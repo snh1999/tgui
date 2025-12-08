@@ -129,3 +129,36 @@
   - [ ] Add badges (build status, downloads)
 
 **Launch**: Post on r/linux, r/selfhosted, Hacker News
+
+
+## 6.1 Launch Plan
+
+### 6.1 Pre-Launch (Week 5-6)
+- [ ] Create demo GIF
+- [ ] Write README with:
+  - Problem statement
+  - Features list
+  - Installation instructions
+  - Quick start guide (5 steps to first command)
+  - Screenshots
+- [ ] Set up GitHub:
+  - Tags: `desktop-app`, `command-runner`, `developer-tools`
+  - Topics: `tauri` or `wails`, `vue`, `typescript`
+- [ ] Build binaries for Linux (priority), Windows, macOS
+
+### 6.2 Launch Day
+- [ ] Create GitHub Release v0.1.0
+- [ ] Post on Reddit:
+  - r/linux (title: "I built a command runner for Linux that saves your frequently used commands")
+  - r/commandline
+  - r/opensource
+  - r/programming (Saturday)
+- [ ] Post on Hacker News "Show HN: CommandPal - A desktop app for organizing and running commands"
+- [ ] Tweet with #buildinpublic #opensource
+- [ ] Post in Discord servers (Tauri/Wails, Vue Land)
+
+### 6.3 Post-Launch (First 2 Weeks)
+- [ ] Respond to GitHub issues within 24 hours
+- [ ] Fix critical bugs immediately
+- [ ] Add "Contributors Welcome" badge if open to PRs
+- [ ] Write blog post about building it (good for portfolio)
