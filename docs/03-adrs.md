@@ -1,5 +1,9 @@
 # 4. Architecture Decision Records (ADRs)
 
+### Update Log
+- **08-12-2025**: Initial Decision Record (ADR-001 to ADR-006)
+
+
 ## ADR-001: Framework Choice - Tauri v2
 
 **Updated**: 2025-12-09 

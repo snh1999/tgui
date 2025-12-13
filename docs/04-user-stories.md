@@ -1,5 +1,9 @@
 # 3. User Stories
 
+### Update Log
+- **05-12-2025**: Initial user stories added (TGUI-01 to TGUI-12)
+
+
 Trello Link: https://trello.com/b/DhteKuWv/tgui
 
 ### TGUI-01: Save and Execute Command with Context (FR-01, FR-02, FR-06)

@@ -1,5 +1,10 @@
 # 10. API Documentation
 
+### Update Log
+
+- **12-12-2025**: Initial API documentation plan 
+
+
 This document defines the IPC (Inter-Process Communication) contract between the Tauri Rust backend and Vue frontend.
 
 ## 10.1 Command Management

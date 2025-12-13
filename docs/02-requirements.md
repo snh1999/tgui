@@ -1,5 +1,9 @@
 # Requirements Specification: TGUI v0.1.0
 
+### Update Log
+- **05-12-2025**: Initial requirement specification
+
+
 ## 2.1 Non-Functional Requirements
 
 | ID     | Requirement               | Target                                              |

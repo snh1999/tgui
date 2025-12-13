@@ -1,6 +1,10 @@
 # 07. Risk Register
 
-**Last Updated**: 2025-12-10  
+### Update Log
+
+- **10-12-2025**: Initial risks (R-01 to R-08)
+- **12-12-2025**: Adds R-09 to R-11
+
 **Review Schedule**: Bi-Weekly during development  
 
 | ID/Status | Risk | Probability/Impact | Mitigation | 
@@ -14,8 +18,8 @@
 | R-07 (Monitoring) | **Log streaming lags at 1000+ lines/sec** | Medium/Medium | Use virtual scrolling; render only visible lines; batch log events (send every 100ms instead of per-line) |  |
 | R-08 (Monitoring) | **System tray doesn't work on Wayland** (Linux) | Medium/Medium | Test on Ubuntu 24.04 (Wayland); fallback to taskbar icon if tray unavailable | 
 | R-09 (Monitoring) | Env vars stored in plain text (security) | Medium/High | Warning in UI; document risk; consider keyring integration in v0.2.0 |
-| R-11 (Active) | **Settings inheritance bugs** (env vars not merging correctly) | Medium/High | Write unit tests for merge logic; document behavior: command overrides group, null = inherit |
-| R-12 (Active) | **Template variable injection** (`{{dir}}` → `/etc`) | High/Critical | Validate all substituted paths; whitelist user directories only; preview before applying template |
+| R-10 (Active) | **Settings inheritance bugs** (env vars not merging correctly) | Medium/High | Write unit tests for merge logic; document behavior: command overrides group, null = inherit |
+| R-11 (Active) | **Template variable injection** (`{{dir}}` → `/etc`) | High/Critical | Validate all substituted paths; whitelist user directories only; preview before applying template |
 
 
 
