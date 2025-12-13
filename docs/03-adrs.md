@@ -112,7 +112,6 @@ Need UI framework for command list, log viewer, and real-time updates with minim
 Need fast and reliable persistance with query support for commands, categories, templates, and settings. 
 
 ### **Decision**: SQLite database
-draft schema is at [database](14-database.md)
 
 ### Justification:
 1. **Extensibility**: Better data storage and reusablility, ensures consistency
@@ -139,6 +138,27 @@ draft schema is at [database](14-database.md)
 - **Linux**: `~/.local/share/tgui/tgui.db`
 - **Windows**: `%APPDATA%/tgui/tgui.db`
 - **macOS**: `~/Library/Application Support/tgui/tgui.db`
+
+### Template vs. Group vs. Category Distinction
+
+**Template** (in `templates` table):
+- Immutable blueprint for copying (if group is class/instance then template is interface)
+- Contains placeholder commands (can not execute commands) and nested templates
+- Used to generate executable commands/groups
+
+**Group** (in `groups` table):
+- Executable container for commands
+- Can contain nested groups (hierarchy)
+- **Commands inside groups can be executed**
+- Supports inheritance of defaults (directory, env vars)
+
+**Category** (in `categories` table):
+- Simple tagging system for organization
+- Flat structure (no nesting)
+- Used for filtering and display grouping
+
+draft schema is at [database](14-database.md)
+
 
 ---
 

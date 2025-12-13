@@ -28,7 +28,7 @@
 | FR-09 | Environment Variables                  | Should   | Pass env vars with commands (e.g., `API_KEY=xxx`)                           |
 | FR-10 | Command Chaining                       | Should   | Run sequence of commands                                                    |
 | FR-11 | System tray Integration                | Should   | Tray icon updates on spawn/kill, hover shows count                          |
-| FR-12 | Variables in Commands                  | Should   | `git commit -m "$message"` with prompt                                      |
+| FR-12 | Category Management                    | Should   | Orgaizing and customizations                                      |
 | FR-13 | Multi-window Logs                      | Could    | Can drag log window to second screen, close main window, logs persist       |
 | FR-14 | Process Tree Termination               | Could    | eg- kill entire process tree                                                |
 | FR-15 | Log Search                             | Could    | Ctrl+F opens search bar, filters in <500ms on 10k lines                     |
@@ -206,7 +206,9 @@
 
 **Security Consideration**:
 - Store in database unencrypted (document limitation)
+- Display warning in UI: "Environment variables stored in plain text. Do not store sensitive data (passwords, API keys) unless you accept this risk."
 - Future possibility: Encrypt with OS keyring integration
+
 
 ---
 
@@ -279,6 +281,8 @@
 
 **Acceptance Criteria**:
 - Checkbox: "Kill process tree"
+  - Unix: Use process groups (`setpgid()`) to kill parent + children
+  - Windows: Use Job Objects (requires additional implementation, otherwise might leave orphan processes)
 - When enabled, sends signal to process group
 - All child processes terminate
 - Tested with: npm, docker-compose, python scripts
@@ -305,8 +309,8 @@
 **Description**: User can export and share command templates as JSON.
 
 **Acceptance Criteria**:
-- Export template to JSON file
-- Import template from JSON file
+- Export template/group/command to JSON file
+- Import template/group/command from JSON file
 - Export logs log to text file
 - Preview before import
 - Validation: Check schema, warn on errors

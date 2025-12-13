@@ -41,7 +41,7 @@ A cross-platform desktop app that:
 | **Command search** | < 200ms for 100+ commands | Users will have many commands |
 | **Log streaming** | < 200ms latency | Debugging needs real-time feedback |
 | **User adoption** | 50 users in first 3 months | Validates real need |
-| **RAM usage** | ≤ 40 MB Idle | App needs to be optimized as utility app |
+| **RAM usage** | ≤ 50 MB Idle | App needs to be optimized as utility app |
 | **Max concurrent processes** | 10-20 processes initially | Blocks premature optimization |
 | **Distribution** | 3+ package formats | Successfully install via exe(windows), flatpak(Linux), AppImage (Linux) and beyond |
 
