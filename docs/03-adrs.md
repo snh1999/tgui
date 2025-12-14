@@ -143,6 +143,8 @@ Need fast and reliable persistance with query support for commands, categories, 
 - **Windows**: `%APPDATA%/tgui/tgui.db`
 - **macOS**: `~/Library/Application Support/tgui/tgui.db`
 
+**draft schema and more explanation is at [database](14-database.md)**
+
 ### Template vs. Group vs. Category Distinction
 
 **Template** (in `templates` table):
@@ -161,7 +163,41 @@ Need fast and reliable persistance with query support for commands, categories, 
 - Flat structure (no nesting)
 - Used for filtering and display grouping
 
-draft schema is at [database](14-database.md)
+### Why JSON Structure Instead of Database Rows?
+
+**Decision**: Templates store command/group structure as JSON, not as separate `template_commands` and `template_groups` tables.
+- Templates stored as JSON text in single `structure` column
+- Commands created in database only when template is applied
+
+**Alternatives Considered**:
+**Separate Tables**
+- `template_groups` and `template_commands` tables with foreign keys
+- Template commands exist as real database rows
+
+**Justification**:
+1. **Industry Standard**: Terraform, Docker Compose, Kubernetes all use text-based blueprints
+2. **Export/Import**: Templates are portable JSON files (version control friendly)
+3. **Safety**: Template commands can't be accidentally executed (not in `commands` table)
+4. **Simplicity**: Templates are read-heavy, written rarely. One table vs three tables, simpler schema
+5. **Extensibility**: JSON schema allows nested templates and variables (FR-05)
+5. **Variables**: `{{variable}}` syntax works naturally in JSON strings
+
+**Trade-offs**:
+- Easy to share/version control
+- Prevents accidental execution
+- Preview requires parsing JSON (not a simple SELECT query)
+- Can't reuse command CRUD logic directly
+
+**Implementation**:
+Template application follows this flow:
+1. Parse `structure` JSON
+2. Substitute `{{variables}}` with user values
+3. Validate all paths (security check)
+4. Create groups in database (in order)
+5. Create commands with correct `group_id` references
+6. Return list of created command IDs
+
+This ensures atomic creation (transaction rollback on failure) and correct parent-child relationships.
 
 
 ---
@@ -235,8 +271,8 @@ Need to buffer logs in memory for display, but limit memory usage.
 
 ### Justification
 1. **Memory**: 10k lines × 100 chars ≈ 1MB per process
-2. **Performance**: In-memory vector is O(1) append
-3. **Use case**: Users want recent logs, not 3-day history
+2. **Performance**: In-memory vector is O(1) append, Writing logs to DB would add latency (continuous write could overwhelm database)
+3. **Use case**: It is assumed Users care about recent logs, not long-term storage
 4. **Simplicity**: No file I/O, no rotation logic
 
 ### Rejected Alternatives
@@ -249,6 +285,7 @@ Need to buffer logs in memory for display, but limit memory usage.
 - Logs older than 10k lines are lost (document limitation)
 - Users who need full history can use `command > output.log 2>&1`
 - Must implement circular buffer logic in Rust
+
 
 ---
 
