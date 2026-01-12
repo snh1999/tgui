@@ -1,3 +1,4 @@
+
 # 4. Architecture Decision Records (ADRs)
 
 ### Update Log
@@ -115,26 +116,37 @@ Need UI framework for command list, log viewer, and real-time updates with minim
 ### Context
 Need fast and reliable persistance with query support for commands, categories, templates, and settings. 
 
-### **Decision**: SQLite database
+### **Decision**: SQLite database (with rusqlite)
 
-### Justification:
+### Justification (SQLite):
 1. **Extensibility**: Better data storage and reusablility, ensures consistency
 2. **Performance**: Faster query result and processing compared to alternatives
 3. **Embedded**: No separate database server
 4. **File-based**: Easy backup (just copy .db file)
 
 
-### Rejected Alternatives
+### Rejected Alternatives (for SQLite):
 - **JSON files**: Simple but no queries, hard to scale searching
 - **PostgreSQL**: Overkill, requires separate server
 - **NoSQL (MongoDB)**: Unnecessary complexity for structured data
 - **LocalStorage**: Browser limitation (5MB), not suitable for desktop app
 - **Cloud**: Overkill for usecase, adds complexity (already has export option planned)
 
+### Justification (rusqlite):
+1. **Simpler than alternatives**: 
+- `sqlx` compile-time checked queries need a database connection to compile the code, causing some edge cases [source](https://news.ycombinator.com/item?id=40994216) it has a offline mode but that evades the benefit [source](https://news.ycombinator.com/item?id=44690914)
+- `turso` is native rust but has too many features and more complicated setup
+- `diesel` can cause bigger binary size and slower complie time in favor of type safety
+- async overhead is not necessary for the usecase
+2. **Performance**: Faster in compilation and bluk data load (may not matter much, as there will not be that high load on database operations).
+3. **Self contained**: features = ["bundled"] means no OS dependencies 
+4. **File-based**: Easy backup (just copy .db file)
+
 
 ### Consequences
 - Fast queries (<50ms for 1000 commands)
 - Easy backup (copy tgui.db)
+- Write raw SQL (no wrapper/ORM)
 - Supports transactions (atomic template application)
 - Need migration system for schema updates (use `schema_version` table)
 
@@ -142,6 +154,9 @@ Need fast and reliable persistance with query support for commands, categories, 
 - **Linux**: `~/.local/share/tgui/tgui.db`
 - **Windows**: `%APPDATA%/tgui/tgui.db`
 - **macOS**: `~/Library/Application Support/tgui/tgui.db`
+
+`rusqlite` was chosen over `sqlx` or `disel` considering the faster complation and smaller bundle size (the alternatives did not provide any significant benefit).
+
 
 **draft schema and more explanation is at [database](14-database.md)**
 
