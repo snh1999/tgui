@@ -1,11 +1,11 @@
-# 13. Database Documentation
+# 10. Database Documentation
 
 ### Update Log
 
 - **14-12-2025**: Initial security guidelines
 
 
-## 13.1 Database Location
+## Database Location
 
 | Platform | Path |
 |----------|------|
@@ -17,7 +17,7 @@
 
 ---
 
-## 13.2 Schema Overview
+## Schema Overview
 
 TGUI uses **separate tables** for different entity types:
 - `categories`: Organize commands (tags)
@@ -29,7 +29,7 @@ TGUI uses **separate tables** for different entity types:
 
 ---
 
-## 13.3 Entity Relationships
+## Entity Relationships
 
 ```
 categories
@@ -50,7 +50,7 @@ groups (parent_group_id- optional)
 
 ---
 
-## 13.4 Table Schemas
+## Table Schemas
 
 ### categories
 
@@ -81,25 +81,25 @@ groups (parent_group_id- optional)
 - Group's default value (provides default values that child commands inherit)
 - Application setting (settings table)/default
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | INTEGER | PRIMARY KEY | Auto-increment |
-| name | TEXT | NOT NULL | Group display name |
-| description | TEXT | NULL | Group purpose |
-| parent_group_id | INTEGER | NULL, FK → groups(id) CASCADE | NULL = top-level group |
-| position | INTEGER | DEFAULT 0 | Order within parent |
-| default_working_directory | TEXT | NULL | Inherited by child commands |
-| default_env_vars | TEXT | NULL | JSON object, inherited |
-| default_shell | TEXT | NULL | Shell path (e.g., "/bin/bash") |
-| default_category_id | INTEGER | NULL, FK → categories(id) | Inherited by child commands |
-| created_at | DATETIME | DEFAULT CURRENT_TIMESTAMP | Creation time |
-| updated_at | DATETIME | DEFAULT CURRENT_TIMESTAMP | Last modification |
+| Column              | Type | Constraints | Description |
+|---------------------|------|-------------|-------------|
+| id                  | INTEGER | PRIMARY KEY | Auto-increment |
+| name                | TEXT | NOT NULL | Group display name |
+| description         | TEXT | NULL | Group purpose |
+| parent_group_id     | INTEGER | NULL, FK → groups(id) CASCADE | NULL = top-level group |
+| position            | INTEGER | DEFAULT 0 | Order within parent |
+| working_directory   | TEXT | NULL | Inherited by child commands |
+| env_vars            | TEXT | NULL | JSON object, inherited |
+| shell               | TEXT | NULL | Shell path (e.g., "/bin/bash") |
+| category_id         | INTEGER | NULL, FK → categories(id) | Inherited by child commands |
+| created_at          | DATETIME | DEFAULT CURRENT_TIMESTAMP | Creation time |
+| updated_at          | DATETIME | DEFAULT CURRENT_TIMESTAMP | Last modification |
 
 
 
 
 **Indexes**:
-<!--- `idx_groups_parent` on `(parent_group_id)`-->
+- `idx_groups_parent` on `(parent_group_id)`
 - `idx_groups_position` on `(parent_group_id, position)`
 
 **Triggers**: `groups_update_timestamp` updates `updated_at` on modification
@@ -136,9 +136,8 @@ groups (parent_group_id- optional)
 
 **Indexes**:
 - `idx_commands_category` on `(category_id)`
-<!--- `idx_commands_position` on `(group_id, position)`-->
+- `idx_commands_position` on `(group_id, position)`
 - `idx_commands_name` on `(name)` for search
-- `idx_commands_favorite` on `(is_favorite)`
 - `idx_commands_group` on `(group_id)`
 
 **Triggers**: `commands_update_timestamp` updates `updated_at` on modification
@@ -214,7 +213,7 @@ UPDATE schema_version SET version = 2;
 
 ---
 
-## 13.5 Common Query Patterns
+## Common Query Patterns
 
 ### Get all top-level items (ungrouped commands + root groups)
 
@@ -297,7 +296,7 @@ DELETE FROM groups WHERE id = ?;
 
 ---
 
-## 13.6 Resolve Inheritance 
+## Resolve Inheritance 
 
 **Not done in SQL** - handled by application code.
 
@@ -339,7 +338,7 @@ Resolved:
 
 ---
 
-## 13.7 Migration Strategy
+## Migration Strategy
 
 ### Current Version: 1
 
@@ -385,7 +384,7 @@ fn backup_database(db_path: &Path) -> Result {
 
 ---
 
-## 13.8 Performance Considerations
+## Performance Considerations
 
 ### WAL Mode (Enabled by default)
 
@@ -443,7 +442,7 @@ PRAGMA journal_mode = WAL;
 
 ---
 
-## 13.9 Data Integrity
+## Data Integrity
 
 ### Foreign Key Constraints
 
@@ -506,7 +505,7 @@ fn validate_parent_id(id: i64, parent_id: i64, conn: &Connection) -> Result {
 
 ---
 
-## 13.10 Backup & Recovery
+## Backup & Recovery
 
 ### Manual Backup
 
@@ -568,7 +567,7 @@ fn export_all_data() -> Result {
 
 ---
 
-## 13.11 Database Health Checks
+## Database Health Checks
 
 ### Integrity Check
 
@@ -605,7 +604,7 @@ VACUUM;
 
 ---
 
-## 13.12 Troubleshooting
+## Troubleshooting
 
 ### Database Locked Error
 
@@ -643,7 +642,7 @@ where
 - App crashes on startup
 
 **Recovery**:
-1. Restore from backup (see 13.10)
+1. Restore from backup
 2. If no backup, try `.recover` command:
    ```bash
    sqlite3 tgui.db.corrupted ".recover" | sqlite3 tgui.db.recovered
@@ -662,7 +661,7 @@ CREATE INDEX idx_commands_name ON commands(name);
 
 
 
-## 13.13 SQL Schema File
+## SQL Schema File
 
 **Full schema available at**: `src-tauri/sql/schema.sql`
 
@@ -679,7 +678,7 @@ sqlite3 tgui.db .schema > schema_dump.sql
 
 ---
 
-## 13.16 Summary
+## Summary
 
 **Key Points**:
 - Separate tables for clear entity separation
