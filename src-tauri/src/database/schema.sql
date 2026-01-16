@@ -75,7 +75,6 @@ INSERT INTO schema_version (version) VALUES (1);
 CREATE INDEX IF NOT EXISTS idx_groups_position ON groups(parent_group_id, position);
 CREATE INDEX IF NOT EXISTS idx_groups_parent ON groups(parent_group_id);
 
-
 CREATE INDEX IF NOT EXISTS idx_commands_category ON commands(category_id);
 CREATE INDEX IF NOT EXISTS idx_commands_favorite ON commands(is_favorite) WHERE is_favorite = 1;
 CREATE INDEX IF NOT EXISTS idx_commands_position ON commands(group_id, position);
