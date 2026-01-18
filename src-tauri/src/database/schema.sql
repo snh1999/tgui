@@ -37,8 +37,7 @@ CREATE TABLE IF NOT EXISTS commands (
     working_directory TEXT,
     env_vars TEXT,
     shell TEXT,
-
-     INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+    category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
     is_favorite BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -51,6 +50,7 @@ CREATE TABLE IF NOT EXISTS templates (
      description TEXT,
      author TEXT,
      structure TEXT NOT NULL,
+     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
