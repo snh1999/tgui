@@ -1,3 +1,4 @@
+-- Categories table
 CREATE TABLE IF NOT EXISTS categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE,
@@ -7,6 +8,9 @@ CREATE TABLE IF NOT EXISTS categories (
   CHECK (length(name) > 0)
 );
 
+INSERT OR IGNORE INTO categories (id, name, icon) VALUES (0, 'Uncategorized', '📁');
+
+-- Groups table
 CREATE TABLE IF NOT EXISTS groups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -37,8 +41,9 @@ CREATE TABLE IF NOT EXISTS commands (
     working_directory TEXT,
     env_vars TEXT,
     shell TEXT,
-    category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
-    is_favorite BOOLEAN NOT NULL DEFAULT 0 CHECK(is_favorite IN (0,1)),
+
+     INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+    is_favorite BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CHECK (length(name) > 0),
