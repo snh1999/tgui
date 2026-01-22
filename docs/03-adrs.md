@@ -306,7 +306,6 @@ Need to buffer logs in memory for display, but limit memory usage.
 
 ## ADR-006: Template Format - JSON
 
-**Status**: Accepted  
 **Date**: 2025-12-05  
 
 ### Context
