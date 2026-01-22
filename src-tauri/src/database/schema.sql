@@ -1,16 +1,12 @@
--- Categories table
 CREATE TABLE IF NOT EXISTS categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     icon TEXT,
     color TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    CHECK (length(trim(name)) > 0)
+    CHECK (length(name) > 0)
 );
 
-INSERT OR IGNORE INTO categories (id, name, icon) VALUES (0, 'Uncategorized', '📁');
-
--- Groups table
 CREATE TABLE IF NOT EXISTS groups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -24,7 +20,7 @@ CREATE TABLE IF NOT EXISTS groups (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CHECK (parent_group_id IS NULL OR parent_group_id != id),
-    CHECK (length(trim(name)) > 0),
+    CHECK (length(name) > 0),
     CHECK (env_vars IS NULL OR json_valid(env_vars))
 );
 
@@ -41,13 +37,12 @@ CREATE TABLE IF NOT EXISTS commands (
     working_directory TEXT,
     env_vars TEXT,
     shell TEXT,
-
-     INTEGER REFERENCES categories(id) ON DELETE SET NULL,
-    is_favorite BOOLEAN DEFAULT 0,
+    category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+    is_favorite BOOLEAN NOT NULL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    CHECK (length(trim(name)) > 0),
-    CHECK (length(trim(command)) > 0),
+    CHECK (length(name) > 0),
+    CHECK (length(command) > 0),
     CHECK (env_vars IS NULL OR json_valid(env_vars)),
     CHECK (arguments IS NULL OR json_valid(arguments))
 );
@@ -82,6 +77,7 @@ INSERT INTO schema_version (version) VALUES (1);
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_groups_position ON groups(parent_group_id, position);
 CREATE INDEX IF NOT EXISTS idx_groups_parent ON groups(parent_group_id);
+
 
 CREATE INDEX IF NOT EXISTS idx_commands_category ON commands(category_id);
 CREATE INDEX IF NOT EXISTS idx_commands_favorite ON commands(is_favorite) WHERE is_favorite = 1;
