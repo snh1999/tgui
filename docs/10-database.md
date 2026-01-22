@@ -66,10 +66,6 @@ groups (parent_group_id- optional)
 | color      | TEXT     | NULL                      | Hex color (e.g., "#3b82f6")     |
 | created_at | DATETIME | DEFAULT CURRENT_TIMESTAMP | Creation time                   |
 
-**Default row**: `id=0, name='Uncategorized', icon='📁'`
-
-**Default category**: "Uncategorized" (ID: 0) ensures every command has a category
-
 **Index**: `idx_commands_category` for fast filtering (Optional)
 
 ---
@@ -333,7 +329,7 @@ For each command field (working_directory, env_vars, shell, category_id):
      - working_directory → $HOME
      - shell → /bin/bash (or system default)
      - env_vars → empty map
-     - category_id → 0 (Uncategorized)
+     - category_id → null
 
 For env_vars specifically (merge):
   1. Start with empty map
