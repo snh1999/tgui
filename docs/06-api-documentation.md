@@ -2,8 +2,7 @@
 
 ### Update Log
 
-- **12-12-2025**: Initial API documentation plan 
-
+- **12-12-2025**: Initial API documentation plan
 
 This document defines the IPC (Inter-Process Communication) contract between the Tauri Rust backend and Vue frontend.
 
@@ -11,7 +10,8 @@ This document defines the IPC (Inter-Process Communication) contract between the
 
 ## Command Management
 
-### Create Command 
+### Create Command
+
 ```rust
 #[tauri::command]
 create_command(payload: CommandPayload) -> Result<CommandId, Error>
@@ -20,6 +20,7 @@ create_command(payload: CommandPayload) -> Result<CommandId, Error>
 **Description**: Save a new command to the database.
 
 **Payload**:
+
 ```rust
 struct CommandPayload {
     name: String,
@@ -37,6 +38,7 @@ struct CommandPayload {
 ```
 
 **Parameters**:
+
 - `name`: Display name for the command
 - `command`: Executable name or path
 - `arguments`: Array of command arguments
@@ -47,10 +49,12 @@ struct CommandPayload {
 - `env_vars`: Optional environment variables
 
 **Returns**:
+
 - `Ok(id)`: Command ID (u32) on success
 - `Err(msg)`: Error message
 
 **Errors**:
+
 - `"Invalid directory"`: Working directory doesn't exist
 - `"Duplicate name"`: Command with same name exists (warning, not error)
 - `"Database error"`: SQLite error
@@ -58,23 +62,24 @@ struct CommandPayload {
 **Usage**:
 
 ```typescript
-import { invoke } from '@tauri-apps/api/tauri'
+import {invoke} from '@tauri-apps/api/tauri'
 
 const commandId = await invoke('create_command', {
-  name: 'Start Dev Server',
-  command: 'npm',
-  arguments: ['run', 'dev'],
-  description: 'Starts Vite dev server',
-  workingDirectory: '/home/user/project',
-  categoryId: 1,
-  isFavorite: false,
-  envVars: { NODE_ENV: 'development' }
+    name: 'Start Dev Server',
+    command: 'npm',
+    arguments: ['run', 'dev'],
+    description: 'Starts Vite dev server',
+    workingDirectory: '/home/user/project',
+    categoryId: 1,
+    isFavorite: false,
+    envVars: {NODE_ENV: 'development'}
 })
 ```
 
 ---
 
 ### Update Command
+
 `update_command(id: CommandId, payload: CommandPayload) -> Result<(), Error>`
 
 **Description**: Update an existing command.
@@ -82,6 +87,7 @@ const commandId = await invoke('create_command', {
 **Parameters**: Same as `save_command` plus `id`
 
 **Returns**:
+
 - `Ok(())`: Success
 - `Err(msg)`: Error message
 
@@ -94,14 +100,17 @@ const commandId = await invoke('create_command', {
 **Description**: Deletes a command and stops if running.
 
 **Parameters**:
+
 - `id`: Command ID
 
 **Returns**:
+
 - `Ok(())`: Success
 - `Err("Command not found")`: Invalid ID
 
 **Edge Cases**:
-- If command is running → stop it first (SIGTERM), 
+
+- If command is running → stop it first (SIGTERM),
 - else Returns error: "Cannot delete running command. Stop it first."
 
 **Events Emitted**: `command-deleted { id }`
@@ -115,9 +124,11 @@ const commandId = await invoke('create_command', {
 **Description**: Finds a single command by ID.
 
 **Parameters**:
+
 - `id`: Command ID
 
 **Returns**:
+
 - `Ok(command)`: Command object
 - `Err("Command not found")`: Invalid ID
 
@@ -129,7 +140,8 @@ const commandId = await invoke('create_command', {
 
 **Description**: Get commands with optional filtering.
 
-Filter: 
+Filter:
+
 ```rust
 struct CommandFilter {
     category_id: Option<u32>,
@@ -140,36 +152,37 @@ struct CommandFilter {
 ```
 
 **Parameters**:
+
 - `search`: Filter by name/command/description
 - `category_id`: Filter by category
 - `favorites_only`: Show only favorites
 
 **Returns**:
+
 - `Ok(commands)`: Array of commands with resolved inheritance (settings applied)
 - `Err(msg)`: Database error
-
 
 **Usage**:
 
 ```typescript
 interface Command {
-  id: number
-  name: string
-  command: string
-  arguments: string[]
-  description?: string
-  workingDirectory: string
-  categoryId?: number
-  isFavorite: boolean
-  envVars?: Record
-  createdAt: string
-  updatedAt: string
+    id: number
+    name: string
+    command: string
+    arguments: string[]
+    description?: string
+    workingDirectory: string
+    categoryId?: number
+    isFavorite: boolean
+    envVars?: Record
+    createdAt: string
+    updatedAt: string
 }
 
 const commands = await invoke('get_commands', {
-  search_term: 'docker',
-  category_id: null,
-  is_favorite: false
+    search_term: 'docker',
+    category_id: null,
+    is_favorite: false
 })
 ```
 
@@ -184,6 +197,7 @@ const commands = await invoke('get_commands', {
 **Description**: Spawns process by running a saved command and start streaming logs.
 
 **Process**:
+
 1. Validate command exists
 2. Resolve working directory (inheritance chain: cmd → group → settings → $HOME)
 3. Merge environment variables (cmd overrides group)
@@ -192,38 +206,41 @@ const commands = await invoke('get_commands', {
 6. Update UI status
 
 **Parameters**:
+
 - `id`: Command ID from database
 - `window`: Tauri window handle (for emitting events), Optional
 
 **Returns**:
+
 - `Ok(pid)`: Process ID (u32) on success
 - `Err(msg)`: Error message
 
 **Events Emitted**:
+
 - process-started: `{ pid: number, commandId: number, command: string, timestamp: number }`
 - log-line: `{ pid: number, line: string, source: 'stdout' | 'stderr', timestamp: number }` (repeated for each line)
 - process-stopped: `{ pid: number, exitCode: number, signal?: string }`
 
 **Errors**:
+
 - **Command not found**: Command not in PATH, Invalid command ID
 - **Directory not found**: Working directory doesn't exist
 - **Permission denied**: Can't execute command
-- **Already running**: Command is already running,  Process with same PID exists
-
+- **Already running**: Command is already running, Process with same PID exists
 
 **Usage**:
 
 ```typescript
-import { listen } from '@tauri-apps/api/event'
+import {listen} from '@tauri-apps/api/event'
 
 // Start listening for logs
 const unlisten = await listen('log-line', (event) => {
-  const { pid, line, source, timestamp } = event.payload
-  console.log(`[${pid}] ${source}: ${line}`)
+    const {pid, line, source, timestamp} = event.payload
+    console.log(`[${pid}] ${source}: ${line}`)
 })
 
 // Execute command
-const pid = await invoke('spawn_command', { id: commandId })
+const pid = await invoke('spawn_command', {id: commandId})
 
 // Clean up listener when done
 unlisten()
@@ -238,15 +255,18 @@ unlisten()
 **Description**: Stop and send signal to running process.
 
 **Parameters**:
+
 - `pid`: Process ID (u32)
 - `force`: boolean
-  - false: Send `SIGTERM` (graceful)
-  - true: Send `SIGKILL` (immediate, Show dialog for confirmation)
-  
-**Events Emitted**: 
+    - false: Send `SIGTERM` (graceful)
+    - true: Send `SIGKILL` (immediate, Show dialog for confirmation)
+
+**Events Emitted**:
+
 - process-stopped { pid, exit_code, timestamp }
 
 **Returns**:
+
 - `Ok(())`: Signal sent successfully
 - `Err(msg)`: Error message
 
@@ -254,10 +274,10 @@ unlisten()
 
 ```typescript
 // Graceful stop
-await invoke('kill_process', { pid: 12345, force: true })
+await invoke('kill_process', {pid: 12345, force: true})
 
 // Force kill (after confirmation)
-await invoke('kill_process', { pid: 12345, force: true  })
+await invoke('kill_process', {pid: 12345, force: true})
 ```
 
 ---
@@ -272,13 +292,13 @@ await invoke('kill_process', { pid: 12345, force: true  })
 
 ```typescript
 interface ProcessInfo {
-  pid: number
-  commandId: number
-  commandName: string
-  command: string
-  status: 'Running' | 'Stopping' | 'Stopped' | 'Error'
-  startTime: number // Unix timestamp
-  exitCode?: number
+    pid: number
+    commandId: number
+    commandName: string
+    command: string
+    status: 'Running' | 'Stopping' | 'Stopped' | 'Error'
+    startTime: number // Unix timestamp
+    exitCode?: number
 }
 
 const processes = await invoke('get_running_processes')
@@ -287,6 +307,7 @@ const processes = await invoke('get_running_processes')
 ---
 
 ### Get process Status
+
 `get_process_status(pid: Pid) -> ProcessStatus`
 
 **Description**: Returns current process state by Id.
@@ -311,9 +332,10 @@ enum ProcessStatus {
 
 <!--TODO: consider passing a Optional array if needed-->
 
-**Description**: Stops all running processes. 
+**Description**: Stops all running processes.
 
 **Returns**:
+
 - `OK(count)`: Count for killed process.
 - `Err("Something went wrong")`
 
@@ -326,9 +348,11 @@ enum ProcessStatus {
 ## 10.2 Logs
 
 ### Event: `log-line`
+
 **Description**: Emitted for each line of stdout/stderr.
 
 **Payload**:
+
 ```rust
 struct LogLine {
     pid: u32,
@@ -341,9 +365,11 @@ struct LogLine {
 **Performance**: Batched every 50ms max to reduce IPC overhead
 
 ### **Event**: `process-status-changed`
+
 **Description**: Emitted when process state changes.
 
 **Payload**:
+
 ```rust
 struct ProcessStatusEvent {
     pid: u32,
@@ -352,34 +378,37 @@ struct ProcessStatusEvent {
 }
 ```
 
-
 ### Get logs
+
 `get_log_buffer(pid: u32,offset: usize, limit: usize, ) -> Vec<LogLine>`
 
 **Description**: Get log lines from circular buffer. (Allows to reopen window and populate logs from memory)
 
 **Parameters**:
+
 - `pid`: Process ID
 - `limit`: Max number of lines (default: 10000)
 
 **Returns**: Slice of log buffer (newest first if offset = 0)
 
 **Usage**:
+
 ```typescript
 interface LogLine {
-  line: string
-  source: 'stdout' | 'stderr'
-  timestamp: number
+    line: string
+    source: 'stdout' | 'stderr'
+    timestamp: number
 }
 
-const logs = await invoke('get_log_buffer', { 
-  pid: 12345,
-  offset: 0,
-  limit: 1000, 
+const logs = await invoke('get_log_buffer', {
+    pid: 12345,
+    offset: 0,
+    limit: 1000,
 })
 ```
 
 ### Clear logs
+
 `clear_log_buffer(pid: Pid) -> Result<(), Error>`
 
 **Description**:Clears log buffer for a process.
@@ -403,6 +432,7 @@ fn create_category(
 ```
 
 **Parameters**:
+
 - `name`: Category name (unique)
 - `icon`: Emoji or icon name (e.g., "🐳", "docker")
 - `color`: Hex color (e.g., "#3b82f6")
@@ -410,11 +440,12 @@ fn create_category(
 **Returns**: Category ID
 
 **Usage**:
+
 ```typescript
 const categoryId = await invoke('create_category', {
-  name: 'Docker',
-  icon: '🐳',
-  color: '#2496ed'
+    name: 'Docker',
+    icon: '🐳',
+    color: '#2496ed'
 })
 ```
 
@@ -431,12 +462,12 @@ fn get_categories(state: State) -> Result<Vec, String>
 
 ```typescript
 interface Category {
-  id: number
-  name: string
-  icon?: string
-  color?: string
-  commandCount: number // How many commands in this category
-  createdAt: string
+    id: number
+    name: string
+    icon?: string
+    color?: string
+    commandCount: number // How many commands in this category
+    createdAt: string
 }
 
 const categories = await invoke('get_categories')
@@ -465,25 +496,26 @@ fn update_category(
 #[tauri::command]
 fn delete_category(
     id: i64,
-    move_to_uncategorized: bool,
     state: State,
 ) -> Result
 ```
 
 **Parameters**:
+
 - `id`: Category ID
-- `move_to_uncategorized`: If true, moves commands to null category; if false, deletes commands
 
 ---
 
 ## 10.4 Template Management
 
 ### Create Template
+
 `create_template(payload: TemplatePayload) -> Result<TemplateId, Error>`
 
 **Description**: Creates a reusable template blueprint.
 
 Payload:
+
 ```rust
 struct TemplatePayload {
     name: String,
@@ -493,58 +525,59 @@ struct TemplatePayload {
 ```
 
 **Usage**:
+
 ```typescript
 interface TemplateCommand {
-  name: string
-  command: string
-  arguments: string[]
-  workingDirectory: string // Can contain {{variables}}
-  categoryName?: string
-  envVars?: Record
+    name: string
+    command: string
+    arguments: string[]
+    workingDirectory: string // Can contain {{variables}}
+    categoryName?: string
+    envVars?: Record
 }
 
 interface TemplateVariable {
-  key: string
-  label: string
-  type: 'string' | 'path' | 'number'
-  default?: string
-  required: boolean
+    key: string
+    label: string
+    type: 'string' | 'path' | 'number'
+    default?: string
+    required: boolean
 }
 
 const templateId = await invoke('create_template', {
-  name: 'Python Development',
-  description: 'Common Python project commands',
-  commands: [
-    {
-      name: 'Create venv',
-      command: 'python',
-      arguments: ['-m', 'venv', '{{venv_name}}'],
-      workingDirectory: '{{directory}}',
-      categoryName: 'Python'
-    },
-    {
-      name: 'Install deps',
-      command: '{{directory}}/{{venv_name}}/bin/pip',
-      arguments: ['install', '-r', 'requirements.txt'],
-      workingDirectory: '{{directory}}',
-      categoryName: 'Python'
-    }
-  ],
-  variables: [
-    {
-      key: 'directory',
-      label: 'Project Directory',
-      type: 'path',
-      required: true
-    },
-    {
-      key: 'venv_name',
-      label: 'Virtual Environment Name',
-      type: 'string',
-      default: 'venv',
-      required: false
-    }
-  ]
+    name: 'Python Development',
+    description: 'Common Python project commands',
+    commands: [
+        {
+            name: 'Create venv',
+            command: 'python',
+            arguments: ['-m', 'venv', '{{venv_name}}'],
+            workingDirectory: '{{directory}}',
+            categoryName: 'Python'
+        },
+        {
+            name: 'Install deps',
+            command: '{{directory}}/{{venv_name}}/bin/pip',
+            arguments: ['install', '-r', 'requirements.txt'],
+            workingDirectory: '{{directory}}',
+            categoryName: 'Python'
+        }
+    ],
+    variables: [
+        {
+            key: 'directory',
+            label: 'Project Directory',
+            type: 'path',
+            required: true
+        },
+        {
+            key: 'venv_name',
+            label: 'Virtual Environment Name',
+            type: 'string',
+            default: 'venv',
+            required: false
+        }
+    ]
 })
 ```
 
@@ -557,10 +590,12 @@ const templateId = await invoke('create_template', {
 **Description**: Apply template by creating commands with substituted variables.
 
 **Parameters**:
+
 - `template_id`: Template ID
 - `variable_values`: Map of variable keys to values
 
 **Process**:
+
 - Load template structure
 - Substitute all {{variables}}
 - Create groups and commands in database
@@ -574,11 +609,11 @@ const templateId = await invoke('create_template', {
 
 ```typescript
 const commandIds = await invoke('apply_template', {
-  templateId: 1,
-  variableValues: {
-    directory: '/home/user/my-project',
-    venv_name: 'venv'
-  }
+    templateId: 1,
+    variableValues: {
+        directory: '/home/user/my-project',
+        venv_name: 'venv'
+    }
 })
 ```
 
@@ -601,11 +636,13 @@ const commandIds = await invoke('apply_template', {
 **Description**: Import template from JSON.
 
 **Parameters**:
+
 - `json`: Template JSON string
 
 **Returns**: Template ID
 
 **Errors**:
+
 - `"Invalid JSON"`: Malformed JSON
 - `"Schema validation failed"`: Missing required fields
 - `"Dangerous commands detected"`: Contains risky commands (return as warning, not error)
@@ -632,15 +669,16 @@ const commandIds = await invoke('apply_template', {
 
 ---
 
-
 ## 10.6 Others
 
 ### System Tray
+
 `get_tray_status() -> TrayStatus`
 
 **Description**: Returns status for tray icon tooltip.
 
 **Returns**:
+
 ```rust
 struct TrayStatus {
     running_count: u32,
@@ -654,13 +692,15 @@ struct TrayStatus {
 ---
 
 ### Show main window
+
 `show_main_window() -> Result<(), Error>`
 
 **Description**: Shows/hides main window from tray.
 
-
 ### Error Types
+
 All API endpoints return structured errors:
+
 ```rust
 enum TguiError {
     CommandNotFound { command: String, suggestion: String },
@@ -676,23 +716,25 @@ enum TguiError {
 **Frontend Handling**: Map to user-friendly toast messages
 
 ### Event Subscription Pattern
+
 Frontend subscribes to events via Tauri's listen:
 
 ```typeScript
-import { listen } from '@tauri-apps/api/event'
+import {listen} from '@tauri-apps/api/event'
 
 listen('log-line', (event) => {
-  const { pid, line, is_stderr } = event.payload
-  logStore.append(pid, line, is_stderr)
+    const {pid, line, is_stderr} = event.payload
+    logStore.append(pid, line, is_stderr)
 })
 
 listen('process-status-changed', (event) => {
-  const { pid, new_status } = event.payload
-  processStore.updateStatus(pid, new_status)
+    const {pid, new_status} = event.payload
+    processStore.updateStatus(pid, new_status)
 })
 ```
 
 ## Versioning
+
 - **API Version**: v1 (increments on breaking changes)
-  - **All commands prefixed**: `api:v1:create_command`
-  - **Events include version**: `api:v1:log-line`
+    - **All commands prefixed**: `api:v1:create_command`
+    - **Events include version**: `api:v1:log-line`
