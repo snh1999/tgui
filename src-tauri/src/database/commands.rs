@@ -52,28 +52,17 @@ impl Database {
     pub fn get_commands(
         &self,
         group_id: Option<i64>,
-        category_id: Option<i64>,
         favorites_only: bool,
     ) -> Result<Vec<Command>> {
-        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-
-        let mut sql_statement = "SELECT * FROM commands WHERE group_id IS ?1".to_string();
-        params.push(Box::new(group_id));
-
-        if let Some(cid) = category_id {
-            sql_statement.push_str(&format!(" AND category_id = ?{}", params.len() + 1));
-            params.push(Box::new(cid));
-        }
-
-        if favorites_only {
-            sql_statement.push_str(" AND is_favorite = 1");
-        }
-
-        sql_statement.push_str(" ORDER BY position");
-
-        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
-
-        self.query_database(&sql_statement, &*param_refs, Self::row_to_command)
+        let commands = self.query_database(
+            "SELECT * FROM commands WHERE group_id IS ?1 ORDER BY position",
+            params![group_id],
+            Self::row_to_command,
+        )?;
+        Ok(commands
+            .into_iter()
+            .filter(|c| !favorites_only || c.is_favorite)
+            .collect())
     }
 
     pub fn search_commands(&self, search_term: &str) -> Result<Vec<Command>> {
@@ -146,6 +135,9 @@ impl Database {
             .unwrap_or((default_val, None)))
     }
 
+    /// Move command between two positions (calculates midpoint)
+    /// prev_id None means move to top
+    /// next_id None means move to bottom
     pub fn move_command_between(
         &self,
         cmd_id: i64,
@@ -204,15 +196,16 @@ impl Database {
         Ok(())
     }
 
-    /// the arguments/env_vars data is not being cross validated because
-    /// 1. the data has already validation via rust type system (check create and update)
-    /// 2. this would render the application in a stuck state as every get operation depends on this function
-    /// -- FE requires updating to even view the command, and to view the command we require fetching the command
-    /// -- If the default value is returned, user at least can retrieve the command/update with new value
-    /// -- NOTE: we have to check before running the commands
     fn row_to_command(row: &rusqlite::Row) -> rusqlite::Result<Command> {
         let args_json: String = row.get(3)?;
         let env_vars_json: Option<String> = row.get(8)?;
+
+        // TODO: throws error instead of default value, for now default empty value is fine
+        // let arguments = serde_json::from_str(&args_json)
+        //     .map_err(|e|
+        //         rusqlite::Error::FromSqlConversionFailure(3, rusqlite::types::Type::Text, Box::new(e)))?;
+        // let env_vars = env_vars_json.map(|json| serde_json::from_str(&json))
+        //     .transpose().map_err(|e| rusqlite::Error::FromSqlConversionFailure(8, rusqlite::types::Type::Text, Box::new(e), ))?;
 
         Ok(Command {
             id: row.get(0)?,
