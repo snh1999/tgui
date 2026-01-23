@@ -265,26 +265,38 @@ icon = ?8
             });
         }
 
-        let mut current = Some(parent_id);
+        let mut current = parent_id;
         let mut visited = HashSet::new();
 
-        while let Some(id) = current {
-            if id == group_id {
+        while let Ok(parent_group) = self.get_group(current) {
+            if current == group_id {
                 return Err(DatabaseError::CircularReference {
                     group_id,
                     parent_id,
                 });
             }
 
-            if !visited.insert(id) {
+            if visited.contains(&current) {
                 return Err(DatabaseError::CircularReference {
                     group_id,
                     parent_id,
                 });
             }
 
-            let parent_group = self.get_group(id)?;
-            current = parent_group.parent_group_id;
+            visited.insert(current);
+
+            // TODO Safety: prevent loops beyond a layer
+            // if visited.len() > 100 {
+            //     return Err(DatabaseError::InvalidData {
+            //         field: "parent_group_id",
+            //         reason: "Group nesting too deep (max 100 levels)".to_string(),
+            //     });
+            // }
+
+            match parent_group.parent_group_id {
+                Some(next_parent) => current = next_parent,
+                None => break, // Reached root
+            }
         }
 
         Ok(())
