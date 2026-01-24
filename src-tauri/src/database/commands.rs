@@ -55,8 +55,15 @@ impl Database {
         category_id: Option<i64>,
         favorites_only: bool,
     ) -> Result<Vec<Command>> {
-        let mut sql_statement =
-            "SELECT * FROM commands WHERE group_id IS ?1 AND category_id IS ?2".to_string();
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+
+        let mut sql_statement = "SELECT * FROM commands WHERE group_id IS ?1".to_string();
+        params.push(Box::new(group_id));
+
+        if let Some(cid) = category_id {
+            sql_statement.push_str(&format!(" AND category_id = ?{}", params.len() + 1));
+            params.push(Box::new(cid));
+        }
 
         if favorites_only {
             sql_statement.push_str(" AND is_favorite = 1");
@@ -64,9 +71,11 @@ impl Database {
 
         sql_statement.push_str(" ORDER BY position");
 
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+
         self.query_database(
             &sql_statement,
-            params![group_id, category_id],
+            &*param_refs,
             Self::row_to_command,
         )
     }
