@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS commands (
     env_vars TEXT,
     shell TEXT,
     category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
-    is_favorite BOOLEAN NOT NULL DEFAULT 0,
+    is_favorite BOOLEAN NOT NULL DEFAULT 0 CHECK(is_favorite IN (0,1)),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CHECK (length(name) > 0),
@@ -80,7 +80,7 @@ CREATE INDEX IF NOT EXISTS idx_groups_parent ON groups(parent_group_id);
 
 
 CREATE INDEX IF NOT EXISTS idx_commands_category ON commands(category_id);
-CREATE INDEX IF NOT EXISTS idx_commands_favorite ON commands(is_favorite) WHERE is_favorite = 1;
+CREATE INDEX IF NOT EXISTS idx_commands_favorite ON commands(is_favorite);
 CREATE INDEX IF NOT EXISTS idx_commands_position ON commands(group_id, position);
 CREATE INDEX IF NOT EXISTS idx_commands_name ON commands(name);
 
