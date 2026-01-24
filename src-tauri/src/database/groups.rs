@@ -179,16 +179,21 @@ impl Database {
     }
 
     pub fn get_group_path(&self, group_id: i64) -> Result<Vec<String>> {
-        let mut path = Vec::new();
-        let mut current_id = group_id;
+        let sql = "
+        WITH RECURSIVE group_path AS (
+            SELECT id, name, parent_group_id FROM groups WHERE id = ?
+            UNION ALL
+            SELECT g.id, g.name, g.parent_group_id FROM groups g
+            JOIN group_path p ON g.id = p.parent_group_id
+        )
+        SELECT name FROM group_path;
+        ";
 
-        while let Ok(group) = self.get_group(current_id) {
-            path.push(group.name);
-            match group.parent_group_id {
-                Some(parent) => current_id = parent,
-                None => break,
-            }
-        }
+        let mut path: Vec<String> = self
+            .conn()
+            .prepare(sql)?
+            .query_map(params![group_id], |row| row.get(0))?
+            .collect::<rusqlite::Result<_>>()?;
 
         path.reverse();
         Ok(path)
@@ -249,14 +254,6 @@ impl Database {
             }
 
             visited.insert(current);
-
-            // TODO Safety: prevent loops beyond a layer
-            // if visited.len() > 100 {
-            //     return Err(DatabaseError::InvalidData {
-            //         field: "parent_group_id",
-            //         reason: "Group nesting too deep (max 100 levels)".to_string(),
-            //     });
-            // }
 
             match parent_group.parent_group_id {
                 Some(next_parent) => current = next_parent,
