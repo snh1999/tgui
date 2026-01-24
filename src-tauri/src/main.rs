@@ -4,4 +4,3 @@
 fn main() {
     tgui_lib::run();
 }
-

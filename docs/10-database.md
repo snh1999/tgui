@@ -4,6 +4,7 @@
 
 - **14-12-2025**: Initial security guidelines
 
+
 ## Database Location
 
 | Platform    | Path                                         |
@@ -47,6 +48,7 @@ groups (parent_group_id- optional)
 - Groups can be **nested** (parent_group_id points to another group)
 - Commands **inherit settings** from immediate parent group
 - Templates store JSON structure (not relational)
+
 
 ---
 
@@ -235,6 +237,7 @@ ORDER BY position;
 
 **Use**: Main view when no group selected
 
+
 ### Get all commands in a group (immediate children only)
 
 ```sql
@@ -336,7 +339,6 @@ For env_vars specifically (merge):
 ```
 
 **Example**:
-
 ```
 Group "Python Projects":
   default_working_directory: /home/user/python
@@ -602,8 +604,7 @@ fn export_all_data() -> Result {
 
 ```sql
 -- Run on app startup
-PRAGMA
-integrity_check;
+PRAGMA integrity_check;
 -- Should return: ok
 ```
 
@@ -611,21 +612,16 @@ integrity_check;
 
 ```sql
 -- Check database size
-SELECT page_count * page_size as size
-FROM pragma_page_count(), pragma_page_size();
+SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size();
 
 -- Count records per table
-SELECT 'commands' as table_name, COUNT(*) as count
-FROM commands
+SELECT 'commands' as table_name, COUNT(*) as count FROM commands
 UNION ALL
-SELECT 'groups', COUNT(*)
-FROM groups
+SELECT 'groups', COUNT(*) FROM groups
 UNION ALL
-SELECT 'categories', COUNT(*)
-FROM categories
+SELECT 'categories', COUNT(*) FROM categories
 UNION ALL
-SELECT 'templates', COUNT(*)
-FROM templates;
+SELECT 'templates', COUNT(*) FROM templates;
 ```
 
 ### Vacuum (Reclaim Space)

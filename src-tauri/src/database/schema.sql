@@ -1,10 +1,10 @@
 CREATE TABLE IF NOT EXISTS categories (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
-  icon TEXT,
-  color TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  CHECK (length(name) > 0)
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    icon TEXT,
+    color TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CHECK (length(trim(name)) > 0)
 );
 
 CREATE TABLE IF NOT EXISTS groups (
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS groups (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CHECK (parent_group_id IS NULL OR parent_group_id != id),
-    CHECK (length(name) > 0),
+    CHECK (length(trim(name)) > 0),
     CHECK (env_vars IS NULL OR json_valid(env_vars))
 );
 
@@ -41,8 +41,8 @@ CREATE TABLE IF NOT EXISTS commands (
     is_favorite BOOLEAN NOT NULL DEFAULT 0 CHECK(is_favorite IN (0,1)),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    CHECK (length(name) > 0),
-    CHECK (length(command) > 0),
+    CHECK (length(trim(name)) > 0),
+    CHECK (length(trim(command)) > 0),
     CHECK (env_vars IS NULL OR json_valid(env_vars)),
     CHECK (arguments IS NULL OR json_valid(arguments))
 );
