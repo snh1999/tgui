@@ -84,11 +84,11 @@ impl Database {
 
         match key {
             "log_buffer_size" | "max_concurrent_processes" => value
-                .parse::<i32>()
+                .parse::<u32>()
                 .map(|_| ())
                 .map_err(|_| DatabaseError::InvalidData {
                     field: "value",
-                    reason: "Must be a number".to_string(),
+                    reason: "Must be a positive number".to_string(),
                 }),
 
             "auto_scroll_logs" | "warn_before_kill" | "kill_process_tree_by_default" => {

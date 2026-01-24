@@ -135,9 +135,6 @@ impl Database {
             .unwrap_or((default_val, None)))
     }
 
-    /// Move command between two positions (calculates midpoint)
-    /// prev_id None means move to top
-    /// next_id None means move to bottom
     pub fn move_command_between(
         &self,
         cmd_id: i64,
