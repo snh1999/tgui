@@ -27,8 +27,8 @@ impl Database {
 
     pub(crate) fn get_position(
         &self,
-        table: &str,
-        column_name: &str,
+        table: &'static str,
+        column_name: &'static str,
         group_id: Option<i64>,
     ) -> Result<i64> {
         let query = format!(
@@ -82,8 +82,8 @@ impl Database {
 
     pub(crate) fn move_item_between<F>(
         &self,
-        table: &str,
-        group_column: &str,
+        table: &'static str,
+        group_column: &'static str,
         item_id: i64,
         prev_id: Option<i64>,
         next_id: Option<i64>,
@@ -121,7 +121,7 @@ impl Database {
         Ok(rows)
     }
 
-    pub(crate) fn renumber_position(
+    fn renumber_position(
         &self,
         table: &'static str,
         column_name: &'static str,

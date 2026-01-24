@@ -52,6 +52,7 @@ impl Database {
     pub fn get_commands(
         &self,
         group_id: Option<i64>,
+        category_id: Option<i64>,
         favorites_only: bool,
     ) -> Result<Vec<Command>> {
         self.get_items(
