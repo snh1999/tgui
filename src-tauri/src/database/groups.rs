@@ -265,30 +265,26 @@ icon = ?8
             });
         }
 
-        let mut current = parent_id;
+        let mut current = Some(parent_id);
         let mut visited = HashSet::new();
 
-        while let Ok(parent_group) = self.get_group(current) {
-            if current == group_id {
+        while let Some(id) = current {
+            if id == group_id {
                 return Err(DatabaseError::CircularReference {
                     group_id,
                     parent_id,
                 });
             }
 
-            if visited.contains(&current) {
+            if !visited.insert(id) {
                 return Err(DatabaseError::CircularReference {
                     group_id,
                     parent_id,
                 });
             }
 
-            visited.insert(current);
-
-            match parent_group.parent_group_id {
-                Some(next_parent) => current = next_parent,
-                None => break, // Reached root
-            }
+            let parent_group = self.get_group(id)?;
+            current = parent_group.parent_group_id;
         }
 
         Ok(())
