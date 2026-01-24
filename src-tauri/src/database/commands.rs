@@ -197,16 +197,15 @@ impl Database {
         Ok(())
     }
 
+    /// the arguments/env_vars data is not being cross validated because
+    /// 1. the data has already validation via rust type system (check create and update)
+    /// 2. this would render the application in a stuck state as every get operation depends on this function
+    /// -- FE requires updating to even view the command, and to view the command we require fetching the command
+    /// -- If the default value is returned, user at least can retrieve the command/update with new value
+    /// -- NOTE: we have to check before running the commands
     fn row_to_command(row: &rusqlite::Row) -> rusqlite::Result<Command> {
         let args_json: String = row.get(3)?;
         let env_vars_json: Option<String> = row.get(8)?;
-
-        // TODO: throws error instead of default value, for now default empty value is fine
-        // let arguments = serde_json::from_str(&args_json)
-        //     .map_err(|e|
-        //         rusqlite::Error::FromSqlConversionFailure(3, rusqlite::types::Type::Text, Box::new(e)))?;
-        // let env_vars = env_vars_json.map(|json| serde_json::from_str(&json))
-        //     .transpose().map_err(|e| rusqlite::Error::FromSqlConversionFailure(8, rusqlite::types::Type::Text, Box::new(e), ))?;
 
         Ok(Command {
             id: row.get(0)?,
