@@ -55,15 +55,20 @@ impl Database {
         category_id: Option<i64>,
         favorites_only: bool,
     ) -> Result<Vec<Command>> {
-        let commands = self.query_database(
-            "SELECT * FROM commands WHERE group_id IS ?1 AND category_id IS ?2 ORDER BY position",
+        let mut sql_statement =
+            "SELECT * FROM commands WHERE group_id IS ?1 AND category_id IS ?2".to_string();
+
+        if favorites_only {
+            sql_statement.push_str(" AND is_favorite = 1");
+        }
+
+        sql_statement.push_str(" ORDER BY position");
+
+        self.query_database(
+            &sql_statement,
             params![group_id, category_id],
             Self::row_to_command,
-        )?;
-        Ok(commands
-            .into_iter()
-            .filter(|c| !favorites_only || c.is_favorite)
-            .collect())
+        )
     }
 
     pub fn search_commands(&self, search_term: &str) -> Result<Vec<Command>> {
