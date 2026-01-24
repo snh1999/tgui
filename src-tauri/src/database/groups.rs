@@ -285,14 +285,6 @@ icon = ?8
 
             visited.insert(current);
 
-            // TODO Safety: prevent loops beyond a layer
-            // if visited.len() > 100 {
-            //     return Err(DatabaseError::InvalidData {
-            //         field: "parent_group_id",
-            //         reason: "Group nesting too deep (max 100 levels)".to_string(),
-            //     });
-            // }
-
             match parent_group.parent_group_id {
                 Some(next_parent) => current = next_parent,
                 None => break, // Reached root
