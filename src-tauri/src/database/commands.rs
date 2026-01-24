@@ -52,11 +52,12 @@ impl Database {
     pub fn get_commands(
         &self,
         group_id: Option<i64>,
+        category_id: Option<i64>,
         favorites_only: bool,
     ) -> Result<Vec<Command>> {
         let commands = self.query_database(
-            "SELECT * FROM commands WHERE group_id IS ?1 ORDER BY position",
-            params![group_id],
+            "SELECT * FROM commands WHERE group_id IS ?1 AND category_id IS ?2 ORDER BY position",
+            params![group_id, category_id],
             Self::row_to_command,
         )?;
         Ok(commands
