@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS categories (
     icon TEXT,
     color TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    CHECK (length(name) > 0)
+    CHECK (length(trim(name)) > 0)
 );
 
 CREATE TABLE IF NOT EXISTS groups (
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS groups (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CHECK (parent_group_id IS NULL OR parent_group_id != id),
-    CHECK (length(name) > 0),
+    CHECK (length(trim(name)) > 0),
     CHECK (env_vars IS NULL OR json_valid(env_vars))
 );
 
@@ -41,8 +41,8 @@ CREATE TABLE IF NOT EXISTS commands (
     is_favorite BOOLEAN NOT NULL DEFAULT 0 CHECK(is_favorite IN (0,1)),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    CHECK (length(name) > 0),
-    CHECK (length(command) > 0),
+    CHECK (length(trim(name)) > 0),
+    CHECK (length(trim(command)) > 0),
     CHECK (env_vars IS NULL OR json_valid(env_vars)),
     CHECK (arguments IS NULL OR json_valid(arguments))
 );
@@ -77,7 +77,7 @@ CREATE INDEX IF NOT EXISTS idx_groups_parent ON groups(parent_group_id);
 
 
 CREATE INDEX IF NOT EXISTS idx_commands_category ON commands(category_id);
-CREATE INDEX IF NOT EXISTS idx_commands_favorite ON commands(is_favorite);
+CREATE INDEX IF NOT EXISTS idx_commands_favorite ON commands(is_favorite) WHERE is_favorite = 1;
 CREATE INDEX IF NOT EXISTS idx_commands_position ON commands(group_id, position);
 CREATE INDEX IF NOT EXISTS idx_commands_name ON commands(name);
 
