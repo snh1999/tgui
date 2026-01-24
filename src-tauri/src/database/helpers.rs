@@ -25,6 +25,8 @@ impl Database {
         Ok(results)
     }
 
+    /// initial position is Self::POSITION_GAP instead of zero,
+    /// starting from 0 forces renumbering every move to beginning operation
     pub(crate) fn get_position(
         &self,
         table: &'static str,
@@ -76,6 +78,9 @@ impl Database {
         }
     }
 
+    /// Move command between two positions (calculates midpoint)
+    /// prev_id None means move to top
+    /// next_id None means move to bottom
     pub(crate) fn move_item_between<F>(
         &self,
         table: &'static str,
@@ -89,11 +94,18 @@ impl Database {
     where
         F: FnMut(Option<i64>, i64) -> Result<(i64, Option<i64>)>,
     {
+        if prev_id.is_none() && next_id.is_none() {
+            return Err(DatabaseError::InvalidData {
+                field: "item_id",
+                reason: "Invalid positons. Either prev_id or next_id must be provided".to_string(),
+            });
+        }
+
         let (prev_pos, prev_parent) = get_position_parent(prev_id, 0)?;
         let (next_pos, next_parent) = get_position_parent(next_id, prev_pos + Self::POSITION_GAP)?;
 
-        if (next_id != None && next_parent != parent_group_id)
-            || (prev_id != None && prev_parent != parent_group_id)
+        if (next_id.is_some() && next_parent != parent_group_id)
+            || (prev_id.is_some() && prev_parent != parent_group_id)
         {
             return Err(DatabaseError::InvalidData {
                 field: "parent_id",

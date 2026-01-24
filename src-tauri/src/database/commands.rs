@@ -73,11 +73,7 @@ impl Database {
 
         let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
 
-        self.query_database(
-            &sql_statement,
-            &*param_refs,
-            Self::row_to_command,
-        )
+        self.query_database(&sql_statement, &*param_refs, Self::row_to_command)
     }
 
     pub fn search_commands(&self, search_term: &str) -> Result<Vec<Command>> {
@@ -150,9 +146,6 @@ impl Database {
             .unwrap_or((default_val, None)))
     }
 
-    /// Move command between two positions (calculates midpoint)
-    /// prev_id None means move to top
-    /// next_id None means move to bottom
     pub fn move_command_between(
         &self,
         cmd_id: i64,
