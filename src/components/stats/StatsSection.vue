@@ -40,10 +40,24 @@ import {ClockIcon, ErrorIcon, ListIcon, PlayIcon} from "@/assets/Icons.ts";
 </template>
 
 <style scoped>
+
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  padding: 30px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+@container root (max-width: 900px) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@container root (max-width: 600px) {
+  .stats {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
 }
 </style>

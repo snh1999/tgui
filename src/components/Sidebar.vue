@@ -54,6 +54,20 @@ import HistoryIcon from '~icons/iconamoon/history-bold';
 </template>
 
 <style scoped>
+.sidebar {
+  width: var(--sidebar-width);
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+  transition: width var(--transition-base);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.nav-item.active {
+  background: var(--color-bg);
+  color: var(--color-primary);
+}
+
 .logo-text {
   font-size: 18px;
   font-weight: 600;
@@ -80,18 +94,13 @@ import HistoryIcon from '~icons/iconamoon/history-bold';
   border-radius: 6px;
   cursor: pointer;
   margin-bottom: 4px;
+  color: var(--color-text-muted);
   font-weight: 600;
-  color: #999;
   transition: background 0.2s;
 }
 
 .nav-item:hover {
   opacity: 0.8;
-}
-
-.nav-item.active {
-  background: #eeeeee;
-  color: #10b981;
 }
 
 .nav-item .badge {
@@ -102,4 +111,30 @@ import HistoryIcon from '~icons/iconamoon/history-bold';
   font-size: 12px;
 }
 
+@container root (max-width: 500px) {
+  .sidebar {
+    width: var(--sidebar-collapsed-width);
+    padding: var(--space-sm);
+  }
+
+  .logo-text,
+  .nav-item span,
+  .nav-label,
+  .btn-primary span {
+    display: none;
+  }
+
+  .nav-item {
+    justify-content: center;
+    padding: var(--space-sm);
+  }
+
+  .badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+}
 </style>

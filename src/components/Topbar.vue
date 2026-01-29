@@ -25,6 +25,13 @@ import {AddIcon, SearchIcon, SettingsIcon} from '@/assets/Icons'
 </template>
 
 <style scoped>
+.header {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-md) var(--space-lg);
+  flex-shrink: 0;
+}
+
 .search-bar {
   flex: 1;
   position: relative;
@@ -54,5 +61,25 @@ import {AddIcon, SearchIcon, SettingsIcon} from '@/assets/Icons'
 .btn-settings {
   background: white;
   border: 1px solid #e5e5e5;
+}
+
+@container root (max-width: 600px) {
+  .search-bar {
+    max-width: 200px;
+  }
+
+  .btn-settings span {
+    display: none; /* Hide "Settings" text, keep icon */
+  }
+}
+
+@container root (max-width: 450px) {
+  .search-bar input::placeholder {
+    color: transparent; /* Hide placeholder to save space */
+  }
+
+  .header-actions button {
+    padding: var(--space-sm);
+  }
 }
 </style>
