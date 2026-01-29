@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { AddIcon, SearchIcon, SettingsIcon } from "@/assets/Icons";
+  import { AddIcon, SearchIcon, SettingsIcon } from "@/assets/Icons.ts";
 </script>
 
 <template>
