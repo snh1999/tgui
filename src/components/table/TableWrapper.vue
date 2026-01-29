@@ -15,7 +15,7 @@ import TableRow from "@/components/table/TableRow.vue";
       </div>
     </div>
 
-    <div class="table-container">
+    <div class="table-scroll-container">
       <table>
         <thead>
         <tr>
@@ -70,7 +70,10 @@ import TableRow from "@/components/table/TableRow.vue";
 
 <style scoped>
 .list {
-  padding: 0 30px 30px;
+  padding: 0;
+  background: var(--color-surface);
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
 }
 
 .list-header {
@@ -101,11 +104,30 @@ import TableRow from "@/components/table/TableRow.vue";
   gap: 8px;
 }
 
-.table-container {
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+.table-scroll-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* Show scrollbar on hover only for cleaner look */
+  scrollbar-width: thin;
+}
+
+.table-scroll-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+table {
+  min-width: 600px;
+  width: 100%;
+}
+
+thead {
+  background: var(--color-bg);
 }
 
 table {
