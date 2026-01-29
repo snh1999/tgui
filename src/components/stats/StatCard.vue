@@ -30,14 +30,34 @@ defineProps<{
 </template>
 
 <style scoped>
-
-
 .stat-card {
-  background: white;
-  padding: 10px 20px;
+  background: var(--color-surface);
+  padding: var(--space-md) var(--space-lg);
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--color-border);
 }
+
+.green {
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  color: var(--color-primary);
+}
+
+.blue {
+  background: color-mix(in srgb, var(--color-secondary) 15%, transparent);
+  color: var(--color-secondary);
+}
+
+.red {
+  background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+  color: var(--color-danger);
+}
+
+.gray {
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+}
+
 
 .stat-header {
   display: flex;
@@ -53,26 +73,6 @@ defineProps<{
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.green {
-  background: #d1fae5;
-  color: #10b981;
-}
-
-.blue {
-  background: #dbeafe;
-  color: #3b82f6;
-}
-
-.red {
-  background: #fee2e2;
-  color: #ef4444;
-}
-
-.gray {
-  background: #f3f4f6;
-  color: #6b7280;
 }
 
 .stat-badge {
@@ -95,4 +95,20 @@ defineProps<{
   color: #666;
   font-size: 14px;
 }
+
+@container root (max-width: 500px) {
+  .stat-card {
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  .stat-icon {
+    width: 32px;
+    height: 32px;
+  }
+}
+
 </style>

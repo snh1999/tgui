@@ -165,4 +165,29 @@ td {
   color: #999;
   margin-top: 2px;
 }
+
+@container root (max-width: 700px) {
+  .desc {
+    display: none;
+  }
+
+  td {
+    padding: var(--space-sm) var(--space-md);
+    white-space: nowrap;
+  }
+}
+
+@container root (max-width: 500px) {
+  .status {
+    font-size: 11px;
+  }
+
+  .status-text {
+    display: none;
+  }
+
+  .status-dot {
+    margin: 0;
+  }
+}
 </style>
