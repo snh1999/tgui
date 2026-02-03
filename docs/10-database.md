@@ -4,7 +4,6 @@
 
 - **14-12-2025**: Initial security guidelines
 
-
 ## Database Location
 
 | Platform    | Path                                         |
