@@ -26,7 +26,7 @@ const argumentSchema = z.string().refine(
   },
   {
     message: "Unbalanced quotes in argument",
-  },
+  }
 );
 
 const envVarEntrySchema = z.object({

@@ -1,7 +1,7 @@
-import {createApp} from "vue";
+import { createApp } from "vue";
 import App from "./App.vue";
 import "./style.css";
-import "./themes/catppuccin.css"
+import "./themes/catppuccin.css";
 import router from "@/router";
 
 const app = createApp(App);

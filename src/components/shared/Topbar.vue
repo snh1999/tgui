@@ -1,38 +1,36 @@
 <script setup lang="ts">
-import { SearchIcon, SettingsIcon } from "@/assets/Icons.ts";
-import {
+  import { SearchIcon, SettingsIcon } from "@/assets/Icons.ts";
+  import {
     InputGroup,
     InputGroupAddon,
     InputGroupInput,
-} from "@/components/ui/input-group";
-import { ref } from "vue";
-import { Button } from "@/components/ui/button";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import CreateCommandsDialogue from "@/components/forms/commands/CreateCommandsDialogue.vue";
+  } from "@/components/ui/input-group";
+  import { ref } from "vue";
+  import { Button } from "@/components/ui/button";
+  import { SidebarTrigger } from "@/components/ui/sidebar";
+  import CreateCommandsDialogue from "@/components/forms/commands/CreateCommandsDialogue.vue";
 
-const resultCount = ref("");
+  const resultCount = ref("");
 </script>
 
 <template>
-    <header class="flex bg-sidebar px-8 py-4 gap-5">
-        <div class="md:hidden">
-            <SidebarTrigger />
-        </div>
-        <InputGroup>
-            <InputGroupInput placeholder="Search..." />
-            <InputGroupAddon>
-                <SearchIcon />
-            </InputGroupAddon>
-            <InputGroupAddon align="inline-end">
-                {{ resultCount }}
-            </InputGroupAddon>
-        </InputGroup>
+  <header class="flex bg-sidebar px-8 py-4 gap-5">
+    <div class="md:hidden">
+      <SidebarTrigger />
+    </div>
+    <InputGroup>
+      <InputGroupInput placeholder="Search..." />
+      <InputGroupAddon>
+        <SearchIcon />
+      </InputGroupAddon>
+      <InputGroupAddon align="inline-end">{{ resultCount }}</InputGroupAddon>
+    </InputGroup>
 
-        <Button variant="outline">
-            <SettingsIcon />
-            Settings
-        </Button>
+    <Button variant="outline">
+      <SettingsIcon />
+      Settings
+    </Button>
 
-        <CreateCommandsDialogue />
-    </header>
+    <CreateCommandsDialogue />
+  </header>
 </template>
