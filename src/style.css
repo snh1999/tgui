@@ -44,7 +44,7 @@
     --transition-fast: 150ms ease;
     --transition-base: 250ms ease;
     /* shadcn */
-    --radius: 0.625rem;
+    --radius: 0.25rem;
     --background: oklch(1 0 0);
     --foreground: oklch(0.13 0.028 261.692);
     --card: oklch(1 0 0);
@@ -126,14 +126,6 @@ body {
     overflow: hidden;
 }
 
-.header {
-    background: white;
-    padding: 20px 30px;
-    border-bottom: 1px solid #e5e5e5;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
 
 .table-btn {
     padding: 10px 20px;
