@@ -70,8 +70,8 @@ fn test_set_setting_validates_boolean_type() {
 #[test]
 fn test_set_setting_theme_allows_any_string() {
     let test_db = TestDb::setup_test_db();
-    test_db.db.set_setting("theme", "custom-dark").unwrap();
-    assert_eq!(test_db.db.get_setting("theme").unwrap(), "custom-dark");
+    test_db.db.set_setting("theme", "tgui-dark").unwrap();
+    assert_eq!(test_db.db.get_setting("theme").unwrap(), "tgui-dark");
 }
 
 #[test]
@@ -105,13 +105,13 @@ fn test_reset_settings() {
 fn test_get_all_settings() {
     let test_db = TestDb::setup_test_db();
 
-    test_db.db.set_setting("theme", "custom").unwrap();
+    test_db.db.set_setting("theme", "tgui").unwrap();
 
     let all_settings = test_db.db.get_all_settings().unwrap();
     assert!(all_settings.contains_key("theme"));
     assert!(all_settings.contains_key("default_shell"));
     assert!(all_settings.contains_key("log_buffer_size"));
-    assert_eq!(all_settings.get("theme").unwrap(), "custom");
+    assert_eq!(all_settings.get("theme").unwrap(), "tgui");
 }
 
 #[test]

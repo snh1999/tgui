@@ -1,4 +1,4 @@
-/** biome-ignore-all lint/performance/noBarrelFile: <barrel expport imports only one file> */
+/** biome-ignore-all lint/performance/noBarrelFile: <barrel export imports only one file> */
 
 export {default as MenuDotsIcon} from "~icons/iconamoon/menu-kebab-vertical-bold";
 export {default as RestartIcon} from "~icons/iconamoon/restart-fill";
@@ -16,3 +16,5 @@ export {default as MoonIcon} from "~icons/solar/moon-bold";
 export {default as PlayIcon} from "~icons/solar/play-bold";
 export {default as PlayCircleIcon} from "~icons/solar/play-circle-bold";
 export {default as SunIcon} from "~icons/solar/sun-bold-duotone";
+export {default as HomeIcon} from "~icons/material-symbols/home-rounded";
+export {default as DeleteIcon} from '~icons/material-symbols/delete-rounded';

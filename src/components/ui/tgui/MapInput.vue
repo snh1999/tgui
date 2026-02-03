@@ -1,10 +1,9 @@
-<!-- MapInput.vue -->
 <script setup lang="ts">
-import {Field as VeeField, FieldArray as VeeFieldArray} from 'vee-validate';
-import {Input} from '@/components/ui/input';
-import {Field, FieldError, FieldLabel} from '@/components/ui/field';
-import {Button} from '@/components/ui/button';
-import {AddIcon, DeleteIcon} from '@/assets/Icons.ts';
+import {Field as VeeField, FieldArray as VeeFieldArray} from "vee-validate";
+import {Input} from "@/components/ui/input";
+import {Field, FieldError, FieldLabel} from "@/components/ui/field";
+import {Button} from "@/components/ui/button";
+import {AddIcon, DeleteIcon} from "@/assets/Icons.ts";
 
 defineProps<{
   name: string;

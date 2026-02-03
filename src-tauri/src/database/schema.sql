@@ -49,7 +49,6 @@ CREATE TABLE IF NOT EXISTS commands (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_commands_position_unique ON commands(COALESCE(group_id, -1), position);
 
--- Templates table
 CREATE TABLE IF NOT EXISTS templates (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      name TEXT NOT NULL,
@@ -60,14 +59,12 @@ CREATE TABLE IF NOT EXISTS templates (
      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Settings table
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Schema version table
 CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER PRIMARY KEY
 );
