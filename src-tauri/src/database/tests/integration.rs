@@ -7,7 +7,7 @@ fn test_full_workflow_project_setup() {
 
     let dev_cat = test_db.create_test_category("Development");
 
-    // 2. Create group hierarchy
+    // Create group hierarchy
     let project_group_id = test_db.create_test_group("MyApp");
     let backend_group_id = test_db.save_group_to_db(
         &GroupBuilder::new("Backend")
@@ -20,12 +20,12 @@ fn test_full_workflow_project_setup() {
             .build(),
     );
 
-    // 3. Assign category to groups
+    // Assign category to groups
     let mut backend_group = test_db.db.get_group(backend_group_id).unwrap();
     backend_group.category_id = Some(dev_cat);
     test_db.db.update_group(&backend_group).unwrap();
 
-    // 4. Create commands
+    // Create commands
     let build_cmd = CommandBuilder::new("Build", "cargo build")
         .with_group(backend_group_id)
         .with_category(dev_cat)
@@ -38,16 +38,16 @@ fn test_full_workflow_project_setup() {
         .build();
     test_db.save_command_to_db(&test_cmd);
 
-    // 5. Verify relationships
+    // Verify relationships
     let build = test_db.db.get_command(build_id).unwrap();
     assert_eq!(build.group_id, Some(backend_group_id));
     assert_eq!(build.category_id, Some(dev_cat));
 
-    // 6. Verify tree structure
+    // Verify tree structure
     let tree = test_db.db.get_group_tree(project_group_id).unwrap();
     assert_eq!(tree.len(), 3);
 
-    // 7. Verify path
+    // Verify path
     let path = test_db.db.get_group_path(backend_group_id).unwrap();
     assert_eq!(path, vec!["MyApp", "Backend"]);
 }
@@ -128,7 +128,7 @@ fn test_concurrent_transactions_isolated() {
     let count_before = test_db.db.get_groups(None).unwrap().len();
 
     {
-        let mut connection = test_db.db.conn_mut();
+        let mut connection = test_db.db.conn();
         let tx = connection.transaction().unwrap();
         tx.execute(
             "INSERT INTO groups (name, position) VALUES (?1, ?2)",
@@ -147,7 +147,7 @@ fn test_database_locked_error() {
     let test_db = TestDb::setup_test_db();
 
     // Acquire exclusive lock
-    let conn1 = test_db.db.conn_mut();
+    let conn1 = test_db.db.conn();
     conn1.execute("BEGIN EXCLUSIVE", []).unwrap();
 
     // Trying another operation (this might block or fail depending on configuration)

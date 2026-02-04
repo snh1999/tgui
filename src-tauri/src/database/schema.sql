@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER PRIMARY KEY
 );
 
-INSERT INTO schema_version (version) VALUES (1);
+INSERT OR REPLACE INTO schema_version (version) VALUES (1);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_groups_position ON groups(parent_group_id, position);

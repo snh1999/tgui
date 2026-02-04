@@ -135,7 +135,7 @@ impl Database {
         column_name: &str,
         group_id: Option<i64>,
     ) -> rusqlite::Result<()> {
-        let mut connection = self.conn_mut();
+        let mut connection = self.conn();
         let tx = connection.transaction()?;
 
         // Fetch all items in current order (by position, then id as tiebreaker)
