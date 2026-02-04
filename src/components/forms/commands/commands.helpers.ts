@@ -40,16 +40,16 @@ const envVarEntrySchema = z.object({
 export const commandFormSchema = z.object({
   name: z
     .string()
-    .min(3, "Command name must be at least 5 characters.")
+    .min(3, "Command name must be at least 3 characters.")
     .max(32, "Command name must be less than 32 characters."),
   command: z.string().min(1, "Command text can not be empty."),
   arguments: z.array(argumentSchema).default([""]),
   description: z.string().optional(),
   group_id: z.number().optional(),
-  position: z.number(),
-  id: z.number(),
+  position: z.number().default(0),
+  id: z.number().default(0),
   working_directory: z.string().optional(),
-  // using array because input processing is easier that way
+  // using array because form input processing is easier that way
   env_vars: z.array(envVarEntrySchema).default([]),
   shell: z.string().optional(),
   category_id: z.number().optional(),

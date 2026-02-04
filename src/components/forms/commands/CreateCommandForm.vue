@@ -1,11 +1,9 @@
 <script setup lang="ts">
   import { toTypedSchema } from "@vee-validate/zod";
   import { useForm } from "vee-validate";
-  import { effect, h, toRaw } from "vue";
-  import { toast } from "vue-sonner";
+  import { effect, toRaw } from "vue";
   import { commandFormSchema } from "@/components/forms/commands/commands.helpers.ts";
-  import { Button } from "@/components/ui/button";
-  import { Field, FieldGroup } from "@/components/ui/field";
+  import { FieldGroup } from "@/components/ui/field";
   import { Input } from "@/components/ui/input";
   import {
     InputGroup,
@@ -18,6 +16,10 @@
   import ArrayInput from "@/components/ui/tgui/ArrayInput.vue";
   import MapInput from "@/components/ui/tgui/MapInput.vue";
   import { transformEnvVars } from "@/lib/helpers.ts";
+
+  const props = defineProps<{
+    onSuccess?: () => void;
+  }>();
 
   const { handleSubmit, resetForm, errors } = useForm({
     validationSchema: toTypedSchema(commandFormSchema),
@@ -38,22 +40,13 @@
   const onSubmit = handleSubmit((rawData) => {
     const data = transformEnvVars(rawData);
     console.log(data);
-    toast("You submitted the following values:", {
-      description: h(
-        "pre",
-        {
-          class:
-            "bg-code text-code-foreground mt-2 w-[320px] overflow-x-auto rounded-md p-4",
-        },
-        h("code", JSON.stringify(data, null, 2))
-      ),
-      position: "bottom-right",
-      class: "flex flex-col gap-2",
-      style: {
-        "--border-radius": "calc(var(--radius)  + 4px)",
-      },
-    });
+
+    if (props.onSuccess) {
+      props.onSuccess();
+    }
   });
+
+  defineExpose({ resetForm });
 </script>
 
 <template>
@@ -119,8 +112,4 @@
       </FormField>
     </FieldGroup>
   </form>
-  <Field orientation="horizontal">
-    <Button type="button" variant="outline" @click="resetForm">Reset</Button>
-    <Button type="submit" :form="COMMAND_FORM_ID">Submit</Button>
-  </Field>
 </template>

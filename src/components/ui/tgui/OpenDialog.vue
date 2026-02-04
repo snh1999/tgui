@@ -10,6 +10,7 @@
     DialogHeader,
     DialogTitle,
   } from "@/components/ui/dialog";
+  import { ScrollArea } from "@/components/ui/scroll-area";
 
   const isDesktop = useMediaQuery("(min-width: 640px)");
 
@@ -39,11 +40,13 @@
         </DialogDescription>
       </DialogHeader>
 
-      <div class="px-4 py-4">
-        <slot>
-          <p class="text-sm text-muted-foreground">No content provided.</p>
-        </slot>
-      </div>
+      <ScrollArea class="max-h-[80vh] px-4 py-4">
+        <div class="px-4 py-4">
+          <slot>
+            <p class="text-sm text-muted-foreground">No content provided.</p>
+          </slot>
+        </div>
+      </ScrollArea>
 
       <DialogFooter class="flex gap-2 justify-end">
         <slot name="footer">

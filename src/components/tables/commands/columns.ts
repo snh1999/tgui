@@ -52,6 +52,12 @@ export const data: Command[] = [
   },
 ];
 
+const statusConfig = {
+  running: { dot: "bg-emerald-500", label: "Running" },
+  stopped: { dot: "bg-gray-500", label: "Stopped" },
+  error: { dot: "bg-red-500", label: "Error" },
+};
+
 export const columns: ColumnDef<Command>[] = [
   {
     accessorKey: "name",
@@ -91,12 +97,7 @@ export const columns: ColumnDef<Command>[] = [
     header: "Status",
     cell: ({ row }) => {
       const status = row.original.status;
-      const config = {
-        running: { dot: "bg-emerald-500", label: "Running" },
-        stopped: { dot: "bg-gray-500", label: "Stopped" },
-        error: { dot: "bg-red-500", label: "Error" },
-      };
-      const style = config[status];
+      const style = statusConfig[status];
 
       return h("div", { class: "flex flex-col gap-1" }, [
         h("div", { class: "flex items-center gap-2" }, [

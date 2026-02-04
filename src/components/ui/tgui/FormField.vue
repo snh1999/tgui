@@ -7,7 +7,7 @@
     FieldLabel,
   } from "@/components/ui/field";
   import { Input } from "@/components/ui/input";
-  import { cloneVNode, computed, h, useSlots } from "vue";
+  import { cloneVNode, computed, h, isVNode, useSlots } from "vue";
 
   /**
    * FormField
@@ -79,11 +79,13 @@
       return null;
     }
 
-    // if (!isVNode(slotNodes[0]) || typeof slotNodes[0] === 'symbol') {
-    //   return h(Input, bindings)
-    // }
+    const firstNode = slotNodes[0];
 
-    return cloneVNode(slotNodes[0], bindings);
+    if (isVNode(firstNode)) {
+      return cloneVNode(slotNodes[0], bindings);
+    }
+
+    return null;
   };
 </script>
 

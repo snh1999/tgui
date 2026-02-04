@@ -5,6 +5,6 @@ export function transformEnvVars<
 >(values: T) {
   return {
     ...values,
-    env_vars: new Map(values.env_vars.map((e) => [e.key, e.value])),
+    env_vars: Object.fromEntries(values.env_vars.map((e) => [e.key, e.value])),
   };
 }
