@@ -7,6 +7,7 @@ pub struct Category {
     pub name: String,
     pub icon: Option<String>,
     pub color: Option<String>,
+    #[serde(skip_deserializing, default)]
     pub created_at: String,
 }
 
@@ -16,12 +17,15 @@ pub struct Group {
     pub name: String,
     pub description: Option<String>,
     pub parent_group_id: Option<i64>,
+    #[serde(skip_deserializing, default)]
     pub position: i64,
     pub working_directory: Option<String>,
     pub env_vars: Option<HashMap<String, String>>,
     pub shell: Option<String>,
     pub category_id: Option<i64>,
+    #[serde(skip_deserializing, default)]
     pub created_at: String,
+    #[serde(skip_deserializing, default)]
     pub updated_at: String,
 }
 
@@ -33,13 +37,16 @@ pub struct Command {
     pub arguments: Vec<String>,
     pub description: Option<String>,
     pub group_id: Option<i64>,
+    #[serde(skip_deserializing, default)]
     pub position: i64,
     pub working_directory: Option<String>,
     pub env_vars: Option<HashMap<String, String>>,
     pub shell: Option<String>,
     pub category_id: Option<i64>,
     pub is_favorite: bool,
+    #[serde(skip_deserializing, default)]
     pub created_at: String,
+    #[serde(skip_deserializing, default)]
     pub updated_at: String,
 }
 
@@ -47,6 +54,7 @@ pub struct Command {
 pub struct Settings {
     pub key: String,
     pub value: String,
+    #[serde(skip_deserializing, default)]
     pub updated_at: String,
 }
 
@@ -57,6 +65,8 @@ pub struct Template {
     pub description: Option<String>,
     pub author: Option<String>,
     pub structure: String, // JSON
+    #[serde(skip_deserializing, default)]
     pub created_at: String,
+    #[serde(skip_deserializing, default)]
     pub updated_at: String,
 }

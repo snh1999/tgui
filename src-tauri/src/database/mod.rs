@@ -1,8 +1,8 @@
 use rusqlite::Connection;
-use std::cell::{Ref, RefCell, RefMut};
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 pub mod categories;
 pub mod commands;
@@ -22,7 +22,7 @@ pub use errors::{DatabaseError, Result};
 mod tests;
 
 pub struct Database {
-    conn: RefCell<Connection>,
+    conn: Arc<Mutex<Connection>>,
 }
 
 impl Database {
@@ -39,18 +39,14 @@ impl Database {
         conn.execute_batch(schema)?;
 
         let db = Self {
-            conn: RefCell::new(conn),
+            conn: Arc::new(Mutex::new(conn)),
         };
         db.initialize_settings()?;
         Ok(db)
     }
 
-    pub(crate) fn conn(&self) -> Ref<'_, Connection> {
-        self.conn.borrow()
-    }
-
-    pub(crate) fn conn_mut(&self) -> RefMut<'_, Connection> {
-        self.conn.borrow_mut()
+    pub(crate) fn conn(&self) -> MutexGuard<Connection> {
+        self.conn.lock().unwrap()
     }
 
     #[cfg(unix)]
