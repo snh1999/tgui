@@ -53,9 +53,9 @@ export const data: Command[] = [
 ];
 
 const statusConfig = {
-  running: { dot: "bg-emerald-500", label: "Running" },
-  stopped: { dot: "bg-gray-500", label: "Stopped" },
-  error: { dot: "bg-red-500", label: "Error" },
+  running: { dot: "bg-emerald-500" },
+  stopped: { dot: "bg-gray-500" },
+  error: { dot: "bg-red-500" },
 };
 
 export const columns: ColumnDef<Command>[] = [
@@ -97,12 +97,12 @@ export const columns: ColumnDef<Command>[] = [
     header: "Status",
     cell: ({ row }) => {
       const status = row.original.status;
-      const style = statusConfig[status];
+      const style = statusConfig[status] ?? { dot: "bg-gray-500" };
 
       return h("div", { class: "flex flex-col gap-1" }, [
         h("div", { class: "flex items-center gap-2" }, [
           h("span", { class: `h-2 w-2 rounded-full ${style.dot}` }),
-          h("span", { class: "text-sm font-medium capitalize" }, style.label),
+          h("span", { class: "text-sm font-medium capitalize" }, status),
         ]),
         h(
           "div",

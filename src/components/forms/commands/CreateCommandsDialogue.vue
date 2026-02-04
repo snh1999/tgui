@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ref, VNodeRef } from "vue";
+  import { ref } from "vue";
   import { AddIcon } from "@/assets/Icons";
   import OpenDialog from "@/components/ui/tgui/OpenDialog.vue";
   import { Button } from "@/components/ui/button";
@@ -11,7 +11,9 @@
   const openNewCommand = () => (newCommandOpen.value = true);
   const closeNewCommand = () => (newCommandOpen.value = false);
 
-  const createCommandFormRef = ref<VNodeRef | null>(null);
+  const createCommandFormRef = ref<InstanceType<
+    typeof CreateCommandForm
+  > | null>(null);
 </script>
 
 <template>
@@ -32,7 +34,7 @@
           <Button
             type="button"
             variant="outline"
-            @click="createCommandFormRef?.resetForm"
+            @click="createCommandFormRef?.resetForm()"
           >
             Reset
           </Button>
@@ -40,7 +42,6 @@
 
         <Button variant="outline" @click="closeNewCommand">Cancel</Button>
         <Button type="submit" :form="COMMAND_FORM_ID">Create</Button>
-        <!--        <Button @click="newCommandOpen = false">Create</Button>-->
       </template>
     </OpenDialog>
   </header>

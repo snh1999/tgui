@@ -5,6 +5,11 @@ export function transformEnvVars<
 >(values: T) {
   return {
     ...values,
-    env_vars: Object.fromEntries(values.env_vars.map((e) => [e.key, e.value])),
+    env_vars: Object.fromEntries(
+      values.env_vars
+        .map((e) => ({ key: e.key.trim(), value: e.value }))
+        .filter((e) => e.key.length > 0)
+        .map((e) => [e.key, e.value])
+    ),
   };
 }
