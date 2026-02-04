@@ -4,7 +4,6 @@
 
 - **14-12-2025**: Initial security guidelines
 
-
 ## Database Location
 
 | Platform    | Path                                         |
@@ -49,14 +48,14 @@ groups (parent_group_id- optional)
 - Commands **inherit settings** from immediate parent group
 - Templates store JSON structure (not relational)
 
-
 ---
 
 ## Table Schemas
 
 ### categories
 
-**Design**: Simple flat list of tags. Commands, groups, templates reference categories via foreign key.
+**Design**: Simple flat list of tags. Commands, groups, templates reference categories via foreign
+key.
 
 | Column     | Type     | Constraints               | Description                     |
 |------------|----------|---------------------------|---------------------------------|
@@ -211,7 +210,8 @@ UPDATE schema_version
 SET version = 2;
 ```
 
-**Idempotent migrations**: Use `CREATE TABLE IF NOT EXISTS` and `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`
+**Idempotent migrations**: Use `CREATE TABLE IF NOT EXISTS` and
+`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`
 
 **Downgrades**: Not yet supported. Users restore from backup to downgrade.
 
@@ -236,7 +236,6 @@ ORDER BY position;
 ```
 
 **Use**: Main view when no group selected
-
 
 ### Get all commands in a group (immediate children only)
 
@@ -339,6 +338,7 @@ For env_vars specifically (merge):
 ```
 
 **Example**:
+
 ```
 Group "Python Projects":
   default_working_directory: /home/user/python
@@ -614,7 +614,7 @@ PRAGMA integrity_check;
 -- Check database size
 SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size();
 
--- Count records per table
+-- Count records per tables
 SELECT 'commands' as table_name, COUNT(*) as count FROM commands
 UNION ALL
 SELECT 'groups', COUNT(*) FROM groups
