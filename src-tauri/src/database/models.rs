@@ -23,6 +23,8 @@ pub struct Group {
     pub env_vars: Option<HashMap<String, String>>,
     pub shell: Option<String>,
     pub category_id: Option<i64>,
+    pub is_favorite: bool,
+    pub icon: Option<String>,
     #[serde(skip_deserializing, default)]
     pub created_at: String,
     #[serde(skip_deserializing, default)]

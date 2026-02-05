@@ -12,8 +12,14 @@ pub fn get_group(db: State<'_, Database>, id: i64) -> Result<Group, String> {
 }
 
 #[tauri::command]
-pub fn get_groups(db: State<'_, Database>, parent_id: Option<i64>) -> Result<Vec<Group>, String> {
-    db.get_groups(parent_id).map_err(|err| err.to_string())
+pub fn get_groups(
+    db: State<'_, Database>,
+    parent_id: Option<i64>,
+    category_id: Option<i64>,
+    is_favorite: bool,
+) -> Result<Vec<Group>, String> {
+    db.get_groups(parent_id, category_id, is_favorite)
+        .map_err(|err| err.to_string())
 }
 
 #[tauri::command]
@@ -22,7 +28,7 @@ pub fn update_group(db: State<'_, Database>, group: Group) -> Result<(), String>
 }
 
 #[tauri::command]
-pub fn move_command_between(
+pub fn move_group_between(
     db: State<'_, Database>,
     group_id: i64,
     prev_id: Option<i64>,
@@ -51,4 +57,9 @@ pub fn get_group_tree(db: State<'_, Database>, root_id: i64) -> Result<Vec<Group
 #[tauri::command]
 pub fn get_group_path(db: State<'_, Database>, group_id: i64) -> Result<Vec<String>, String> {
     db.get_group_path(group_id).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+pub fn toggle_group_favorite(db: State<'_, Database>, id: i64) -> Result<(), String> {
+    db.toggle_group_favorite(id).map_err(|err| err.to_string())
 }

@@ -125,7 +125,7 @@ fn test_unicode_names() {
 fn test_concurrent_transactions_isolated() {
     let test_db = TestDb::setup_test_db();
 
-    let count_before = test_db.db.get_groups(None).unwrap().len();
+    let count_before = test_db.db.get_groups(None, None,false).unwrap().len();
 
     {
         let mut connection = test_db.db.conn();
@@ -138,7 +138,7 @@ fn test_concurrent_transactions_isolated() {
         tx.commit().unwrap();
     } // Drop mutable borrow
 
-    let groups = test_db.db.get_groups(None).unwrap();
+    let groups = test_db.db.get_groups(None, None,false).unwrap();
     assert_eq!(groups.len(), count_before + 1);
 }
 

@@ -131,8 +131,8 @@ impl Database {
 
     fn renumber_position(
         &self,
-        table: &str,
-        column_name: &str,
+        table: &'static str,
+        column_name: &'static str,
         group_id: Option<i64>,
     ) -> rusqlite::Result<()> {
         let mut connection = self.conn();
@@ -157,5 +157,37 @@ impl Database {
         }
 
         tx.commit()
+    }
+
+    pub(crate) fn get_items<T, F>(
+        &self,
+        table: &'static str,
+        column: &'static str,
+        group_id: Option<i64>,
+        category_id: Option<i64>,
+        favorites_only: bool,
+        mut row_mapper: F,
+    ) -> Result<Vec<T>>
+    where
+        F: FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
+    {
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+        let mut sql_statement = format!("SELECT * FROM {} WHERE {} IS ?1", table, column);
+        params.push(Box::new(group_id));
+
+        if let Some(cid) = category_id {
+            sql_statement.push_str(&format!(" AND category_id = ?{}", params.len() + 1));
+            params.push(Box::new(cid));
+        }
+
+        if favorites_only {
+            sql_statement.push_str(" AND is_favorite = 1");
+        }
+
+        sql_statement.push_str(" ORDER BY position");
+
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+
+        self.query_database(&sql_statement, &*param_refs, row_mapper)
     }
 }
