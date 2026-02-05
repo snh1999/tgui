@@ -1,36 +1,6 @@
 use crate::database::{Command, Group};
 use std::collections::HashMap;
 
-pub struct CategoryBuilder {
-    name: String,
-    icon: Option<String>,
-    color: Option<String>,
-}
-
-impl CategoryBuilder {
-    pub fn new(name: &str) -> Self {
-        Self {
-            name: name.to_string(),
-            icon: None,
-            color: None,
-        }
-    }
-
-    pub fn with_icon(mut self, icon: &str) -> Self {
-        self.icon = Some(icon.to_string());
-        self
-    }
-
-    pub fn with_color(mut self, color: &str) -> Self {
-        self.color = Some(color.to_string());
-        self
-    }
-
-    pub fn build(self) -> (String, Option<String>, Option<String>) {
-        (self.name, self.icon, self.color)
-    }
-}
-
 pub(crate) struct CommandBuilder {
     command: Command,
 }
@@ -100,6 +70,8 @@ impl GroupBuilder {
                 env_vars: None,
                 shell: None,
                 category_id: None,
+                is_favorite: false,
+                icon: None,
                 created_at: String::new(),
                 updated_at: String::new(),
             },

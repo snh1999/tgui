@@ -1,14 +1,15 @@
 use super::*;
-use crate::database::builders::{CategoryBuilder, CommandBuilder};
+use crate::database::builders::CommandBuilder;
 
 #[test]
-fn test_create_category() {
+fn test_create_category_and_get_category() {
     let test_db = TestDb::setup_test_db();
-    let cat_id = test_db.create_test_category("Development");
+    let cat_name = "Development";
+    let cat_id = test_db.create_test_category(cat_name);
 
     assert!(cat_id > 0);
     let category = test_db.db.get_category(cat_id).unwrap();
-    assert_eq!(category.name, "Development");
+    assert_eq!(category.name, cat_name);
     assert_eq!(category.icon, None);
     assert_eq!(category.color, None);
 }
@@ -16,19 +17,18 @@ fn test_create_category() {
 #[test]
 fn test_create_category_with_icon_and_color() {
     let test_db = TestDb::setup_test_db();
-    let (name, icon, color) = CategoryBuilder::new("Production")
-        .with_icon("🚀")
-        .with_color("#FF0000")
-        .build();
+    let cat_name = "Development";
+    let icon = "smiley";
+    let color = "#FF0000";
 
     let cat_id = test_db
         .db
-        .create_category(&name, icon.as_deref(), color.as_deref())
+        .create_category(cat_name, Some(icon), Some(color))
         .unwrap();
     let category = test_db.db.get_category(cat_id).unwrap();
 
-    assert_eq!(category.icon, Some("🚀".to_string()));
-    assert_eq!(category.color, Some("#FF0000".to_string()));
+    assert_eq!(category.icon, Some(icon.to_string()));
+    assert_eq!(category.color, Some(color.to_string()));
 }
 
 #[test]

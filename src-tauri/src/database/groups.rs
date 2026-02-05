@@ -16,8 +16,8 @@ impl Database {
             self.get_position("groups", "parent_group_id", group.parent_group_id)?;
 
         self.conn().execute(
-            "INSERT INTO groups (name, description, parent_group_id, position, working_directory, env_vars, shell, category_id)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            "INSERT INTO groups (name, description, parent_group_id, position, working_directory, env_vars, shell, category_id, is_favorite, icon)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![
                 group.name,
                 group.description,
@@ -27,6 +27,8 @@ impl Database {
                 env_vars_json,
                 group.shell,
                 group.category_id,
+                group.is_favorite,
+                group.icon,
             ],
         )?;
 
@@ -47,10 +49,18 @@ impl Database {
             })
     }
 
-    pub fn get_groups(&self, parent_id: Option<i64>) -> Result<Vec<Group>> {
-        self.query_database(
-            "SELECT * FROM groups WHERE parent_group_id IS ? ORDER BY position",
-            params![parent_id],
+    pub fn get_groups(
+        &self,
+        parent_id: Option<i64>,
+        category_id: Option<i64>,
+        favorites_only: bool,
+    ) -> Result<Vec<Group>> {
+        self.get_items(
+            "groups",
+            "parent_group_id",
+            parent_id,
+            category_id,
+            favorites_only,
             Self::row_to_group,
         )
     }
@@ -76,8 +86,9 @@ impl Database {
             working_directory = ?4,
             env_vars = ?5,
             shell = ?6,
-            category_id = ?7
-            WHERE id = ?8",
+            category_id = ?7,
+icon = ?8
+            WHERE id = ?9",
             params![
                 group.name,
                 group.description,
@@ -86,6 +97,7 @@ impl Database {
                 env_vars_json,
                 group.shell,
                 group.category_id,
+                group.icon,
                 group.id
             ],
         )?;
@@ -199,6 +211,22 @@ impl Database {
         Ok(path)
     }
 
+    pub fn toggle_group_favorite(&self, id: i64) -> Result<()> {
+        let rows_affected = self.conn().execute(
+            "UPDATE groups SET is_favorite = NOT is_favorite WHERE id = ?1",
+            params![id],
+        )?;
+
+        if rows_affected == 0 {
+            return Err(DatabaseError::NotFound {
+                entity: "group",
+                id,
+            });
+        }
+
+        Ok(())
+    }
+
     fn row_to_group(row: &rusqlite::Row) -> rusqlite::Result<Group> {
         let env_vars_json: Option<String> = row.get(6)?;
 
@@ -212,8 +240,10 @@ impl Database {
             env_vars: env_vars_json.and_then(|json| serde_json::from_str(&json).ok()),
             shell: row.get(7)?,
             category_id: row.get(8)?,
-            created_at: row.get(9)?,
-            updated_at: row.get(10)?,
+            is_favorite: row.get(9)?,
+            icon: row.get(10)?,
+            created_at: row.get(11)?,
+            updated_at: row.get(12)?,
         })
     }
 

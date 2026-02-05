@@ -4,7 +4,7 @@ use rusqlite::params;
 use std::collections::HashMap;
 
 #[test]
-fn test_builder_pattern() {
+fn test_command_builder_pattern() {
     let test_db = TestDb::setup_test_db();
     let group_id = test_db.create_test_group("Test");
     let category_id = test_db.create_test_category("Test Category");
@@ -210,7 +210,7 @@ fn test_get_commands_by_group() {
 }
 
 #[test]
-fn test_get_commands_by_none_group() {
+fn test_get_commands_root_group() {
     let test_db = TestDb::setup_test_db();
     let group_id = test_db.create_test_group("Test Group");
 
@@ -306,14 +306,14 @@ fn test_get_commands_by_category_and_group() {
 }
 
 #[test]
-fn test_get_favorite_commands_only() {
+fn test_get_favorite_commands() {
     let test_db = TestDb::setup_test_db();
     let group_id = test_db.create_test_group("Test Group");
 
     let fav_id = test_db.create_test_command("Fav", "echo 1", Some(group_id));
     test_db.create_test_command("NotFav", "echo 2", Some(group_id));
 
-    test_db.db.toggle_favorite(fav_id).unwrap();
+    test_db.db.toggle_command_favorite(fav_id).unwrap();
 
     let favorites = test_db.db.get_commands(Some(group_id), None, true).unwrap();
     assert_eq!(favorites.len(), 1);
@@ -399,13 +399,13 @@ fn test_update_command_preserves_position() {
 }
 
 #[test]
-fn test_update_command_validation_fails() {
+fn test_update_command_validation() {
     let test_db = TestDb::setup_test_db();
     let group_id = test_db.create_test_group("Test Group");
     let cmd_id = test_db.create_test_command("Valid", "echo", Some(group_id));
 
     let mut command = test_db.db.get_command(cmd_id).unwrap();
-    command.name = "".to_string(); // Invalidate
+    command.name = "".to_string();
 
     let result = test_db.db.update_command(&command);
     assert!(matches!(
@@ -421,7 +421,7 @@ fn test_toggle_favorite() {
     let cmd_id = test_db.create_test_command("Test", "echo", Some(group_id));
 
     let initial = test_db.db.get_command(cmd_id).unwrap().is_favorite;
-    test_db.db.toggle_favorite(cmd_id).unwrap();
+    test_db.db.toggle_command_favorite(cmd_id).unwrap();
 
     assert_eq!(
         !initial,
@@ -432,7 +432,7 @@ fn test_toggle_favorite() {
 #[test]
 fn test_toggle_favorite_not_found() {
     let test_db = TestDb::setup_test_db();
-    let result = test_db.db.toggle_favorite(99999);
+    let result = test_db.db.toggle_command_favorite(99999);
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
@@ -649,13 +649,14 @@ fn test_updated_at_changes_on_update() {
     let test_db = TestDb::setup_test_db();
     let cmd_id = test_db.create_test_command("Test", "echo", None);
 
-    let cmd1 = test_db.db.get_command(cmd_id).unwrap();
+    let cmd = test_db.db.get_command(cmd_id).unwrap();
     std::thread::sleep(std::time::Duration::from_millis(1000)); // Ensure time difference
 
-    let mut cmd1 = cmd1.clone();
+    let mut cmd1 = cmd.clone();
     cmd1.name = "Updated".to_string();
     test_db.db.update_command(&cmd1).unwrap();
 
-    let cmd2 = test_db.db.get_command(cmd_id).unwrap();
-    assert_ne!(cmd1.updated_at, cmd2.updated_at); // Timestamp should change
+    let retrieved_cmd = test_db.db.get_command(cmd_id).unwrap();
+    assert_eq!(cmd1.created_at, retrieved_cmd.created_at);
+    assert_ne!(cmd1.updated_at, retrieved_cmd.updated_at);
 }

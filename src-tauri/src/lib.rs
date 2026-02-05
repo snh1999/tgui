@@ -34,11 +34,12 @@ pub fn run() {
             groups::get_group,
             groups::get_groups,
             groups::update_group,
-            groups::move_command_between,
+            groups::move_group_between,
             groups::delete_group,
             groups::get_group_command_count,
             groups::get_group_tree,
             groups::get_group_path,
+            groups::toggle_group_favorite,
             commands::create_command,
             commands::get_command,
             commands::get_commands,
@@ -46,7 +47,7 @@ pub fn run() {
             commands::delete_command,
             commands::search_commands,
             commands::move_command_between,
-            commands::toggle_favorite,
+            commands::toggle_command_favorite,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

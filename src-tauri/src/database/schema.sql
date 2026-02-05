@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS groups (
     env_vars TEXT,
     shell TEXT,
     category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+    is_favorite BOOLEAN NOT NULL DEFAULT 0 CHECK(is_favorite IN (0,1)),
+    icon TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CHECK (parent_group_id IS NULL OR parent_group_id != id),

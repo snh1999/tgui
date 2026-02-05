@@ -45,8 +45,8 @@ pub fn delete_command(db: State<'_, Database>, id: i64) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn toggle_favorite(db: State<'_, Database>, id: i64) -> Result<(), String> {
-    db.toggle_favorite(id).map_err(|e| e.to_string())
+pub fn toggle_command_favorite(db: State<'_, Database>, id: i64) -> Result<(), String> {
+    db.toggle_command_favorite(id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
