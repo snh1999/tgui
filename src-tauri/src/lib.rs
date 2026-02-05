@@ -1,8 +1,9 @@
-mod commands;
 mod database;
 mod errors;
+mod handlers;
 
 use crate::database::Database;
+use crate::handlers::{categories, commands, groups};
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -23,6 +24,21 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            categories::create_category,
+            categories::get_category,
+            categories::get_categories,
+            categories::update_category,
+            categories::delete_category,
+            categories::get_category_command_count,
+            groups::create_group,
+            groups::get_group,
+            groups::get_groups,
+            groups::update_group,
+            groups::move_command_between,
+            groups::delete_group,
+            groups::get_group_command_count,
+            groups::get_group_tree,
+            groups::get_group_path,
             commands::create_command,
             commands::get_command,
             commands::get_commands,
