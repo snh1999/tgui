@@ -91,6 +91,7 @@ fn test_create_group_empty_name() {
     ));
 }
 
+#[test]
 fn test_create_group_whitespace_name() {
     let test_db = TestDb::setup_test_db();
     let group = GroupBuilder::new("    ").build();
@@ -333,6 +334,7 @@ fn test_update_group_position() {
     assert_eq!(updated.position, original_pos); // Position should not change on update
 }
 
+#[test]
 fn test_update_group_validation() {
     let test_db = TestDb::setup_test_db();
     let group_id = test_db.create_test_group("Test Group");

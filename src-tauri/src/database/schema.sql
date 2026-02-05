@@ -63,8 +63,7 @@ CREATE TABLE IF NOT EXISTS templates (
 
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    value TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -101,10 +100,4 @@ CREATE TRIGGER IF NOT EXISTS templates_update_timestamp
 AFTER UPDATE ON templates
 BEGIN
 UPDATE templates SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-END;
-
-CREATE TRIGGER IF NOT EXISTS settings_update_timestamp
-AFTER UPDATE ON settings
-BEGIN
-UPDATE settings SET updated_at = CURRENT_TIMESTAMP WHERE key = NEW.key;
 END;

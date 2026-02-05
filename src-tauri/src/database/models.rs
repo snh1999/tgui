@@ -52,14 +52,6 @@ pub struct Command {
     pub updated_at: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Settings {
-    pub key: String,
-    pub value: String,
-    #[serde(skip_deserializing, default)]
-    pub updated_at: String,
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Template {
     pub id: i64,

@@ -1,7 +1,6 @@
 use crate::database::{Command, Database};
 use tauri::State;
 
-// TODO: use serializable error type and convert to e.into()
 #[tauri::command]
 pub fn create_command(db: State<'_, Database>, cmd: Command) -> Result<i64, String> {
     db.create_command(&cmd).map_err(|e| e.to_string())
