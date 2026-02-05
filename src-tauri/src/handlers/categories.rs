@@ -1,4 +1,4 @@
-use crate::database::{Category, Database, Group};
+use crate::database::{Category, Database};
 use tauri::State;
 
 #[tauri::command]
@@ -14,7 +14,7 @@ pub fn get_category(db: State<'_, Database>, id: i64) -> Result<Category, String
 }
 
 #[tauri::command]
-pub fn get_categories(db: State<'_, Database>, parent_id: Option<i64>) -> Result<Vec<Category>, String> {
+pub fn get_categories(db: State<'_, Database>) -> Result<Vec<Category>, String> {
     db.get_categories().map_err(|err| err.to_string())
 }
 
