@@ -13,7 +13,7 @@ impl Database {
 
         let position = self.get_position("commands", "group_id", cmd.group_id)?;
 
-        self.conn().execute(
+        self.conn()?.execute(
             "INSERT INTO
             commands (name, command, arguments, description, group_id, position, working_directory, env_vars, shell, category_id, is_favorite)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
@@ -32,11 +32,11 @@ impl Database {
             ],
         )?;
 
-        Ok(self.conn().last_insert_rowid())
+        Ok(self.conn()?.last_insert_rowid())
     }
 
     pub fn get_command(&self, id: i64) -> Result<Command> {
-        self.conn()
+        self.conn()?
             .query_row("SELECT * FROM commands WHERE id = ?1", params![id], |row| {
                 Self::row_to_command(row)
             })
@@ -86,7 +86,7 @@ impl Database {
             .map(|vars| serde_json::to_string(vars))
             .transpose()?;
 
-        let rows_affected = self.conn().execute(
+        let rows_affected = self.conn()?.execute(
             "UPDATE commands SET
             name = ?1,
             command = ?2,
@@ -164,7 +164,7 @@ impl Database {
 
     pub fn delete_command(&self, id: i64) -> Result<()> {
         let rows_affected = self
-            .conn()
+            .conn()?
             .execute("DELETE FROM commands WHERE id = ?1", params![id])?;
 
         if rows_affected == 0 {
@@ -178,7 +178,7 @@ impl Database {
     }
 
     pub fn toggle_command_favorite(&self, id: i64) -> Result<()> {
-        let rows_affected = self.conn().execute(
+        let rows_affected = self.conn()?.execute(
             "UPDATE commands SET is_favorite = NOT is_favorite WHERE id = ?1",
             params![id],
         )?;

@@ -1,6 +1,6 @@
 use crate::database::{Command, Database};
+use crate::handlers::serialize_errors::SerializableError;
 use tauri::State;
-use crate::errors::SerializableError;
 
 #[tauri::command]
 pub fn create_command(db: State<'_, Database>, cmd: Command) -> Result<i64, SerializableError> {
@@ -50,6 +50,9 @@ pub fn toggle_command_favorite(db: State<'_, Database>, id: i64) -> Result<(), S
 }
 
 #[tauri::command]
-pub fn search_commands(db: State<'_, Database>, term: String) -> Result<Vec<Command>, SerializableError> {
+pub fn search_commands(
+    db: State<'_, Database>,
+    term: String,
+) -> Result<Vec<Command>, SerializableError> {
     db.search_commands(&term).map_err(|e| e.into())
 }

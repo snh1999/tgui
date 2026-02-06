@@ -45,8 +45,10 @@ impl Database {
         Ok(db)
     }
 
-    pub(crate) fn conn(&self) -> MutexGuard<Connection> {
-        self.conn.lock().unwrap()
+    pub(crate) fn conn(&self) -> Result<MutexGuard<'_, Connection>> {
+        self.conn
+            .lock()
+            .map_err(|_| DatabaseError::ConnectionFailed)
     }
 
     #[cfg(unix)]
@@ -62,7 +64,7 @@ impl Database {
 
     pub fn get_schema_version(&self) -> Result<i32> {
         let version: i32 =
-            self.conn()
+            self.conn()?
                 .query_row("SELECT version FROM schema_version", [], |row| row.get(0))?;
         Ok(version)
     }

@@ -17,7 +17,7 @@ impl Database {
         F: FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
         P: rusqlite::Params,
     {
-        let connection = self.conn();
+        let connection = self.conn()?;
         let mut stmt = connection.prepare(sql_query)?;
         let results = stmt
             .query_map(params, |row| row_mapper(row))?
@@ -32,16 +32,20 @@ impl Database {
         table: &'static str,
         column_name: &'static str,
         group_id: Option<i64>,
-    ) -> rusqlite::Result<i64> {
+    ) -> Result<i64> {
         let query = format!(
             "SELECT COALESCE(MAX(position), -1) + 1 FROM {} WHERE {} IS ?1",
             table, column_name
         );
 
-        Ok(Self::POSITION_GAP
-            + (self
-                .conn()
-                .query_row(&query, params![group_id], |row| row.get::<_, i64>(0))?))
+        let position = Self::POSITION_GAP
+            + (self.conn()?.query_row(
+                &query,
+                params![group_id],
+                |row| row.get::<_, i64>(0),
+            )?);
+
+        Ok(position)
     }
 
     pub(crate) fn validate_env_var_keys(
@@ -125,7 +129,7 @@ impl Database {
         }
 
         let query = format!("UPDATE {} SET position = ?1 WHERE id = ?2", table);
-        let rows = self.conn().execute(&query, params![new_pos, item_id])?;
+        let rows = self.conn()?.execute(&query, params![new_pos, item_id])?;
         Ok(rows)
     }
 
@@ -134,8 +138,8 @@ impl Database {
         table: &'static str,
         column_name: &'static str,
         group_id: Option<i64>,
-    ) -> rusqlite::Result<()> {
-        let mut connection = self.conn();
+    ) -> Result<()> {
+        let mut connection = self.conn()?;
         let tx = connection.transaction()?;
 
         // Fetch all items in current order (by position, then id as tiebreaker)
@@ -156,7 +160,7 @@ impl Database {
             tx.execute(&update_query, params![position, id])?;
         }
 
-        tx.commit()
+        tx.commit().map_err(DatabaseError::from)
     }
 
     pub(crate) fn get_items<T, F>(
@@ -166,7 +170,7 @@ impl Database {
         id: Option<i64>,
         category_id: Option<i64>,
         favorites_only: bool,
-        mut row_mapper: F,
+        row_mapper: F,
     ) -> Result<Vec<T>>
     where
         F: FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<T>,

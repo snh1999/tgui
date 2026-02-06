@@ -1,6 +1,6 @@
 use crate::database::{Database, Group};
+use crate::handlers::serialize_errors::SerializableError;
 use tauri::State;
-use crate::errors::SerializableError;
 
 #[tauri::command]
 pub fn create_group(db: State<'_, Database>, group: Group) -> Result<i64, SerializableError> {
@@ -46,17 +46,22 @@ pub fn delete_group(db: State<'_, Database>, id: i64) -> Result<(), Serializable
 
 #[tauri::command]
 pub fn get_group_command_count(db: State<'_, Database>, id: i64) -> Result<i64, SerializableError> {
-    db.get_group_command_count(id)
-        .map_err(|err| err.into())
+    db.get_group_command_count(id).map_err(|err| err.into())
 }
 
 #[tauri::command]
-pub fn get_group_tree(db: State<'_, Database>, root_id: i64) -> Result<Vec<Group>, SerializableError> {
+pub fn get_group_tree(
+    db: State<'_, Database>,
+    root_id: i64,
+) -> Result<Vec<Group>, SerializableError> {
     db.get_group_tree(root_id).map_err(|err| err.into())
 }
 
 #[tauri::command]
-pub fn get_group_path(db: State<'_, Database>, group_id: i64) -> Result<Vec<String>, SerializableError> {
+pub fn get_group_path(
+    db: State<'_, Database>,
+    group_id: i64,
+) -> Result<Vec<String>, SerializableError> {
     db.get_group_path(group_id).map_err(|err| err.into())
 }
 

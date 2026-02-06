@@ -1,3 +1,4 @@
+use crate::constants::{CONNECTION_FAILED_MESSAGE, DATABASE_LOCKED_MESSAGE};
 use crate::database::DatabaseError;
 use serde::Serialize;
 
@@ -5,12 +6,6 @@ use serde::Serialize;
 pub struct SerializableError {
     pub code: String,
     pub message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub entity: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub field: Option<String>,
 }
 
 impl From<DatabaseError> for SerializableError {
@@ -19,16 +14,10 @@ impl From<DatabaseError> for SerializableError {
             DatabaseError::NotFound { entity, id } => SerializableError {
                 code: "NOT_FOUND".to_string(),
                 message: format!("{} with ID {} not found", entity, id),
-                entity: Some(entity.to_string()),
-                id: Some(id),
-                field: None,
             },
             DatabaseError::InvalidData { field, reason } => SerializableError {
                 code: "INVALID_DATA".to_string(),
                 message: format!("Invalid {}: {}", field, reason),
-                entity: None,
-                id: None,
-                field: Some(field.to_string()),
             },
             DatabaseError::CircularReference {
                 group_id,
@@ -39,9 +28,6 @@ impl From<DatabaseError> for SerializableError {
                     "Circular reference detected: group {} cannot have parent {} (would create loop)",
                     group_id, parent_id
                 ),
-                entity: Some("group".to_string()),
-                id: Some(group_id),
-                field: None,
             },
             DatabaseError::ForeignKeyViolation {
                 field,
@@ -49,23 +35,18 @@ impl From<DatabaseError> for SerializableError {
             } => SerializableError {
                 code: "FOREIGN_KEY_VIOLATION".to_string(),
                 message: format!("{} references non-existent ID {}", field, referenced_id),
-                entity: None,
-                id: Some(referenced_id),
-                field: Some(field.to_string()),
             },
             DatabaseError::DatabaseLocked => SerializableError {
                 code: "DATABASE_LOCKED".to_string(),
-                message: "Database is locked by another process. Please try again.".to_string(),
-                entity: None,
-                id: None,
-                field: None,
+                message: DATABASE_LOCKED_MESSAGE.to_string(),
+            },
+            DatabaseError::ConnectionFailed => SerializableError{
+                code: "DATABASE_CONNECTION_FAIL".to_string(),
+                message: CONNECTION_FAILED_MESSAGE.to_string(),
             },
             DatabaseError::Internal(msg) => SerializableError {
-                code: "INTERNAL_ERROR".to_string(),
+                code: "INTERNAL".to_string(),
                 message: format!("Database error: {}", msg),
-                entity: None,
-                id: None,
-                field: None,
             },
         }
     }

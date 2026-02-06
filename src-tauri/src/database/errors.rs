@@ -1,3 +1,4 @@
+use crate::constants::{CONNECTION_FAILED_MESSAGE, DATABASE_LOCKED_MESSAGE};
 use std::fmt;
 
 #[derive(Debug)]
@@ -19,6 +20,7 @@ pub enum DatabaseError {
         referenced_id: i64,
     },
     DatabaseLocked,
+    ConnectionFailed,
     Internal(String),
 }
 
@@ -39,10 +41,8 @@ impl fmt::Display for DatabaseError {
                 field,
                 referenced_id,
             } => write!(f, "{} references non-existent ID {}", field, referenced_id),
-            Self::DatabaseLocked => write!(
-                f,
-                "Database is locked by another process. Please try again."
-            ),
+            Self::DatabaseLocked => write!(f, "{}", DATABASE_LOCKED_MESSAGE),
+            Self::ConnectionFailed => write!(f, "{}", CONNECTION_FAILED_MESSAGE),
             Self::Internal(msg) => write!(f, "Database error: {}", msg),
         }
     }
