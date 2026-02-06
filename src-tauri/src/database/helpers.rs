@@ -199,7 +199,7 @@ impl Database {
         &self,
         table: &'static str,
         column: &'static str,
-        group_id: Option<i64>,
+        id: Option<i64>,
         category_id: Option<i64>,
         favorites_only: bool,
         mut row_mapper: F,
@@ -209,7 +209,7 @@ impl Database {
     {
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
         let mut sql_statement = format!("SELECT * FROM {} WHERE {} IS ?1", table, column);
-        params.push(Box::new(group_id));
+        params.push(Box::new(id));
 
         if let Some(cid) = category_id {
             sql_statement.push_str(&format!(" AND category_id = ?{}", params.len() + 1));

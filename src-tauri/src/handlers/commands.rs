@@ -1,6 +1,7 @@
 use crate::database::{Command, Database};
 use crate::handlers::serialize_errors::SerializableError;
 use tauri::State;
+use crate::errors::SerializableError;
 
 #[tauri::command]
 pub fn create_command(db: State<'_, Database>, cmd: Command) -> Result<i64, SerializableError> {
