@@ -10,16 +10,16 @@ impl Database {
     ) -> Result<i64> {
         self.validate_non_empty("name", &name)?;
 
-        self.conn().execute(
+        self.conn()?.execute(
             "INSERT INTO categories (name, icon, color) VALUES (?1, ?2, ?3)",
             params![name, icon, color],
         )?;
 
-        Ok(self.conn().last_insert_rowid())
+        Ok(self.conn()?.last_insert_rowid())
     }
 
     pub fn get_category(&self, id: i64) -> Result<Category> {
-        self.conn()
+        self.conn()?
             .query_row(
                 "SELECT * FROM categories WHERE id = ?1",
                 params![id],
@@ -56,7 +56,7 @@ impl Database {
             });
         }
 
-        let rows_affected = self.conn().execute(
+        let rows_affected = self.conn()?.execute(
             "UPDATE categories SET name = ?1, icon = ?2, color = ?3 WHERE id = ?4",
             params![name, icon, color, id],
         )?;
@@ -73,7 +73,7 @@ impl Database {
 
     pub fn delete_category(&self, id: i64) -> Result<()> {
         let rows_affected = self
-            .conn()
+            .conn()?
             .execute("DELETE FROM categories WHERE id = ?1", params![id])?;
 
         if rows_affected == 0 {
@@ -87,7 +87,7 @@ impl Database {
     }
 
     pub fn get_category_command_count(&self, id: i64) -> Result<i64> {
-        self.conn()
+        self.conn()?
             .query_row(
                 "SELECT COUNT(*) FROM commands WHERE category_id = ?",
                 params![id],

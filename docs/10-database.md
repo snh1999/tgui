@@ -3,6 +3,7 @@
 ### Update Log
 
 - **14-12-2025**: Initial security guidelines
+- **06-02-2026**: Updates groups and settings table
 
 ## Database Location
 
@@ -79,19 +80,21 @@ key.
 - Group's default value (provides default values that child commands inherit)
 - Application setting (settings table)/default
 
-| Column            | Type     | Constraints                   | Description                    |
-|-------------------|----------|-------------------------------|--------------------------------|
-| id                | INTEGER  | PRIMARY KEY                   | Auto-increment                 |
-| name              | TEXT     | NOT NULL                      | Group display name             |
-| description       | TEXT     | NULL                          | Group purpose                  |
-| parent_group_id   | INTEGER  | NULL, FK → groups(id) CASCADE | NULL = top-level group         |
-| position          | INTEGER  | DEFAULT 0                     | Order within parent            |
-| working_directory | TEXT     | NULL                          | Inherited by child commands    |
-| env_vars          | TEXT     | NULL                          | JSON object, inherited         |
-| shell             | TEXT     | NULL                          | Shell path (e.g., "/bin/bash") |
-| category_id       | INTEGER  | NULL, FK → categories(id)     | Inherited by child commands    |
-| created_at        | DATETIME | DEFAULT CURRENT_TIMESTAMP     | Creation time                  |
-| updated_at        | DATETIME | DEFAULT CURRENT_TIMESTAMP     | Last modification              |
+| Column            | Type     | Constraints                   | Description                     |
+|-------------------|----------|-------------------------------|---------------------------------|
+| id                | INTEGER  | PRIMARY KEY                   | Auto-increment                  |
+| name              | TEXT     | NOT NULL                      | Group display name              |
+| description       | TEXT     | NULL                          | Group purpose                   |
+| parent_group_id   | INTEGER  | NULL, FK → groups(id) CASCADE | NULL = top-level group          |
+| position          | INTEGER  | DEFAULT 0                     | Order within parent             |
+| working_directory | TEXT     | NULL                          | Inherited by child commands     |
+| env_vars          | TEXT     | NULL                          | JSON object, inherited          |
+| shell             | TEXT     | NULL                          | Shell path (e.g., "/bin/bash")  |
+| category_id       | INTEGER  | NULL, FK → categories(id)     | Inherited by child commands     |
+| icon              | TEXT     | NULL                          | Emoji or icon name (e.g., "🐳") |
+| is_favorite       | BOOLEAN  | DEFAULT 0                     | Star for quick access           |
+| created_at        | DATETIME | DEFAULT CURRENT_TIMESTAMP     | Creation time                   |
+| updated_at        | DATETIME | DEFAULT CURRENT_TIMESTAMP     | Last modification               |
 
 **Indexes**:
 
@@ -169,11 +172,10 @@ key.
 - No need to ALTER TABLE for new settings
 - Easy to add/remove settings without migration
 
-| Column     | Type     | Constraints               | Description               |
-|------------|----------|---------------------------|---------------------------|
-| key        | TEXT     | PRIMARY KEY               | Setting name              |
-| value      | TEXT     | NOT NULL                  | Setting value (as string) |
-| updated_at | DATETIME | DEFAULT CURRENT_TIMESTAMP | Last modification         |
+| Column | Type | Constraints | Description               |
+|--------|------|-------------|---------------------------|
+| key    | TEXT | PRIMARY KEY | Setting name              |
+| value  | TEXT | NOT NULL    | Setting value (as string) |
 
 **Default rows**:
 
@@ -604,7 +606,8 @@ fn export_all_data() -> Result {
 
 ```sql
 -- Run on app startup
-PRAGMA integrity_check;
+PRAGMA
+integrity_check;
 -- Should return: ok
 ```
 
@@ -612,16 +615,21 @@ PRAGMA integrity_check;
 
 ```sql
 -- Check database size
-SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size();
+SELECT page_count * page_size as size
+FROM pragma_page_count(), pragma_page_size();
 
 -- Count records per tables
-SELECT 'commands' as table_name, COUNT(*) as count FROM commands
+SELECT 'commands' as table_name, COUNT(*) as count
+FROM commands
 UNION ALL
-SELECT 'groups', COUNT(*) FROM groups
+SELECT 'groups', COUNT(*)
+FROM groups
 UNION ALL
-SELECT 'categories', COUNT(*) FROM categories
+SELECT 'categories', COUNT(*)
+FROM categories
 UNION ALL
-SELECT 'templates', COUNT(*) FROM templates;
+SELECT 'templates', COUNT(*)
+FROM templates;
 ```
 
 ### Vacuum (Reclaim Space)

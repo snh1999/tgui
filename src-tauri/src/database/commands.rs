@@ -13,7 +13,7 @@ impl Database {
 
         let position = self.get_position("commands", "group_id", cmd.group_id)?;
 
-        self.conn().execute(
+        self.conn()?.execute(
             "INSERT INTO
             commands (name, command, arguments, description, group_id, position, working_directory, env_vars, shell, category_id, is_favorite)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
@@ -32,11 +32,11 @@ impl Database {
             ],
         )?;
 
-        Ok(self.conn().last_insert_rowid())
+        Ok(self.conn()?.last_insert_rowid())
     }
 
     pub fn get_command(&self, id: i64) -> Result<Command> {
-        self.conn()
+        self.conn()?
             .query_row("SELECT * FROM commands WHERE id = ?1", params![id], |row| {
                 Self::row_to_command(row)
             })
@@ -55,25 +55,14 @@ impl Database {
         category_id: Option<i64>,
         favorites_only: bool,
     ) -> Result<Vec<Command>> {
-        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-
-        let mut sql_statement = "SELECT * FROM commands WHERE group_id IS ?1".to_string();
-        params.push(Box::new(group_id));
-
-        if let Some(cid) = category_id {
-            sql_statement.push_str(&format!(" AND category_id = ?{}", params.len() + 1));
-            params.push(Box::new(cid));
-        }
-
-        if favorites_only {
-            sql_statement.push_str(" AND is_favorite = 1");
-        }
-
-        sql_statement.push_str(" ORDER BY position");
-
-        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
-
-        self.query_database(&sql_statement, &*param_refs, Self::row_to_command)
+        self.get_items(
+            "commands",
+            "group_id",
+            group_id,
+            category_id,
+            favorites_only,
+            Self::row_to_command,
+        )
     }
 
     pub fn search_commands(&self, search_term: &str) -> Result<Vec<Command>> {
@@ -97,7 +86,7 @@ impl Database {
             .map(|vars| serde_json::to_string(vars))
             .transpose()?;
 
-        let rows_affected = self.conn().execute(
+        let rows_affected = self.conn()?.execute(
             "UPDATE commands SET
             name = ?1,
             command = ?2,
@@ -175,7 +164,7 @@ impl Database {
 
     pub fn delete_command(&self, id: i64) -> Result<()> {
         let rows_affected = self
-            .conn()
+            .conn()?
             .execute("DELETE FROM commands WHERE id = ?1", params![id])?;
 
         if rows_affected == 0 {
@@ -188,8 +177,8 @@ impl Database {
         Ok(())
     }
 
-    pub fn toggle_favorite(&self, id: i64) -> Result<()> {
-        let rows_affected = self.conn().execute(
+    pub fn toggle_command_favorite(&self, id: i64) -> Result<()> {
+        let rows_affected = self.conn()?.execute(
             "UPDATE commands SET is_favorite = NOT is_favorite WHERE id = ?1",
             params![id],
         )?;

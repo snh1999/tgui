@@ -18,7 +18,7 @@ static DEFAULT_SETTINGS: LazyLock<HashMap<&'static str, &'static str>> = LazyLoc
 impl Database {
     pub fn initialize_settings(&self) -> Result<()> {
         for (key, value) in DEFAULT_SETTINGS.iter() {
-            self.conn().execute(
+            self.conn()?.execute(
                 "INSERT OR IGNORE INTO settings (key, value) VALUES (?1, ?2)",
                 params![key, value],
             )?;
@@ -28,7 +28,7 @@ impl Database {
 
     /// no id provided/exists, so id in error is set to a dummy value 0
     pub fn get_setting(&self, key: &str) -> Result<String> {
-        self.conn()
+        self.conn()?
             .query_row(
                 "SELECT value FROM settings WHERE key = ?1",
                 params![key],
@@ -46,7 +46,7 @@ impl Database {
     pub fn set_setting(&self, key: &str, value: &str) -> Result<()> {
         self.validate_setting(key, value)?;
 
-        self.conn().execute(
+        self.conn()?.execute(
             "INSERT OR REPLACE INTO settings (key, value) VALUES (?1, ?2)",
             params![key, value],
         )?;
@@ -63,7 +63,7 @@ impl Database {
 
     /// Get all settings as HashMap
     pub fn get_all_settings(&self) -> Result<HashMap<String, String>> {
-        let connection = self.conn();
+        let connection = self.conn()?;
         let mut stmt = connection.prepare("SELECT key, value FROM settings")?;
         let settings = stmt
             .query_map([], |row| {

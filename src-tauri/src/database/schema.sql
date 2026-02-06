@@ -1,3 +1,4 @@
+-- Migration script not required for now, as app is not released yet
 CREATE TABLE IF NOT EXISTS categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
@@ -17,6 +18,8 @@ CREATE TABLE IF NOT EXISTS groups (
     env_vars TEXT,
     shell TEXT,
     category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+    is_favorite BOOLEAN NOT NULL DEFAULT 0 CHECK(is_favorite IN (0,1)),
+    icon TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CHECK (parent_group_id IS NULL OR parent_group_id != id),
@@ -59,17 +62,18 @@ CREATE TABLE IF NOT EXISTS templates (
      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+
+
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    value TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER PRIMARY KEY
 );
 
-INSERT INTO schema_version (version) VALUES (1);
+INSERT OR REPLACE INTO schema_version (version) VALUES (1);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_groups_position ON groups(parent_group_id, position);
@@ -99,10 +103,4 @@ CREATE TRIGGER IF NOT EXISTS templates_update_timestamp
 AFTER UPDATE ON templates
 BEGIN
 UPDATE templates SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-END;
-
-CREATE TRIGGER IF NOT EXISTS settings_update_timestamp
-AFTER UPDATE ON settings
-BEGIN
-UPDATE settings SET updated_at = CURRENT_TIMESTAMP WHERE key = NEW.key;
 END;

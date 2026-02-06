@@ -4,15 +4,21 @@ use rusqlite::params;
 use std::collections::HashMap;
 
 #[test]
-fn test_builder_pattern() {
+fn test_command_builder_pattern() {
     let test_db = TestDb::setup_test_db();
     let group_id = test_db.create_test_group("Test");
+    let category_id = test_db.create_test_category("Test Category");
 
-    let cmd = CommandBuilder::new("Test", "cargo")
+    let mut cmd = CommandBuilder::new("Test", "cargo")
         .with_group(group_id)
         .with_args(vec!["test", "--release"])
+        .with_category(category_id)
         .with_env("RUST_LOG", "debug")
         .build();
+
+    cmd.shell = Some("test".to_string());
+    cmd.position = 11;
+    cmd.working_directory = Some("~/dir".to_string());
     let id = test_db.db.create_command(&cmd).unwrap();
 
     let retrieved_cmd = test_db.db.get_command(id).unwrap();
@@ -23,11 +29,12 @@ fn test_builder_pattern() {
     assert_eq!(retrieved_cmd.env_vars, cmd.env_vars);
     assert_eq!(retrieved_cmd.shell, cmd.shell);
     assert_eq!(retrieved_cmd.category_id, cmd.category_id);
+    assert_eq!(retrieved_cmd.is_favorite, false);
     assert_eq!(retrieved_cmd.position, Database::POSITION_GAP);
 }
 
 #[test]
-fn test_create_command() {
+fn test_create_command_and_get_command() {
     let test_db = TestDb::setup_test_db();
     let group_id = test_db.create_test_group("Test Group");
 
@@ -138,6 +145,21 @@ fn test_create_command_empty_command() {
 }
 
 #[test]
+fn test_create_command_whitespace_command() {
+    let test_db = TestDb::setup_test_db();
+    let command = CommandBuilder::new("Test", "    ").build();
+
+    let result = test_db.db.create_command(&command);
+    assert!(matches!(
+        result,
+        Err(DatabaseError::InvalidData {
+            field: "command",
+            ..
+        })
+    ));
+}
+
+#[test]
 fn test_create_command_invalid_env_var_key() {
     let test_db = TestDb::setup_test_db();
     let mut env_vars = HashMap::new();
@@ -177,7 +199,7 @@ fn test_get_commands_by_group() {
 
     test_db.create_test_command("Cmd1", "echo 1", Some(group_id));
     test_db.create_test_command("Cmd2", "echo 2", Some(group_id));
-    test_db.create_test_command("Cmd3", "echo 3", None); // Different group
+    test_db.create_test_command("Cmd3", "echo 3", None);
 
     let commands = test_db
         .db
@@ -187,6 +209,42 @@ fn test_get_commands_by_group() {
     assert!(commands.iter().all(|c| c.group_id == Some(group_id)));
 }
 
+#[test]
+fn test_get_commands_root_group() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+
+    test_db.create_test_command("Cmd1", "echo 1", Some(group_id));
+    test_db.create_test_command("Cmd2", "echo 2", None);
+    test_db.create_test_command("Cmd3", "echo 3", None);
+    test_db.create_test_command("Cmd3", "echo 3", None);
+
+    let commands = test_db.db.get_commands(None, None, false).unwrap();
+    assert_eq!(commands.len(), 3);
+    assert!(commands.iter().all(|c| c.group_id == None));
+}
+
+#[test]
+fn test_get_commands_by_none_category() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+    let category_id = test_db.create_test_category("Test Category");
+
+    test_db.create_test_command("Cmd1", "echo 1", Some(group_id));
+    test_db.create_test_command("Cmd2", "echo 2", Some(group_id));
+    test_db.save_command_to_db(
+        &CommandBuilder::new("cmd3", "echo 3")
+            .with_group(group_id)
+            .with_category(category_id)
+            .build(),
+    );
+
+    let commands = test_db
+        .db
+        .get_commands(Some(group_id), None, false)
+        .unwrap();
+    assert_eq!(commands.len(), 3);
+}
 #[test]
 fn test_get_commands_by_category() {
     let test_db = TestDb::setup_test_db();
@@ -248,14 +306,14 @@ fn test_get_commands_by_category_and_group() {
 }
 
 #[test]
-fn test_get_favorite_commands_only() {
+fn test_get_favorite_commands() {
     let test_db = TestDb::setup_test_db();
     let group_id = test_db.create_test_group("Test Group");
 
     let fav_id = test_db.create_test_command("Fav", "echo 1", Some(group_id));
     test_db.create_test_command("NotFav", "echo 2", Some(group_id));
 
-    test_db.db.toggle_favorite(fav_id).unwrap();
+    test_db.db.toggle_command_favorite(fav_id).unwrap();
 
     let favorites = test_db.db.get_commands(Some(group_id), None, true).unwrap();
     assert_eq!(favorites.len(), 1);
@@ -341,13 +399,13 @@ fn test_update_command_preserves_position() {
 }
 
 #[test]
-fn test_update_command_validation_fails() {
+fn test_update_command_validation() {
     let test_db = TestDb::setup_test_db();
     let group_id = test_db.create_test_group("Test Group");
     let cmd_id = test_db.create_test_command("Valid", "echo", Some(group_id));
 
     let mut command = test_db.db.get_command(cmd_id).unwrap();
-    command.name = "".to_string(); // Invalidate
+    command.name = "".to_string();
 
     let result = test_db.db.update_command(&command);
     assert!(matches!(
@@ -363,7 +421,7 @@ fn test_toggle_favorite() {
     let cmd_id = test_db.create_test_command("Test", "echo", Some(group_id));
 
     let initial = test_db.db.get_command(cmd_id).unwrap().is_favorite;
-    test_db.db.toggle_favorite(cmd_id).unwrap();
+    test_db.db.toggle_command_favorite(cmd_id).unwrap();
 
     assert_eq!(
         !initial,
@@ -374,7 +432,7 @@ fn test_toggle_favorite() {
 #[test]
 fn test_toggle_favorite_not_found() {
     let test_db = TestDb::setup_test_db();
-    let result = test_db.db.toggle_favorite(99999);
+    let result = test_db.db.toggle_command_favorite(99999);
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
@@ -486,7 +544,7 @@ fn test_position_gap_exhaustion_triggers_renumber() {
     // Manually set positions to simulate exhaustion
     test_db
         .db
-        .conn()
+        .conn().unwrap()
         .execute(
             "UPDATE commands SET position = 1000 WHERE id = ?1",
             params![id1],
@@ -496,7 +554,7 @@ fn test_position_gap_exhaustion_triggers_renumber() {
     let id2 = test_db.create_test_command("B", "echo 2", Some(group_id));
     test_db
         .db
-        .conn()
+        .conn().unwrap()
         .execute(
             "UPDATE commands SET position = 1001 WHERE id = ?1",
             params![id2],
@@ -591,13 +649,14 @@ fn test_updated_at_changes_on_update() {
     let test_db = TestDb::setup_test_db();
     let cmd_id = test_db.create_test_command("Test", "echo", None);
 
-    let cmd1 = test_db.db.get_command(cmd_id).unwrap();
+    let cmd = test_db.db.get_command(cmd_id).unwrap();
     std::thread::sleep(std::time::Duration::from_millis(1000)); // Ensure time difference
 
-    let mut cmd1 = cmd1.clone();
+    let mut cmd1 = cmd.clone();
     cmd1.name = "Updated".to_string();
     test_db.db.update_command(&cmd1).unwrap();
 
-    let cmd2 = test_db.db.get_command(cmd_id).unwrap();
-    assert_ne!(cmd1.updated_at, cmd2.updated_at); // Timestamp should change
+    let retrieved_cmd = test_db.db.get_command(cmd_id).unwrap();
+    assert_eq!(cmd1.created_at, retrieved_cmd.created_at);
+    assert_ne!(cmd1.updated_at, retrieved_cmd.updated_at);
 }
