@@ -1,5 +1,5 @@
+mod constants;
 mod database;
-mod errors;
 mod handlers;
 
 use crate::database::Database;
@@ -14,8 +14,9 @@ pub fn run() {
             let app_dir = app
                 .path()
                 .app_data_dir()
-                .expect("Failed to get app data dir");
-            std::fs::create_dir_all(&app_dir).unwrap();
+                .map_err(|_| "Failed to get app data dir")?;
+
+            std::fs::create_dir_all(&app_dir).map_err(|_| "Failed to create app data dir")?;
 
             let db_path = app_dir.join("commands.db");
             let db = Database::new(&db_path).expect("Failed to initialize database");

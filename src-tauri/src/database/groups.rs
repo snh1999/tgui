@@ -15,7 +15,7 @@ impl Database {
         let position: i64 =
             self.get_position("groups", "parent_group_id", group.parent_group_id)?;
 
-        self.conn().execute(
+        self.conn()?.execute(
             "INSERT INTO groups (name, description, parent_group_id, position, working_directory, env_vars, shell, category_id, is_favorite, icon)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![
@@ -32,11 +32,11 @@ impl Database {
             ],
         )?;
 
-        Ok(self.conn().last_insert_rowid())
+        Ok(self.conn()?.last_insert_rowid())
     }
 
     pub fn get_group(&self, id: i64) -> Result<Group> {
-        self.conn()
+        self.conn()?
             .query_row("SELECT * FROM groups WHERE id = ?1", params![id], |row| {
                 Self::row_to_group(row)
             })
@@ -78,7 +78,7 @@ impl Database {
             .map(|vars| serde_json::to_string(vars))
             .transpose()?;
 
-        let rows_affected = self.conn().execute(
+        let rows_affected = self.conn()?.execute(
             "UPDATE groups SET
             name = ?1,
             description = ?2,
@@ -153,7 +153,7 @@ icon = ?8
 
     pub fn delete_group(&self, id: i64) -> Result<()> {
         let rows_affected = self
-            .conn()
+            .conn()?
             .execute("DELETE FROM groups WHERE id = ?1", params![id])?;
 
         if rows_affected == 0 {
@@ -167,7 +167,7 @@ icon = ?8
     }
 
     pub fn get_group_command_count(&self, id: i64) -> Result<i64> {
-        self.conn()
+        self.conn()?
             .query_row(
                 "SELECT COUNT(*) FROM commands WHERE group_id = ?",
                 params![id],
@@ -202,7 +202,7 @@ icon = ?8
         ";
 
         let mut path: Vec<String> = self
-            .conn()
+            .conn()?
             .prepare(sql)?
             .query_map(params![group_id], |row| row.get(0))?
             .collect::<rusqlite::Result<_>>()?;
@@ -212,7 +212,7 @@ icon = ?8
     }
 
     pub fn toggle_group_favorite(&self, id: i64) -> Result<()> {
-        let rows_affected = self.conn().execute(
+        let rows_affected = self.conn()?.execute(
             "UPDATE groups SET is_favorite = NOT is_favorite WHERE id = ?1",
             params![id],
         )?;

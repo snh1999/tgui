@@ -1,5 +1,5 @@
 use crate::database::{Category, Database};
-use crate::errors::SerializableError;
+use crate::handlers::serialize_errors::SerializableError;
 use tauri::State;
 
 #[tauri::command]

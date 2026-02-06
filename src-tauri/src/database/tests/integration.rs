@@ -128,7 +128,7 @@ fn test_concurrent_transactions_isolated() {
     let count_before = test_db.db.get_groups(None, None,false).unwrap().len();
 
     {
-        let mut connection = test_db.db.conn();
+        let mut connection = test_db.db.conn().unwrap();
         let tx = connection.transaction().unwrap();
         tx.execute(
             "INSERT INTO groups (name, position) VALUES (?1, ?2)",
@@ -147,7 +147,7 @@ fn test_database_locked_error() {
     let test_db = TestDb::setup_test_db();
 
     // Acquire exclusive lock
-    let conn1 = test_db.db.conn();
+    let conn1 = test_db.db.conn().unwrap();
     conn1.execute("BEGIN EXCLUSIVE", []).unwrap();
 
     // Trying another operation (this might block or fail depending on configuration)

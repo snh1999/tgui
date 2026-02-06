@@ -544,7 +544,7 @@ fn test_position_gap_exhaustion_triggers_renumber() {
     // Manually set positions to simulate exhaustion
     test_db
         .db
-        .conn()
+        .conn().unwrap()
         .execute(
             "UPDATE commands SET position = 1000 WHERE id = ?1",
             params![id1],
@@ -554,7 +554,7 @@ fn test_position_gap_exhaustion_triggers_renumber() {
     let id2 = test_db.create_test_command("B", "echo 2", Some(group_id));
     test_db
         .db
-        .conn()
+        .conn().unwrap()
         .execute(
             "UPDATE commands SET position = 1001 WHERE id = ?1",
             params![id2],
