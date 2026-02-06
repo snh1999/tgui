@@ -1,3 +1,4 @@
+-- Migration script not required for now, as app is not released yet
 CREATE TABLE IF NOT EXISTS categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
@@ -60,6 +61,8 @@ CREATE TABLE IF NOT EXISTS templates (
      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+
 
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
