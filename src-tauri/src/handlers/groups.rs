@@ -1,7 +1,6 @@
 use crate::database::{Database, Group};
 use crate::handlers::serialize_errors::SerializableError;
 use tauri::State;
-use crate::errors::SerializableError;
 
 #[tauri::command]
 pub fn create_group(db: State<'_, Database>, group: Group) -> Result<i64, SerializableError> {

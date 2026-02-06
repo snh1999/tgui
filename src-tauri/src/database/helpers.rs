@@ -202,7 +202,7 @@ impl Database {
         id: Option<i64>,
         category_id: Option<i64>,
         favorites_only: bool,
-        mut row_mapper: F,
+        row_mapper: F,
     ) -> Result<Vec<T>>
     where
         F: FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
