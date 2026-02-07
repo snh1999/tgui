@@ -4,7 +4,14 @@ mod handlers;
 
 use crate::database::Database;
 use crate::handlers::{categories, commands, groups};
+use handlers::logger;
 use tauri::Manager;
+use tracing::{error, info};
+
+fn error_map(error_message: &str) -> &str {
+    error!(error_message);
+    error_message
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -14,14 +21,26 @@ pub fn run() {
             let app_dir = app
                 .path()
                 .app_data_dir()
-                .map_err(|_| "Failed to get app data dir")?;
+                .map_err(|_| error_map("Failed to get app data dir"))?;
 
-            std::fs::create_dir_all(&app_dir).map_err(|_| "Failed to create app data dir")?;
+            std::fs::create_dir_all(&app_dir)
+                .map_err(|_| error_map("Failed to create app data dir"))?;
+
+            let guard =
+                logger::init(&app_dir).map_err(|_| error_map("Failed to initialize logger"))?;
+
+            info!("TGUI starting");
 
             let db_path = app_dir.join("commands.db");
-            let db = Database::new(&db_path).expect("Failed to initialize database");
+            let db = Database::new(&db_path).map_err(|e| {
+                error!(error = %e, "Database initialization failed");
+                e
+            })?;
 
-            app.manage(db); // Directly manage the Database struct
+            info!(db_path = %db_path.display(), "Database initialized successfully");
+
+            app.manage(guard);
+            app.manage(db);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
