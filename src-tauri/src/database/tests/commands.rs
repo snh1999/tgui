@@ -1,4 +1,5 @@
 use super::*;
+use crate::constants::COMMANDS_TABLE;
 use crate::database::builders::CommandBuilder;
 use rusqlite::params;
 use std::collections::HashMap;
@@ -138,7 +139,7 @@ fn test_create_command_empty_command() {
     assert!(matches!(
         result,
         Err(DatabaseError::InvalidData {
-            field: COMMANDS_TABLE,
+            field: "command",
             ..
         })
     ));
@@ -153,7 +154,7 @@ fn test_create_command_whitespace_command() {
     assert!(matches!(
         result,
         Err(DatabaseError::InvalidData {
-            field: COMMANDS_TABLE,
+            field: "command",
             ..
         })
     ));
@@ -544,7 +545,8 @@ fn test_position_gap_exhaustion_triggers_renumber() {
     // Manually set positions to simulate exhaustion
     test_db
         .db
-        .conn().unwrap()
+        .conn()
+        .unwrap()
         .execute(
             "UPDATE commands SET position = 1000 WHERE id = ?1",
             params![id1],
@@ -554,7 +556,8 @@ fn test_position_gap_exhaustion_triggers_renumber() {
     let id2 = test_db.create_test_command("B", "echo 2", Some(group_id));
     test_db
         .db
-        .conn().unwrap()
+        .conn()
+        .unwrap()
         .execute(
             "UPDATE commands SET position = 1001 WHERE id = ?1",
             params![id2],
