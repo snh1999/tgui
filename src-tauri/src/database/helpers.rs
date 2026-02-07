@@ -2,6 +2,7 @@ pub use crate::database::errors::{DatabaseError, Result};
 use crate::database::Database;
 use crate::db_span;
 use rusqlite::params;
+use serde_json::Error;
 use std::collections::HashMap;
 use tracing::{debug, error, info};
 
@@ -10,9 +11,9 @@ impl Database {
 
     pub(crate) fn create<P: rusqlite::Params>(
         &self,
+        table: &'static str,
         sql: &str,
         params: P,
-        table: &'static str,
     ) -> Result<i64> {
         self.execute(
             sql,
@@ -28,11 +29,11 @@ impl Database {
 
     pub(crate) fn update<P: rusqlite::Params>(
         &self,
+        table: &'static str,
+        operation: &'static str,
         id: i64,
         sql: &str,
         params: P,
-        table: &'static str,
-        operation: &'static str,
     ) -> Result<()> {
         let rows_affected = self.execute(
             sql,
@@ -43,14 +44,11 @@ impl Database {
         )?;
 
         if rows_affected == 0 {
-            error!(id = rows_affected, table = table);
+            error!(id = id, table = table, "Not found");
             return Err(DatabaseError::NotFound { entity: table, id });
         }
 
-        info!(
-            id = id,
-            "{} operation successful on {}", operation, table
-        );
+        info!(id = id, "{} operation successful on {}", operation, table);
         Ok(())
     }
 
@@ -73,12 +71,12 @@ impl Database {
         })
     }
 
+    /// query_row can be used only for query by id (only param)
     pub(crate) fn query_row<T, F>(
         &self,
-        sql_query: &str,
-        id: i64,
         table: &'static str,
-        error_message: Option<&'static str>,
+        id: i64,
+        sql_query: &str,
         mut row_mapper: F,
     ) -> Result<T>
     where
@@ -90,9 +88,8 @@ impl Database {
             .conn()?
             .query_row(sql_query, params![id], |row| row_mapper(row))
             .map_err(|e| {
-                if let Some(msg) = error_message {
-                    error!(error = %e, message = msg, "Query failed");
-                }
+                error!(error = %e, "Query failed");
+
                 return match e {
                     rusqlite::Error::QueryReturnedNoRows => {
                         DatabaseError::NotFound { entity: table, id }
@@ -258,6 +255,15 @@ impl Database {
         }
 
         tx.commit().map_err(DatabaseError::from)
+    }
+
+    pub(crate) fn hashmap_to_string(
+        hashmap: &Option<HashMap<String, String>>,
+    ) -> std::result::Result<Option<String>, Error> {
+        hashmap
+            .as_ref()
+            .map(|val| serde_json::to_string(val))
+            .transpose()
     }
 
     pub(crate) fn get_items_groups_commands<T, F>(

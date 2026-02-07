@@ -1,5 +1,5 @@
 use super::{Command, Database, DatabaseError, Result};
-use crate::constants::COMMANDS_TABLE;
+use crate::constants::{COMMANDS_TABLE, COMMAND_GROUP_COLUMN};
 use rusqlite::params;
 use tracing::{debug, instrument, warn};
 
@@ -8,16 +8,13 @@ impl Database {
     pub fn create_command(&self, cmd: &Command) -> Result<i64> {
         self.validate_command(cmd)?;
         let arguments_json = serde_json::to_string(&cmd.arguments)?;
-        let env_vars_json = cmd
-            .env_vars
-            .as_ref()
-            .map(|vars| serde_json::to_string(vars))
-            .transpose()?;
+        let env_vars_json = Self::hashmap_to_string(&cmd.env_vars)?;
 
-        let position = self.get_position(COMMANDS_TABLE, "group_id", cmd.group_id)?;
+        let position = self.get_position(COMMANDS_TABLE, COMMAND_GROUP_COLUMN, cmd.group_id)?;
         debug!(calculated_position = position, "Command position");
 
         self.create(
+            COMMANDS_TABLE,
             "INSERT INTO
             commands (name, command, arguments, description, group_id, position, working_directory, env_vars, shell, category_id, is_favorite)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
@@ -34,21 +31,20 @@ impl Database {
                 cmd.category_id,
                 cmd.is_favorite,
             ],
-            COMMANDS_TABLE,
         )
     }
 
-    #[instrument(skip(self), ret)]
+    #[instrument(skip(self))]
     pub fn get_command(&self, id: i64) -> Result<Command> {
         self.query_row(
-            "SELECT * FROM commands WHERE id = ?1",
-            id,
             COMMANDS_TABLE,
-            Some("Database operation failed"),
+            id,
+            "SELECT * FROM commands WHERE id = ?1",
             Self::row_to_command,
         )
     }
 
+    #[instrument(skip(self))]
     pub fn get_commands(
         &self,
         group_id: Option<i64>,
@@ -57,13 +53,15 @@ impl Database {
     ) -> Result<Vec<Command>> {
         self.get_items_groups_commands(
             COMMANDS_TABLE,
-            "group_id",
+            COMMAND_GROUP_COLUMN,
             group_id,
             category_id,
             favorites_only,
             Self::row_to_command,
         )
     }
+
+    #[instrument(skip(self))]
     pub fn search_commands(&self, search_term: &str) -> Result<Vec<Command>> {
         debug!(search_term_length = search_term.len(), "Searching commands");
 
@@ -77,15 +75,12 @@ impl Database {
         )
     }
 
+    #[instrument(skip(self))]
     pub fn update_command(&self, cmd: &Command) -> Result<()> {
         self.validate_command(cmd)?;
 
-        let args_json = serde_json::to_string(&cmd.arguments)?;
-        let env_vars_json = cmd
-            .env_vars
-            .as_ref()
-            .map(|vars| serde_json::to_string(vars))
-            .transpose()?;
+        let arguments = serde_json::to_string(&cmd.arguments)?;
+        let env_vars = Self::hashmap_to_string(&cmd.env_vars)?;
 
         debug!(
             command_id = cmd.id,
@@ -94,6 +89,8 @@ impl Database {
         );
 
         self.update(
+            COMMANDS_TABLE,
+            "UPDATE",
             cmd.id,
             "UPDATE commands SET
             name = ?1,
@@ -110,18 +107,16 @@ impl Database {
             params![
                 cmd.name,
                 cmd.command,
-                args_json,
+                arguments,
                 cmd.description,
                 cmd.group_id,
                 cmd.working_directory,
-                env_vars_json,
+                env_vars,
                 cmd.shell,
                 cmd.category_id,
                 cmd.is_favorite,
                 cmd.id
             ],
-            COMMANDS_TABLE,
-            "UPDATE",
         )
     }
 
@@ -136,6 +131,7 @@ impl Database {
             .unwrap_or((default_val, None)))
     }
 
+    #[instrument(skip(self))]
     pub fn move_command_between(
         &self,
         cmd_id: i64,
@@ -146,7 +142,7 @@ impl Database {
 
         let rows = self.move_item_between(
             COMMANDS_TABLE,
-            "group_id",
+            COMMAND_GROUP_COLUMN,
             cmd_id,
             prev_id,
             next_id,
@@ -166,11 +162,11 @@ impl Database {
     #[instrument(skip(self))]
     pub fn delete_command(&self, id: i64) -> Result<()> {
         self.update(
+            COMMANDS_TABLE,
+            "DELETE",
             id,
             "DELETE FROM commands WHERE id = ?1",
             params![id],
-            COMMANDS_TABLE,
-            "DELETE",
         )
     }
 
@@ -178,11 +174,11 @@ impl Database {
     pub fn toggle_command_favorite(&self, id: i64) -> Result<()> {
         debug!(command_id = id, "Toggling favorite");
         self.update(
+            COMMANDS_TABLE,
+            "UPDATE",
             id,
             "UPDATE commands SET is_favorite = NOT is_favorite WHERE id = ?1",
             params![id],
-            COMMANDS_TABLE,
-            "UPDATE",
         )
     }
 
