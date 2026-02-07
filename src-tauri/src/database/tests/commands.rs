@@ -138,7 +138,7 @@ fn test_create_command_empty_command() {
     assert!(matches!(
         result,
         Err(DatabaseError::InvalidData {
-            field: "command",
+            field: COMMANDS_TABLE,
             ..
         })
     ));
@@ -153,7 +153,7 @@ fn test_create_command_whitespace_command() {
     assert!(matches!(
         result,
         Err(DatabaseError::InvalidData {
-            field: "command",
+            field: COMMANDS_TABLE,
             ..
         })
     ));
@@ -186,7 +186,7 @@ fn test_get_command_not_found() {
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
-            entity: "command",
+            entity: COMMANDS_TABLE,
             id: 99999
         })
     ));
@@ -376,7 +376,7 @@ fn test_update_command_not_found() {
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
-            entity: "command",
+            entity: COMMANDS_TABLE,
             id: 99999
         })
     ));
@@ -436,7 +436,7 @@ fn test_toggle_favorite_not_found() {
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
-            entity: "command",
+            entity: COMMANDS_TABLE,
             id: 99999
         })
     ));
@@ -461,7 +461,7 @@ fn test_delete_command_not_found() {
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
-            entity: "command",
+            entity: COMMANDS_TABLE,
             id: 99999
         })
     ));

@@ -1,7 +1,10 @@
 use super::{Command, Database, DatabaseError, Result};
+use crate::constants::COMMANDS_TABLE;
 use rusqlite::params;
+use tracing::{debug, instrument, warn};
 
 impl Database {
+    #[instrument(skip(self, cmd), fields(name = %cmd.name))]
     pub fn create_command(&self, cmd: &Command) -> Result<i64> {
         self.validate_command(cmd)?;
         let arguments_json = serde_json::to_string(&cmd.arguments)?;
@@ -11,9 +14,10 @@ impl Database {
             .map(|vars| serde_json::to_string(vars))
             .transpose()?;
 
-        let position = self.get_position("commands", "group_id", cmd.group_id)?;
+        let position = self.get_position(COMMANDS_TABLE, "group_id", cmd.group_id)?;
+        debug!(calculated_position = position, "Command position");
 
-        self.conn()?.execute(
+        self.create(
             "INSERT INTO
             commands (name, command, arguments, description, group_id, position, working_directory, env_vars, shell, category_id, is_favorite)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
@@ -30,23 +34,19 @@ impl Database {
                 cmd.category_id,
                 cmd.is_favorite,
             ],
-        )?;
-
-        Ok(self.conn()?.last_insert_rowid())
+            COMMANDS_TABLE,
+        )
     }
 
+    #[instrument(skip(self), ret)]
     pub fn get_command(&self, id: i64) -> Result<Command> {
-        self.conn()?
-            .query_row("SELECT * FROM commands WHERE id = ?1", params![id], |row| {
-                Self::row_to_command(row)
-            })
-            .map_err(|e| match e {
-                rusqlite::Error::QueryReturnedNoRows => DatabaseError::NotFound {
-                    entity: "command",
-                    id,
-                },
-                _ => e.into(),
-            })
+        self.query_row(
+            "SELECT * FROM commands WHERE id = ?1",
+            id,
+            COMMANDS_TABLE,
+            Some("Database operation failed"),
+            Self::row_to_command,
+        )
     }
 
     pub fn get_commands(
@@ -55,8 +55,8 @@ impl Database {
         category_id: Option<i64>,
         favorites_only: bool,
     ) -> Result<Vec<Command>> {
-        self.get_items(
-            "commands",
+        self.get_items_groups_commands(
+            COMMANDS_TABLE,
             "group_id",
             group_id,
             category_id,
@@ -64,8 +64,9 @@ impl Database {
             Self::row_to_command,
         )
     }
-
     pub fn search_commands(&self, search_term: &str) -> Result<Vec<Command>> {
+        debug!(search_term_length = search_term.len(), "Searching commands");
+
         let pattern = format!("%{}%", search_term);
         self.query_database(
             "SELECT * FROM commands
@@ -86,7 +87,14 @@ impl Database {
             .map(|vars| serde_json::to_string(vars))
             .transpose()?;
 
-        let rows_affected = self.conn()?.execute(
+        debug!(
+            command_id = cmd.id,
+            has_env_vars = cmd.env_vars.is_some(),
+            "Updating command"
+        );
+
+        self.update(
+            cmd.id,
             "UPDATE commands SET
             name = ?1,
             command = ?2,
@@ -112,16 +120,9 @@ impl Database {
                 cmd.is_favorite,
                 cmd.id
             ],
-        )?;
-
-        if rows_affected == 0 {
-            return Err(DatabaseError::NotFound {
-                entity: "command",
-                id: cmd.id,
-            });
-        }
-
-        Ok(())
+            COMMANDS_TABLE,
+            "UPDATE",
+        )
     }
 
     fn get_position_parent_command(
@@ -144,7 +145,7 @@ impl Database {
         let cmd = self.get_command(cmd_id)?;
 
         let rows = self.move_item_between(
-            "commands",
+            COMMANDS_TABLE,
             "group_id",
             cmd_id,
             prev_id,
@@ -155,42 +156,34 @@ impl Database {
 
         if rows == 0 {
             return Err(DatabaseError::NotFound {
-                entity: "command",
+                entity: COMMANDS_TABLE,
                 id: cmd_id,
             });
         }
         Ok(())
     }
 
+    #[instrument(skip(self))]
     pub fn delete_command(&self, id: i64) -> Result<()> {
-        let rows_affected = self
-            .conn()?
-            .execute("DELETE FROM commands WHERE id = ?1", params![id])?;
-
-        if rows_affected == 0 {
-            return Err(DatabaseError::NotFound {
-                entity: "command",
-                id,
-            });
-        }
-
-        Ok(())
+        self.update(
+            id,
+            "DELETE FROM commands WHERE id = ?1",
+            params![id],
+            COMMANDS_TABLE,
+            "DELETE",
+        )
     }
 
+    #[instrument(skip(self))]
     pub fn toggle_command_favorite(&self, id: i64) -> Result<()> {
-        let rows_affected = self.conn()?.execute(
+        debug!(command_id = id, "Toggling favorite");
+        self.update(
+            id,
             "UPDATE commands SET is_favorite = NOT is_favorite WHERE id = ?1",
             params![id],
-        )?;
-
-        if rows_affected == 0 {
-            return Err(DatabaseError::NotFound {
-                entity: "command",
-                id,
-            });
-        }
-
-        Ok(())
+            COMMANDS_TABLE,
+            "UPDATE",
+        )
     }
 
     /// the arguments/env_vars data is not being cross validated because
@@ -203,16 +196,28 @@ impl Database {
         let args_json: String = row.get(3)?;
         let env_vars_json: Option<String> = row.get(8)?;
 
+        let arguments = serde_json::from_str(&args_json).unwrap_or_else(|e| {
+            warn!(error = %e, "Failed to parse arguments, using default");
+            Vec::new()
+        });
+
+        let env_vars = env_vars_json.and_then(|json| {
+            serde_json::from_str(&json).ok().or_else(|| {
+                warn!("Failed to parse env_vars, using None");
+                None
+            })
+        });
+
         Ok(Command {
             id: row.get(0)?,
             name: row.get(1)?,
             command: row.get(2)?,
-            arguments: serde_json::from_str(&args_json).unwrap_or_default(),
+            arguments,
             description: row.get(4)?,
             group_id: row.get(5)?,
             position: row.get(6)?,
             working_directory: row.get(7)?,
-            env_vars: env_vars_json.and_then(|json| serde_json::from_str(&json).ok()),
+            env_vars,
             shell: row.get(9)?,
             category_id: row.get(10)?,
             is_favorite: row.get(11)?,

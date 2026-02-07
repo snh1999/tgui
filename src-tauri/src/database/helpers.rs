@@ -1,11 +1,110 @@
+pub use crate::database::errors::{DatabaseError, Result};
 use crate::database::Database;
+use crate::db_span;
 use rusqlite::params;
 use std::collections::HashMap;
-
-pub use crate::database::errors::{DatabaseError, Result};
+use tracing::{debug, error, info};
 
 impl Database {
     pub(crate) const POSITION_GAP: i64 = 1000;
+
+    pub(crate) fn create<P: rusqlite::Params>(
+        &self,
+        sql: &str,
+        params: P,
+        table: &'static str,
+    ) -> Result<i64> {
+        self.execute(
+            sql,
+            params,
+            "INSERT",
+            table,
+            Some(&format!("Failed to create {}", table)),
+        )?;
+        let row_id = self.conn()?.last_insert_rowid();
+        info!(id = row_id, entity = table, "created successfully");
+        Ok(row_id)
+    }
+
+    pub(crate) fn update<P: rusqlite::Params>(
+        &self,
+        id: i64,
+        sql: &str,
+        params: P,
+        table: &'static str,
+        operation: &'static str,
+    ) -> Result<()> {
+        let rows_affected = self.execute(
+            sql,
+            params,
+            operation,
+            table,
+            Some(&format!("{} operation failed on {}", operation, table)),
+        )?;
+
+        if rows_affected == 0 {
+            error!(id = rows_affected, table = table);
+            return Err(DatabaseError::NotFound { entity: table, id });
+        }
+
+        info!(
+            id = id,
+            "{} operation successful on {}", operation, table
+        );
+        Ok(())
+    }
+
+    fn execute<P: rusqlite::Params>(
+        &self,
+        sql: &str,
+        params: P,
+        operation: &'static str,
+        table: &'static str,
+        error_message: Option<&str>,
+    ) -> Result<usize> {
+        let span = db_span!(operation, table, 0);
+        let _enter = span.enter();
+
+        self.conn()?.execute(sql, params).map_err(|e| {
+            if let Some(msg) = error_message {
+                error!(error = %e, message = msg);
+            }
+            DatabaseError::from(e)
+        })
+    }
+
+    pub(crate) fn query_row<T, F>(
+        &self,
+        sql_query: &str,
+        id: i64,
+        table: &'static str,
+        error_message: Option<&'static str>,
+        mut row_mapper: F,
+    ) -> Result<T>
+    where
+        F: FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
+    {
+        debug!(id = id, "{}", format!("Fetching {}", table));
+
+        let item = self
+            .conn()?
+            .query_row(sql_query, params![id], |row| row_mapper(row))
+            .map_err(|e| {
+                if let Some(msg) = error_message {
+                    error!(error = %e, message = msg, "Query failed");
+                }
+                return match e {
+                    rusqlite::Error::QueryReturnedNoRows => {
+                        DatabaseError::NotFound { entity: table, id }
+                    }
+                    _ => e.into(),
+                };
+            })?;
+
+        debug!(id = id, "{}", format!("{} found", table));
+
+        Ok(item)
+    }
 
     pub(crate) fn query_database<T, F, P>(
         &self,
@@ -39,11 +138,9 @@ impl Database {
         );
 
         let position = Self::POSITION_GAP
-            + (self.conn()?.query_row(
-                &query,
-                params![group_id],
-                |row| row.get::<_, i64>(0),
-            )?);
+            + (self
+                .conn()?
+                .query_row(&query, params![group_id], |row| row.get::<_, i64>(0))?);
 
         Ok(position)
     }
@@ -163,7 +260,7 @@ impl Database {
         tx.commit().map_err(DatabaseError::from)
     }
 
-    pub(crate) fn get_items<T, F>(
+    pub(crate) fn get_items_groups_commands<T, F>(
         &self,
         table: &'static str,
         column: &'static str,

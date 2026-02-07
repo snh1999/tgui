@@ -55,7 +55,7 @@ impl Database {
         category_id: Option<i64>,
         favorites_only: bool,
     ) -> Result<Vec<Group>> {
-        self.get_items(
+        self.get_items_groups_commands(
             "groups",
             "parent_group_id",
             parent_id,
