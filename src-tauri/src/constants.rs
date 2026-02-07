@@ -1,3 +1,7 @@
+pub const LOG_PREFIX: &'static str = "app.log";
+
+pub const COMMANDS_TABLE: &'static str = "commands";
+
 pub const CONNECTION_FAILED_MESSAGE: &'static str =
     "Database connection poisoned by previous panic";
 pub const DATABASE_LOCKED_MESSAGE: &'static str =
