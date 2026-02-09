@@ -3,7 +3,7 @@ use crate::constants::CATEGORIES_TABLE;
 use crate::database::builders::CommandBuilder;
 
 #[test]
-fn test_create_category_and_get_category() {
+fn test_create_and_get_category() {
     let test_db = TestDb::setup_test_db();
     let cat_name = "Development";
     let cat_id = test_db.create_test_category(cat_name);

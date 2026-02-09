@@ -1,8 +1,8 @@
 use super::{Database, DatabaseError, Group, Result};
 use crate::constants::{GROUPS_TABLE, GROUP_PARENT_GROUP_COLUMN};
-use rusqlite::params;
+use rusqlite::{named_params, params};
 use std::collections::HashSet;
-use tracing::{debug, instrument};
+use tracing::{debug, instrument, warn};
 
 impl Database {
     #[instrument(skip(self, group), fields(name = %group.name))]
@@ -12,26 +12,26 @@ impl Database {
 
         let position: i64 = self.get_position(
             GROUPS_TABLE,
-            GROUP_PARENT_GROUP_COLUMN,
+            Some(GROUP_PARENT_GROUP_COLUMN),
             group.parent_group_id,
         )?;
 
         self.create(
             GROUPS_TABLE,
             "INSERT INTO groups (name, description, parent_group_id, position, working_directory, env_vars, shell, category_id, is_favorite, icon)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
-            params![
-                group.name,
-                group.description,
-                group.parent_group_id,
-                position,
-                group.working_directory,
-                env_vars,
-                group.shell,
-                group.category_id,
-                group.is_favorite,
-                group.icon,
-            ],
+             VALUES (:name, :description, :parent_group_id, :position, :working_directory, :env_vars, :shell, :category_id, :is_favorite, :icon)",
+            named_params! {
+                ":name": group.name,
+                ":description": group.description,
+                ":parent_group_id": group.parent_group_id,
+                ":position": position,
+                ":working_directory": group.working_directory,
+                ":env_vars": env_vars,
+                ":shell": group.shell,
+                ":category_id": group.category_id,
+                ":is_favorite": group.is_favorite,
+                ":icon": group.icon,
+            },
         )
     }
 
@@ -83,26 +83,26 @@ impl Database {
             "UPDATE",
             group.id,
             "UPDATE groups SET
-            name = ?1,
-            description = ?2,
-            parent_group_id = ?3,
-            working_directory = ?4,
-            env_vars = ?5,
-            shell = ?6,
-            category_id = ?7,
-            icon = ?8
-            WHERE id = ?9",
-            params![
-                group.name,
-                group.description,
-                group.parent_group_id,
-                group.working_directory,
-                env_vars,
-                group.shell,
-                group.category_id,
-                group.icon,
-                group.id
-            ],
+            name = :name,
+            description = :description,
+            parent_group_id = :parent_group_id,
+            working_directory = :working_directory,
+            env_vars = :env_vars,
+            shell = :shell,
+            category_id = :category_id,
+            icon = :icon
+            WHERE id = :id",
+            named_params! {
+                ":name": group.name,
+                ":description": group.description,
+                ":parent_group_id": group.parent_group_id,
+                ":working_directory": group.working_directory,
+                ":env_vars": env_vars,
+                ":shell": group.shell,
+                ":category_id": group.category_id,
+                ":icon": group.icon,
+                ":id": group.id
+            },
         )
     }
 
@@ -115,24 +115,15 @@ impl Database {
     ) -> Result<()> {
         let group = self.get_group(group_id)?;
 
-        let rows = self.move_item_between(
+        self.move_item_between(
             "groups",
-            GROUP_PARENT_GROUP_COLUMN,
             group_id,
             prev_id,
             next_id,
+            Some(GROUP_PARENT_GROUP_COLUMN),
             group.parent_group_id,
             |id, default| self.get_group_position_parent(id, default),
-        )?;
-
-        if rows == 0 {
-            return Err(DatabaseError::NotFound {
-                entity: "group",
-                id: group_id,
-            });
-        }
-
-        Ok(())
+        )
     }
 
     fn get_group_position_parent(
@@ -218,22 +209,23 @@ impl Database {
     }
 
     fn row_to_group(row: &rusqlite::Row) -> rusqlite::Result<Group> {
-        let env_vars_json: Option<String> = row.get(6)?;
+        let env_vars_json: Option<String> = row.get("env_vars")?;
+        let env_vars = Self::string_to_hashmap(env_vars_json);
 
         Ok(Group {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            description: row.get(2)?,
-            parent_group_id: row.get(3)?,
-            position: row.get(4)?,
-            working_directory: row.get(5)?,
-            env_vars: env_vars_json.and_then(|json| serde_json::from_str(&json).ok()),
-            shell: row.get(7)?,
-            category_id: row.get(8)?,
-            is_favorite: row.get(9)?,
-            icon: row.get(10)?,
-            created_at: row.get(11)?,
-            updated_at: row.get(12)?,
+            id: row.get("id")?,
+            name: row.get("name")?,
+            description: row.get("description")?,
+            parent_group_id: row.get("parent_group_id")?,
+            position: row.get("position")?,
+            working_directory: row.get("working_directory")?,
+            env_vars,
+            shell: row.get("shell")?,
+            category_id: row.get("category_id")?,
+            is_favorite: row.get("is_favorite")?,
+            icon: row.get("icon")?,
+            created_at: row.get("created_at")?,
+            updated_at: row.get("updated_at")?,
         })
     }
 

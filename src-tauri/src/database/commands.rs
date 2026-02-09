@@ -1,6 +1,6 @@
 use super::{Command, Database, DatabaseError, Result};
 use crate::constants::{COMMANDS_TABLE, COMMAND_GROUP_COLUMN};
-use rusqlite::params;
+use rusqlite::{named_params, params};
 use tracing::{debug, instrument, warn};
 
 impl Database {
@@ -10,27 +10,29 @@ impl Database {
         let arguments_json = serde_json::to_string(&cmd.arguments)?;
         let env_vars_json = Self::hashmap_to_string(&cmd.env_vars)?;
 
-        let position = self.get_position(COMMANDS_TABLE, COMMAND_GROUP_COLUMN, cmd.group_id)?;
+        let position =
+            self.get_position(COMMANDS_TABLE, Some(COMMAND_GROUP_COLUMN), cmd.group_id)?;
+
         debug!(calculated_position = position, "Command position");
 
         self.create(
             COMMANDS_TABLE,
             "INSERT INTO
             commands (name, command, arguments, description, group_id, position, working_directory, env_vars, shell, category_id, is_favorite)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-            params![
-                cmd.name,
-                cmd.command,
-                arguments_json,
-                cmd.description,
-                cmd.group_id,
-                position,
-                cmd.working_directory,
-                env_vars_json,
-                cmd.shell,
-                cmd.category_id,
-                cmd.is_favorite,
-            ],
+             VALUES (:name, :command, :arguments, :description, :group_id, :position, :working_directory, :env_vars, :shell, :category_id, :is_favorite)",
+            named_params! {
+                ":name": cmd.name,
+                ":command": cmd.command,
+                ":arguments": arguments_json,
+                ":description": cmd.description,
+                ":group_id": cmd.group_id,
+                ":position": position,
+                ":working_directory": cmd.working_directory,
+                ":env_vars": env_vars_json,
+                ":shell": cmd.shell,
+                ":category_id": cmd.category_id,
+                ":is_favorite": cmd.is_favorite,
+            },
         )
     }
 
@@ -93,30 +95,30 @@ impl Database {
             "UPDATE",
             cmd.id,
             "UPDATE commands SET
-            name = ?1,
-            command = ?2,
-            arguments = ?3,
-            description = ?4,
-            group_id = ?5,
-            working_directory = ?6,
-            env_vars = ?7,
-            shell = ?8,
-            category_id = ?9,
-            is_favorite = ?10
-            WHERE id = ?11",
-            params![
-                cmd.name,
-                cmd.command,
-                arguments,
-                cmd.description,
-                cmd.group_id,
-                cmd.working_directory,
-                env_vars,
-                cmd.shell,
-                cmd.category_id,
-                cmd.is_favorite,
-                cmd.id
-            ],
+            name = :name,
+            command = :command,
+            arguments = :arguments,
+            description = :description,
+            group_id = :group_id,
+            working_directory = :working_directory,
+            env_vars = :env_vars,
+            shell = :shell,
+            category_id = :category_id,
+            is_favorite = :is_favorite
+            WHERE id = :id",
+            named_params! {
+                ":name": cmd.name,
+                ":command": cmd.command,
+                ":arguments": arguments,
+                ":description": cmd.description,
+                ":group_id": cmd.group_id,
+                ":working_directory": cmd.working_directory,
+                ":env_vars": env_vars,
+                ":shell": cmd.shell,
+                ":category_id": cmd.category_id,
+                ":is_favorite": cmd.is_favorite,
+                ":id": cmd.id
+            },
         )
     }
 
@@ -140,23 +142,15 @@ impl Database {
     ) -> Result<()> {
         let cmd = self.get_command(cmd_id)?;
 
-        let rows = self.move_item_between(
+        self.move_item_between(
             COMMANDS_TABLE,
-            COMMAND_GROUP_COLUMN,
             cmd_id,
             prev_id,
             next_id,
+            Some(COMMAND_GROUP_COLUMN),
             cmd.group_id,
             |id, default| self.get_position_parent_command(id, default),
-        )?;
-
-        if rows == 0 {
-            return Err(DatabaseError::NotFound {
-                entity: COMMANDS_TABLE,
-                id: cmd_id,
-            });
-        }
-        Ok(())
+        )
     }
 
     #[instrument(skip(self))]
@@ -189,36 +183,31 @@ impl Database {
     /// -- If the default value is returned, user at least can retrieve the command/update with new value
     /// -- NOTE: we have to check before running the commands
     fn row_to_command(row: &rusqlite::Row) -> rusqlite::Result<Command> {
-        let args_json: String = row.get(3)?;
-        let env_vars_json: Option<String> = row.get(8)?;
+        let args_json: String = row.get("arguments")?;
+        let env_vars_json: Option<String> = row.get("env_vars")?;
 
         let arguments = serde_json::from_str(&args_json).unwrap_or_else(|e| {
             warn!(error = %e, "Failed to parse arguments, using default");
             Vec::new()
         });
 
-        let env_vars = env_vars_json.and_then(|json| {
-            serde_json::from_str(&json).ok().or_else(|| {
-                warn!("Failed to parse env_vars, using None");
-                None
-            })
-        });
+        let env_vars = Self::string_to_hashmap(env_vars_json);
 
         Ok(Command {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            command: row.get(2)?,
+            id: row.get("id")?,
+            name: row.get("name")?,
+            command: row.get("command")?,
             arguments,
-            description: row.get(4)?,
-            group_id: row.get(5)?,
-            position: row.get(6)?,
-            working_directory: row.get(7)?,
+            description: row.get("description")?,
+            group_id: row.get("group_id")?,
+            position: row.get("position")?,
+            working_directory: row.get("working_directory")?,
             env_vars,
-            shell: row.get(9)?,
-            category_id: row.get(10)?,
-            is_favorite: row.get(11)?,
-            created_at: row.get(12)?,
-            updated_at: row.get(13)?,
+            shell: row.get("shell")?,
+            category_id: row.get("category_id")?,
+            is_favorite: row.get("is_favorite")?,
+            created_at: row.get("created_at")?,
+            updated_at: row.get("updated_at")?,
         })
     }
 
