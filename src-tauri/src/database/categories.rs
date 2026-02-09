@@ -81,11 +81,11 @@ impl Database {
 
     fn row_to_category(row: &rusqlite::Row) -> rusqlite::Result<Category> {
         Ok(Category {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            icon: row.get(2)?,
-            color: row.get(3)?,
-            created_at: row.get(4)?,
+            id: row.get("id")?,
+            name: row.get("name")?,
+            icon: row.get("icon")?,
+            color: row.get("color")?,
+            created_at: row.get("created_at")?,
         })
     }
 }
