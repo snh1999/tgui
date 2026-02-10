@@ -144,6 +144,158 @@ key.
 
 ---
 
+### workflows
+
+**Design**: Container for sequencing commands with different execution modes. Supports sequential (
+MVP), parallel, and conditional execution (future).
+
+| Column         | Type     | Constraints                                  | Description                             |
+|----------------|----------|----------------------------------------------|-----------------------------------------|
+| id             | INTEGER  | PRIMARY KEY                                  | Auto-increment                          |
+| name           | TEXT     | NOT NULL                                     | Workflow display name                   |
+| description    | TEXT     | NULL                                         | Workflow purpose                        |
+| category_id    | INTEGER  | NULL, FK → categories(id) ON DELETE SET NULL | Optional categorization                 |
+| is_favorite    | BOOLEAN  | DEFAULT 0                                    | Star for quick access                   |
+| execution_mode | TEXT     | NOT NULL DEFAULT 'sequential'                | 'sequential', 'parallel', 'conditional' |
+| position       | INTEGER  | NOT NULL                                     | Order in workflow lists                 |
+| created_at     | DATETIME | DEFAULT CURRENT_TIMESTAMP                    | Creation time                           |
+| updated_at     | DATETIME | DEFAULT CURRENT_TIMESTAMP                    | Last modification                       |
+
+**Indexes**:
+
+- `idx_workflows_name` on `(name)` for search
+- `idx_workflows_category` on `(category_id)` for filtering
+
+**Triggers**: `workflow_update_timestamp` updates `updated_at` on modification
+
+**CHECK Constraints**:
+
+- `execution_mode IN ('sequential', 'parallel', 'conditional')`
+- `length(trim(name)) > 0`
+
+---
+
+### workflow_steps
+
+**Design**: Junction table linking workflows to commands with step-specific configuration. Enables
+reusable commands across multiple workflows with per-step overrides.
+
+| Column              | Type     | Constraints                                    | Description                                       |
+|---------------------|----------|------------------------------------------------|---------------------------------------------------|
+| id                  | INTEGER  | PRIMARY KEY                                    | Auto-increment                                    |
+| workflow_id         | INTEGER  | NOT NULL, FK → workflows(id) ON DELETE CASCADE | Parent workflow                                   |
+| command_id          | INTEGER  | NOT NULL, FK → commands(id) ON DELETE CASCADE  | Command to execute                                |
+| position            | INTEGER  | NOT NULL                                       | Execution order (uses POSITION_GAP = 1000)        |
+| condition           | TEXT     | NOT NULL DEFAULT 'always'                      | When to run: 'always', 'on_success', 'on_failure' |
+| timeout_seconds     | INTEGER  | NULL                                           | Per-step timeout override                         |
+| auto_retry_count    | INTEGER  | DEFAULT 0                                      | Automatic retry attempts on failure               |
+| enabled             | BOOLEAN  | NOT NULL DEFAULT 1                             | Can disable without deleting                      |
+| continue_on_failure | BOOLEAN  | NOT NULL DEFAULT 0                             | Keep executing workflow even if step fails        |
+| created_at          | DATETIME | DEFAULT CURRENT_TIMESTAMP                      | Creation time                                     |
+| updated_at          | DATETIME | DEFAULT CURRENT_TIMESTAMP                      | Last modification                                 |
+
+**Indexes**:
+
+- `idx_workflow_steps_workflow` on `(workflow_id)` for fetching steps
+- `idx_workflow_steps_command` on `(command_id)` for reverse lookup
+- `idx_workflow_steps_position` on `(workflow_id, position)` for ordered retrieval
+
+**CHECK Constraints**:
+
+- `condition IN ('always', 'on_success', 'on_failure')`
+- `enabled IN (0,1)`
+- `continue_on_failure IN (0,1)`
+
+**Triggers**: `workflow_steps_update_timestamp` updates `updated_at` on modification
+
+**TODO Features** (documented in ADR-004):
+
+- Variables/templating: `${PREVIOUS_OUTPUT}`, `${WORKFLOW_START_TIME}`
+- Rollback/cleanup commands on failure
+- Pipe stdout between steps
+
+---
+
+### execution_history
+
+**Design**: Audit trail for all command and workflow executions. Single table with CHECK constraints
+for type safety across three execution types.
+
+| Column           | Type     | Constraints                                     | Description                                                       |
+|------------------|----------|-------------------------------------------------|-------------------------------------------------------------------|
+| id               | INTEGER  | PRIMARY KEY                                     | Auto-increment                                                    |
+| command_id       | INTEGER  | NULL, FK → commands(id) ON DELETE CASCADE       | Command executed                                                  |
+| workflow_id      | INTEGER  | NULL, FK → workflows(id) ON DELETE CASCADE      | Parent workflow (if any)                                          |
+| workflow_step_id | INTEGER  | NULL, FK → workflow_steps(id) ON DELETE CASCADE | Specific step (if any)                                            |
+| status           | TEXT     | NOT NULL                                        | 'running', 'success', 'failed', 'timeout', 'cancelled', 'skipped' |
+| exit_code        | INTEGER  | NULL                                            | Process exit code                                                 |
+| started_at       | DATETIME | NOT NULL DEFAULT CURRENT_TIMESTAMP              | Execution start                                                   |
+| completed_at     | DATETIME | NULL                                            | Execution end (NULL if running)                                   |
+| triggered_by     | TEXT     | NOT NULL                                        | 'manual', 'workflow', 'schedule'                                  |
+| context          | TEXT     | NULL                                            | Optional JSON for execution notes                                 |
+| stop_reason      | TEXT     | NULL                                            | 'error', 'user_cancelled', 'timeout', 'completed'                 |
+
+**Indexes**:
+
+- `idx_execution_history_command` on `(command_id)` for command history
+- `idx_execution_history_workflow` on `(workflow_id)` for workflow history
+- `idx_execution_history_workflow_step` on `(workflow_step_id)` for step history
+- `idx_execution_history_status` on `(status)` for filtering by status
+- `idx_execution_history_started_at` on `(started_at DESC)` for recent-first queries
+- `idx_execution_history_command_status` on `(command_id, status)` for success/failure stats
+- `idx_execution_history_workflow_status` on `(workflow_id, status)` for workflow stats
+
+**CHECK Constraints**:
+
+- `status IN ('running', 'success', 'failed', 'timeout', 'cancelled', 'skipped')`
+- `triggered_by IN ('manual', 'workflow', 'schedule')`
+- `stop_reason IN ('error', 'user_cancelled', 'timeout', 'completed')`
+- **Type enforcement**: Exactly one of three execution types:
+  ```sql
+  (command_id IS NOT NULL AND workflow_id IS NULL AND workflow_step_id IS NULL) OR
+  (command_id IS NULL AND workflow_id IS NOT NULL AND workflow_step_id IS NULL) OR
+  (command_id IS NOT NULL AND workflow_id IS NOT NULL AND workflow_step_id IS NOT NULL)
+  ```
+
+**Execution Types**:
+
+1. **Command execution**: `command_id` set, others NULL
+2. **Workflow execution**: `workflow_id` set, others NULL
+3. **Workflow step execution**: All three IDs set
+
+**Status Lifecycle**:
+
+```
+running → success/failed/timeout/cancelled
+(skipped is set directly, not from running)
+```
+
+**Triggers**:
+
+- Auto-set `completed_at` when status becomes terminal
+- Prevent updating completed executions
+- Validate status transitions (e.g., can't go running → skipped)
+
+**Security Considerations** (from ADR-007, ADR-005):
+
+- **No stdout/stderr storage**: Would bloat database, may contain secrets
+- **No command text**: Reference by ID only (command text in commands table)
+- **No env vars**: Stored separately, not in audit log
+- **Cascade delete**: History removed when command/workflow deleted
+
+**Output Storage Strategy** (TODO):
+
+- Option A: Save to `/executions/{execution_id}.log` files with 0o600 permissions
+- Option B: Stream live only, don't persist to disk
+
+**Cleanup Strategy**:
+
+- Manual cleanup with configurable retention (default: keep last 100 per entity)
+- Delete executions older than X days
+- TODO: Add retention settings to user preferences
+
+---
+
 ### templates
 
 **Design**: Stores `JSON` structure in structure TEXT column (read heavy).
