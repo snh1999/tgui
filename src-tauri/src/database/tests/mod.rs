@@ -4,8 +4,11 @@ mod commands;
 mod groups;
 mod integration;
 mod settings;
+mod workflows;
 
-use crate::database::builders::{CommandBuilder, GroupBuilder};
+use crate::database::builders::{
+    CommandBuilder, GroupBuilder, WorkflowBuilder, WorkflowStepBuilder,
+};
 use tempfile::TempDir;
 
 pub struct TestDb {
@@ -48,5 +51,20 @@ impl TestDb {
 
     fn save_command_to_db(&self, command: &Command) -> i64 {
         self.db.create_command(command).unwrap()
+    }
+
+    fn create_test_workflow(&self, name: &str) -> i64 {
+        let workflow = WorkflowBuilder::new(name).build();
+        self.save_workflow_to_db(&workflow)
+    }
+
+    fn save_workflow_to_db(&self, workflow: &Workflow) -> i64 {
+        self.db.create_workflow(&workflow).unwrap()
+    }
+
+    fn create_test_workflow_step(&self, workflow_id: i64, command_id: i64) -> i64 {
+        self.db
+            .create_workflow_step(&WorkflowStepBuilder::new(workflow_id, command_id).build())
+            .unwrap()
     }
 }

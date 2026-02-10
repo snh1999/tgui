@@ -20,6 +20,7 @@ pub use errors::{DatabaseError, Result};
 
 #[cfg(test)]
 mod tests;
+mod workflows;
 
 pub struct Database {
     conn: Arc<Mutex<Connection>>,
