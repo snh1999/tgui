@@ -3,7 +3,7 @@ mod database;
 mod handlers;
 
 use crate::database::Database;
-use crate::handlers::{categories, commands, groups};
+use crate::handlers::{categories, commands, groups, workflows};
 use handlers::logger;
 use tauri::Manager;
 use tracing::{error, info};
@@ -68,6 +68,23 @@ pub fn run() {
             commands::search_commands,
             commands::move_command_between,
             commands::toggle_command_favorite,
+            workflows::create_workflow,
+            workflows::get_workflow,
+            workflows::get_workflows,
+            workflows::update_workflow,
+            workflows::delete_workflow,
+            workflows::toggle_favorite_workflow,
+            workflows::get_workflow_count_for_category,
+            workflows::move_workflow_between,
+            workflows::create_workflow_step,
+            workflows::get_workflow_step,
+            workflows::get_workflow_steps,
+            workflows::get_workflow_steps_command_populated,
+            workflows::update_workflow_step,
+            workflows::delete_workflow_step,
+            workflows::move_workflow_step_between,
+            workflows::toggle_workflow_step_enabled,
+            workflows::get_workflow_step_count,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -114,14 +114,10 @@ impl Database {
 
     #[instrument(skip(self))]
     pub fn get_workflow_count(&self, category_id: Option<i64>) -> Result<i64> {
-        let query = if let Some(cid) = category_id {
-            format!("SELECT COUNT(*) FROM workflows WHERE category_id = {}", cid)
-        } else {
-            "SELECT COUNT(*) FROM workflows WHERE category_id IS NULL".to_string()
-        };
+        let query = "SELECT COUNT(*) FROM workflows WHERE category_id IS ?";
 
         self.conn()?
-            .query_row(&query, [], |row| row.get(0))
+            .query_row(&query, [category_id], |row| row.get(0))
             .map_err(DatabaseError::from)
     }
 
