@@ -1,4 +1,4 @@
-use crate::database::{Command, Group};
+use crate::database::{Command, ExecutionMode, Group, StepCondition, Workflow, WorkflowStep};
 use std::collections::HashMap;
 
 pub(crate) struct CommandBuilder {
@@ -96,5 +96,69 @@ impl GroupBuilder {
 
     pub(crate) fn build(self) -> Group {
         self.group
+    }
+}
+
+pub(crate) struct WorkflowBuilder {
+    workflow: Workflow,
+}
+
+impl WorkflowBuilder {
+    pub(crate) fn new(name: &str) -> Self {
+        Self {
+            workflow: Workflow {
+                id: 0,
+                name: name.to_string(),
+                description: None,
+                category_id: None,
+                is_favorite: false,
+                execution_mode: ExecutionMode::Sequential,
+                position: 0,
+                created_at: String::new(),
+                updated_at: String::new(),
+            },
+        }
+    }
+
+    pub(crate) fn with_category(mut self, category_id: i64) -> Self {
+        self.workflow.category_id = Some(category_id);
+        self
+    }
+
+    pub(crate) fn with_execution_mode(mut self, execution_mode: ExecutionMode) -> Self {
+        self.workflow.execution_mode = execution_mode;
+        self
+    }
+
+    pub(crate) fn build(self) -> Workflow {
+        self.workflow
+    }
+}
+
+pub(crate) struct WorkflowStepBuilder {
+    workflow_step: WorkflowStep,
+}
+
+impl WorkflowStepBuilder {
+    pub(crate) fn new(workflow_id: i64, command_id: i64) -> Self {
+        Self {
+            workflow_step: WorkflowStep {
+                id: 0,
+                workflow_id,
+                command_id,
+                position: 0,
+                condition: StepCondition::Always,
+                timeout_seconds: None,
+                auto_retry_count: None,
+                enabled: true,
+                continue_on_failure: false,
+                created_at: String::new(),
+                updated_at: String::new(),
+            },
+        }
+    }
+
+    pub(crate) fn build(self) -> WorkflowStep {
+        self.workflow_step
     }
 }

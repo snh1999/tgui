@@ -183,15 +183,15 @@ impl Database {
     /// -- If the default value is returned, user at least can retrieve the command/update with new value
     /// -- NOTE: we have to check before running the commands
     fn row_to_command(row: &rusqlite::Row) -> rusqlite::Result<Command> {
-        let args_json: String = row.get("arguments")?;
-        let env_vars_json: Option<String> = row.get("env_vars")?;
+        let args_str: String = row.get("arguments")?;
+        let env_vars_str: Option<String> = row.get("env_vars")?;
 
-        let arguments = serde_json::from_str(&args_json).unwrap_or_else(|e| {
+        let arguments = serde_json::from_str(&args_str).unwrap_or_else(|e| {
             warn!(error = %e, "Failed to parse arguments, using default");
             Vec::new()
         });
 
-        let env_vars = Self::string_to_hashmap(env_vars_json);
+        let env_vars = Self::string_to_hashmap(env_vars_str);
 
         Ok(Command {
             id: row.get("id")?,
