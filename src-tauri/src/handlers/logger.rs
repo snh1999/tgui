@@ -7,18 +7,24 @@ use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::fmt::time::UtcTime;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
+use crate::error_map;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Error};
+
+const INVALID_INPUT: &str = "Invalid input";
+const NOT_FOUND: &str = "Resource not found";
+const DIRECTORY_ERROR: &str = "Failed to read/modify file/directory";
+const INTERNAL_ERROR: &str = "An internal error occurred";
 
 /// must return guard as we are using non-blocking.
 /// it ensures all logs are flushed before app closing
 pub fn init(app_dir: &PathBuf) -> Result<WorkerGuard, Box<dyn std::error::Error>> {
     let logs_dir = app_dir.join("logs");
-    fs::create_dir_all(&logs_dir)?;
+    fs::create_dir_all(&logs_dir).map_err(|_| error_map("Failed to create logs dir"))?;
 
     delete_logs_older_than(app_dir.as_path(), 30)?;
 
-    let file_appender = tracing_appender::rolling::daily(&logs_dir, "app-log");
+    let file_appender = tracing_appender::rolling::daily(&logs_dir, LOG_PREFIX);
     let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
     let file_layer = tracing_subscriber::fmt::layer()
@@ -71,18 +77,27 @@ pub fn logs_dir(app_dir: &Path) -> PathBuf {
 }
 
 #[tauri::command]
-pub fn list_log_files(app_dir: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
+pub fn list_log_files(app_dir: &Path) -> Result<Vec<PathBuf>, String> {
     let logs_dir = logs_dir(app_dir);
     let mut log_files = Vec::new();
 
     if logs_dir.exists() {
-        for entry in fs::read_dir(&logs_dir)? {
-            let entry = entry?;
+        let today = format!("{}.{}", LOG_PREFIX, OffsetDateTime::now_utc().date());
+
+        let entries = fs::read_dir(&logs_dir).map_err(|e| {
+            error!(error = %e);
+            "Failed to read directory."
+        })?;
+
+        for entry in entries {
+            let entry = entry.map_err(|e| {
+                error!(error = %e);
+                INTERNAL_ERROR
+            })?;
             let path = entry.path();
 
             if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
                 if filename.starts_with(LOG_PREFIX) {
-                    let today = format!("{}.{}", LOG_PREFIX, OffsetDateTime::now_utc().date());
                     if filename != today {
                         log_files.push(path);
                     }
@@ -95,13 +110,10 @@ pub fn list_log_files(app_dir: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
 }
 
 #[tauri::command]
-pub fn delete_logs_older_than(
-    app_dir: &Path,
-    days: i64,
-) -> Result<usize, Box<dyn std::error::Error>> {
+pub fn delete_logs_older_than(app_dir: &Path, days: i64) -> Result<usize, String> {
     if days < 1 {
         warn!("Invalid days parameter: {}", days);
-        return Err("Days must be at least 1".into());
+        return Err(INVALID_INPUT.to_string());
     }
 
     let logs_dir = logs_dir(app_dir);
@@ -110,10 +122,21 @@ pub fn delete_logs_older_than(
 
     info!(days = days, cutoff_date = %cutoff_date, "Starting log cleanup");
 
-    let date_format = time::format_description::parse("[year]-[month]-[day]")?;
+    let date_format = time::format_description::parse("[year]-[month]-[day]").map_err(|e| {
+        error!(error = %e);
+        INTERNAL_ERROR
+    })?;
 
-    for entry in fs::read_dir(&logs_dir)? {
-        let entry = entry?;
+    let entries = fs::read_dir(&logs_dir).map_err(|e| {
+        error!(error = %e);
+        DIRECTORY_ERROR
+    })?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| {
+            error!(error = %e);
+            INTERNAL_ERROR
+        })?;
         let path = entry.path();
 
         if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
@@ -144,36 +167,69 @@ pub fn delete_logs_older_than(
 }
 
 #[tauri::command]
-pub fn delete_log_by_date(app_dir: &Path, date: &str) -> Result<bool, std::io::Error> {
+pub fn delete_log_by_date(app_dir: &Path, date: &str) -> Result<bool, String> {
     let logs_dir = logs_dir(app_dir);
     let log_file = logs_dir.join(std::format!("{}.{}", LOG_PREFIX, date));
 
+    if !is_valid_date(date) {
+        warn!(date = date, "Invalid date format provided");
+        return Err(INVALID_INPUT.to_string());
+    }
+
+    // let canonical_log = log_file.canonicalize().ok();
+    // let canonical_base = logs_dir.canonicalize().ok();
+    //
+    // if let (Some(log), Some(base)) = (canonical_log, canonical_base) {
+    //     if !log.starts_with(&base) {
+    //         warn!(date = date, "Path traversal attempt detected");
+    //         return Err(LogError::InvalidInput);
+    //     }
+    // }
+
     if log_file.exists() {
-        fs::remove_file(&log_file)?;
+        fs::remove_file(&log_file).map_err(|e| {
+            error!(error = %e);
+            DIRECTORY_ERROR
+        })?;
         info!(date = date, "Deleted log file of date");
         Ok(true)
     } else {
         warn!(date = date, "Log file not found for deletion");
-        Ok(false)
+        Err(NOT_FOUND.to_string())
     }
 }
 
+fn is_valid_date(date: &str) -> bool {
+    if date.contains('/') || date.contains('\\') || date.contains("..") {
+        return false;
+    }
+    if date.len() != 10 {
+        return false;
+    }
+
+    for char in date.chars() {
+        if !char.is_numeric() && char != '-' {
+            return false;
+        }
+    }
+
+    true
+}
+
 #[tauri::command]
-pub fn delete_all_logs(app_dir: &Path) -> Result<usize, std::io::Error> {
+pub fn delete_all_logs(app_dir: &Path) -> Result<usize, String> {
     let logs_dir = logs_dir(app_dir);
     let mut deleted_count = 0;
 
     if logs_dir.exists() {
-        for entry in fs::read_dir(&logs_dir)? {
-            let entry = entry?;
-            let path = entry.path();
+        let log_files = list_log_files(app_dir)?;
 
-            if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
-                if filename.starts_with(LOG_PREFIX) {
-                    fs::remove_file(&path)?;
-                    deleted_count += 1;
-                }
-            }
+        for log_file in log_files {
+            fs::remove_file(&log_file).map_err(|e| {
+                error!(error = %e, "Failed to delete log file");
+                INTERNAL_ERROR
+            })?;
+            deleted_count += 1;
         }
     }
 

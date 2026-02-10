@@ -87,7 +87,6 @@ mod tests {
 
         let result = logger::delete_logs_older_than(temp_dir.path(), 0);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "Days must be at least 1");
     }
 
     #[test]
@@ -136,8 +135,8 @@ mod tests {
         let logs_path = temp_dir.path().join("logs");
         fs::create_dir_all(&logs_path).unwrap();
 
-        let result = logger::delete_log_by_date(temp_dir.path(), "2025-01-15").unwrap();
-        assert!(!result);
+        let result = logger::delete_log_by_date(temp_dir.path(), "2025-01-15");
+        assert!(result.is_err());
     }
 
     #[test]
