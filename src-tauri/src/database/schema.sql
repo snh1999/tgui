@@ -148,12 +148,6 @@ CREATE INDEX IF NOT EXISTS idx_execution_history_command_status ON execution_his
 CREATE INDEX IF NOT EXISTS idx_execution_history_workflow_status ON execution_history(workflow_id, status);
 CREATE INDEX IF NOT EXISTS idx_execution_history_time ON execution_history(completed_at);
 
-CREATE TRIGGER IF NOT EXISTS workflow_steps_update_timestamp
-AFTER UPDATE ON workflow_steps
-BEGIN
-UPDATE workflow_steps SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-END;
-
 -- Triggers
 -- Updated At time
 CREATE TRIGGER IF NOT EXISTS groups_update_timestamp

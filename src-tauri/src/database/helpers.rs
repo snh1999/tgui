@@ -22,6 +22,7 @@ impl Database {
             table,
             Some(&format!("Failed to create {}", table)),
         )?;
+        // TODO explore the unlikely possibility of another insert
         let row_id = self.conn()?.last_insert_rowid();
         info!(id = row_id, entity = table, "created successfully");
         Ok(row_id)

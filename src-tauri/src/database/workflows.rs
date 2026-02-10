@@ -46,7 +46,7 @@ impl Database {
         let mut sql_statement = "SELECT * FROM workflows WHERE 1=1".to_string();
 
         if let Some(cid) = category_id {
-            sql_statement.push_str(&format!(" AND category_id = {}", cid));
+            sql_statement.push_str(&" AND category_id = ?".to_string());
         }
 
         if favorites_only {
@@ -55,7 +55,13 @@ impl Database {
 
         sql_statement.push_str(" ORDER BY position");
 
-        self.query_database(&sql_statement, [], |row| Self::row_to_workflow(row))
+        let params = if category_id.is_some() {
+            params![category_id]
+        } else {
+            params![]
+        };
+
+        self.query_database(&sql_statement, params, |row| Self::row_to_workflow(row))
     }
 
     #[instrument(skip(self, workflow))]
