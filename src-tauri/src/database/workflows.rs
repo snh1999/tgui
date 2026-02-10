@@ -101,7 +101,7 @@ impl Database {
             WORKFLOWS_TABLE,
             "UPDATE",
             id,
-            "UPDATE workflows SET is_favorite = 1 WHERE id = ?1",
+            "UPDATE workflows SET is_favorite = NOT is_favorite WHERE id = ?1",
             params![id],
         )
     }

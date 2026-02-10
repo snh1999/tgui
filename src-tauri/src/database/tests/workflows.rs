@@ -254,7 +254,7 @@ fn test_toggle_workflow_favorite() {
     test_db.db.toggle_favorite_workflow(id).unwrap();
     let updated = test_db.db.get_workflow(id).unwrap();
 
-    assert_eq!(original.position, updated.position);
+    assert_eq!(!original.is_favorite, updated.is_favorite);
 }
 
 #[test]
