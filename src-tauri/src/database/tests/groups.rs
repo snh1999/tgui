@@ -1,6 +1,5 @@
 use super::*;
 use crate::constants::GROUPS_TABLE;
-use crate::database::builders::GroupBuilder;
 
 #[test]
 fn test_group_builder_pattern() {

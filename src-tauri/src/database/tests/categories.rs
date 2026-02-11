@@ -1,6 +1,5 @@
 use super::*;
 use crate::constants::CATEGORIES_TABLE;
-use crate::database::builders::CommandBuilder;
 
 #[test]
 fn test_create_and_get_category() {

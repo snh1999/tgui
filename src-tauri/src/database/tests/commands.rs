@@ -1,6 +1,5 @@
 use super::*;
 use crate::constants::COMMANDS_TABLE;
-use crate::database::builders::CommandBuilder;
 use rusqlite::params;
 use std::collections::HashMap;
 

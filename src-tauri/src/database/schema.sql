@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS workflow_steps (
     workflow_id INTEGER NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
     command_id INTEGER NOT NULL REFERENCES commands(id) ON DELETE CASCADE,
     position INTEGER NOT NULL,
-    condition TEXT,
+    condition TEXT NOT NULL DEFAULT 'always',
     timeout_seconds INTEGER,
     auto_retry_count INTEGER DEFAULT 0,
     enabled BOOLEAN NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)),
