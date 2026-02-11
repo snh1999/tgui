@@ -15,15 +15,19 @@ impl Database {
         sql: &str,
         params: P,
     ) -> Result<i64> {
-        self.execute(
-            sql,
-            params,
-            "INSERT",
-            table,
-            Some(&format!("Failed to create {}", table)),
-        )?;
-        // TODO explore the unlikely possibility of another insert
-        let row_id = self.conn()?.last_insert_rowid();
+        let span = db_span!("INSERT", table, 0);
+        let _enter = span.enter();
+
+        let sql = format!("{} RETURNING id", sql);
+
+        let row_id: i64 = self
+            .conn()?
+            .query_row(&sql, params, |row| row.get(0))
+            .map_err(|e| {
+                error!(error = %e, table = table, "Failed to create");
+                DatabaseError::from(e)
+            })?;
+
         info!(id = row_id, entity = table, "created successfully");
         Ok(row_id)
     }
@@ -36,13 +40,13 @@ impl Database {
         sql: &str,
         params: P,
     ) -> Result<()> {
-        let rows_affected = self.execute(
-            sql,
-            params,
-            operation,
-            table,
-            Some(&format!("{} operation failed on {}", operation, table)),
-        )?;
+        let span = db_span!(operation, table, 0);
+        let _enter = span.enter();
+
+        let rows_affected = self.conn()?.execute(sql, params).map_err(|e| {
+            error!(error = %e, "{} operation failed on {}", operation, table);
+            DatabaseError::from(e)
+        })?;
 
         if rows_affected == 0 {
             error!(id = id, table = table, "Not found");
@@ -51,25 +55,6 @@ impl Database {
 
         info!(id = id, "{} operation successful on {}", operation, table);
         Ok(())
-    }
-
-    fn execute<P: rusqlite::Params>(
-        &self,
-        sql: &str,
-        params: P,
-        operation: &'static str,
-        table: &'static str,
-        error_message: Option<&str>,
-    ) -> Result<usize> {
-        let span = db_span!(operation, table, 0);
-        let _enter = span.enter();
-
-        self.conn()?.execute(sql, params).map_err(|e| {
-            if let Some(msg) = error_message {
-                error!(error = %e, message = msg);
-            }
-            DatabaseError::from(e)
-        })
     }
 
     /// query_row can be used only for query by id (only param)
