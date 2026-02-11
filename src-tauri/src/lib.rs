@@ -3,7 +3,7 @@ mod database;
 mod handlers;
 
 use crate::database::Database;
-use crate::handlers::{categories, commands, groups, workflows};
+use crate::handlers::{categories, commands, groups, settings, workflows};
 use handlers::logger;
 use tauri::Manager;
 use tracing::{error, info};
@@ -85,6 +85,16 @@ pub fn run() {
             workflows::move_workflow_step_between,
             workflows::toggle_workflow_step_enabled,
             workflows::get_workflow_step_count,
+            logger::logs_dir,
+            logger::list_log_files,
+            logger::delete_logs_older_than,
+            logger::delete_log_by_date,
+            logger::delete_all_logs,
+            logger::get_recent_logs,
+            settings::get_setting,
+            settings::set_setting,
+            settings::reset_settings,
+            settings::get_all_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

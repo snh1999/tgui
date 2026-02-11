@@ -2,6 +2,7 @@ use super::{Database, DatabaseError, Result};
 use rusqlite::params;
 use std::collections::HashMap;
 use std::sync::LazyLock;
+use tracing::{info, instrument};
 
 static DEFAULT_SETTINGS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
     HashMap::from([
@@ -16,7 +17,9 @@ static DEFAULT_SETTINGS: LazyLock<HashMap<&'static str, &'static str>> = LazyLoc
 });
 
 impl Database {
+    #[instrument(skip(self))]
     pub fn initialize_settings(&self) -> Result<()> {
+        info!("Initializing settings with default values");
         for (key, value) in DEFAULT_SETTINGS.iter() {
             self.conn()?.execute(
                 "INSERT OR IGNORE INTO settings (key, value) VALUES (?1, ?2)",
@@ -27,6 +30,7 @@ impl Database {
     }
 
     /// no id provided/exists, so id in error is set to a dummy value 0
+    #[instrument(skip(self))]
     pub fn get_setting(&self, key: &str) -> Result<String> {
         self.conn()?
             .query_row(
@@ -44,6 +48,7 @@ impl Database {
     }
 
     pub fn set_setting(&self, key: &str, value: &str) -> Result<()> {
+        info!("Updating setting {}", key);
         self.validate_setting(key, value)?;
 
         self.conn()?.execute(
@@ -55,6 +60,7 @@ impl Database {
     }
 
     pub fn reset_settings(&self) -> Result<()> {
+        info!("Resetting settings with default values");
         for (key, value) in DEFAULT_SETTINGS.iter() {
             self.set_setting(key, value)?;
         }

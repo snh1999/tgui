@@ -226,7 +226,7 @@ fn test_delete_workflow() {
         result,
         Err(DatabaseError::NotFound {
             entity: WORKFLOWS_TABLE,
-            id
+            ..
         })
     ));
 }
@@ -587,7 +587,7 @@ fn test_update_workflow_step_to_running() {
 
     let workflow_id = test_db.create_test_workflow("Test");
     let cmd1_id = test_db.create_test_command("Test", "echo test", None);
-    let cmd2_id = test_db.create_test_command("Test2", "echo test", None);
+    test_db.create_test_command("Test2", "echo test", None);
 
     let flow_step_id = test_db.create_test_workflow_step(workflow_id, cmd1_id);
 
@@ -666,7 +666,7 @@ fn test_delete_workflow_step() {
         result,
         Err(DatabaseError::NotFound {
             entity: WORKFLOW_STEPS_TABLE,
-            id
+            ..
         })
     ));
 }
@@ -764,7 +764,7 @@ fn test_move_workflow_step_between() {
     let workflow_id_1 = test_db.create_test_workflow("Test");
     let command_id_1 = test_db.create_test_command("Test", "Echo test", None);
     let command_id_2 = test_db.create_test_command("Test", "Echo test", None);
-    let command_id_3 = test_db.create_test_command("Test", "Echo test", None);
+    test_db.create_test_command("Test", "Echo test", None);
 
     let id1 = test_db.create_test_workflow_step(workflow_id_1, command_id_1);
     let id2 = test_db.create_test_workflow_step(workflow_id_1, command_id_2);

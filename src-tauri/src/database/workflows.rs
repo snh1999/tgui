@@ -45,7 +45,7 @@ impl Database {
     ) -> Result<Vec<Workflow>> {
         let mut sql_statement = "SELECT * FROM workflows WHERE 1=1".to_string();
 
-        if let Some(cid) = category_id {
+        if category_id.is_some() {
             sql_statement.push_str(&" AND category_id = ?".to_string());
         }
 

@@ -1,4 +1,4 @@
-use super::{Command, Database, DatabaseError, Result};
+use super::{Command, Database, Result};
 use crate::constants::{COMMANDS_TABLE, COMMAND_GROUP_COLUMN};
 use rusqlite::{named_params, params};
 use tracing::{debug, instrument, warn};
