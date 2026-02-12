@@ -68,7 +68,7 @@ impl Database {
     pub fn update_workflow(&self, workflow: &Workflow) -> Result<()> {
         self.validate_non_empty("name", &workflow.name)?;
 
-        self.update(
+        self.execute_db(
             WORKFLOWS_TABLE,
             "UPDATE",
             workflow.id,
@@ -92,7 +92,7 @@ impl Database {
 
     #[instrument(skip(self))]
     pub fn delete_workflow(&self, id: i64) -> Result<()> {
-        self.update(
+        self.execute_db(
             WORKFLOWS_TABLE,
             "DELETE",
             id,
@@ -103,7 +103,7 @@ impl Database {
 
     #[instrument(skip(self))]
     pub fn toggle_favorite_workflow(&self, id: i64) -> Result<()> {
-        self.update(
+        self.execute_db(
             WORKFLOWS_TABLE,
             "UPDATE",
             id,
@@ -307,7 +307,7 @@ impl Database {
 
         self.get_command(flow_step.command_id)?;
 
-        self.update(
+        self.execute_db(
             WORKFLOW_STEPS_TABLE,
             "UPDATE",
             flow_step.id,
@@ -335,7 +335,7 @@ impl Database {
     pub fn delete_workflow_step(&self, id: i64) -> Result<()> {
         debug!(step_id = id, "Deleting workflow step");
 
-        self.update(
+        self.execute_db(
             WORKFLOW_STEPS_TABLE,
             "DELETE",
             id,
@@ -386,7 +386,7 @@ impl Database {
     pub fn toggle_workflow_step_enabled(&self, id: i64) -> Result<()> {
         debug!(step_id = id, "Toggling workflow step enabled");
 
-        self.update(
+        self.execute_db(
             WORKFLOW_STEPS_TABLE,
             "UPDATE",
             id,
