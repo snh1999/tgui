@@ -42,9 +42,12 @@ pub fn init(app_dir: &PathBuf) -> Result<WorkerGuard, Box<dyn std::error::Error>
         .with_thread_ids(false)
         .with_writer(std::io::stdout);
 
-    // Filter: RUST_LOG=debug,tgui=info,sqlx=warn env var
     let filter = EnvFilter::builder()
-        .with_default_directive(tracing::Level::INFO.into())
+        .with_default_directive(if cfg!(debug_assertions) {
+            tracing::Level::DEBUG.into()
+        } else {
+            tracing::Level::INFO.into()
+        })
         .from_env_lossy();
 
     tracing_subscriber::registry()
@@ -57,18 +60,6 @@ pub fn init(app_dir: &PathBuf) -> Result<WorkerGuard, Box<dyn std::error::Error>
     debug!(log_directory = %logs_dir.display(), "Log files location");
 
     Ok(guard)
-}
-
-#[macro_export]
-macro_rules! db_span {
-    ($operation:expr, $entity:expr, $id:expr) => {
-        tracing::info_span!(
-            "db_operation",
-            operation = $operation,
-            entity = $entity,
-            entity_id = $id
-        )
-    };
 }
 
 #[tauri::command]

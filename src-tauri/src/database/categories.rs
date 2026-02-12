@@ -49,7 +49,7 @@ impl Database {
     ) -> Result<()> {
         self.validate_non_empty("name", &name)?;
 
-        self.update(
+        self.execute_db(
             CATEGORIES_TABLE,
             "UPDATE",
             id,
@@ -60,7 +60,7 @@ impl Database {
 
     #[instrument(skip(self))]
     pub fn delete_category(&self, id: i64) -> Result<()> {
-        self.update(
+        self.execute_db(
             CATEGORIES_TABLE,
             "DELETE",
             id,

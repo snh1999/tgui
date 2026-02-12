@@ -78,7 +78,7 @@ impl Database {
             "Updating Group"
         );
 
-        self.update(
+        self.execute_db(
             GROUPS_TABLE,
             "UPDATE",
             group.id,
@@ -139,7 +139,7 @@ impl Database {
 
     #[instrument(skip(self))]
     pub fn delete_group(&self, id: i64) -> Result<()> {
-        self.update(
+        self.execute_db(
             GROUPS_TABLE,
             "DELETE",
             id,
@@ -199,7 +199,7 @@ impl Database {
     pub fn toggle_group_favorite(&self, id: i64) -> Result<()> {
         debug!(command_id = id, "Toggling favorite");
 
-        self.update(
+        self.execute_db(
             GROUPS_TABLE,
             "UPDATE",
             id,

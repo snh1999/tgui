@@ -1,10 +1,9 @@
 pub use crate::database::errors::{DatabaseError, Result};
 use crate::database::Database;
-use crate::db_span;
 use rusqlite::params;
 use serde_json::Error;
 use std::collections::HashMap;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, instrument, warn};
 
 impl Database {
     pub(crate) const POSITION_GAP: i64 = 1000;
@@ -15,9 +14,6 @@ impl Database {
         sql: &str,
         params: P,
     ) -> Result<i64> {
-        let span = db_span!("INSERT", table, 0);
-        let _enter = span.enter();
-
         let sql = format!("{} RETURNING id", sql);
 
         let row_id: i64 = self
@@ -32,19 +28,15 @@ impl Database {
         Ok(row_id)
     }
 
-    pub(crate) fn update<P: rusqlite::Params>(
+    pub(crate) fn execute_db<P: rusqlite::Params>(
         &self,
         table: &'static str,
-        operation: &'static str,
         id: i64,
         sql: &str,
         params: P,
     ) -> Result<()> {
-        let span = db_span!(operation, table, 0);
-        let _enter = span.enter();
-
         let rows_affected = self.conn()?.execute(sql, params).map_err(|e| {
-            error!(error = %e, "{} operation failed on {}", operation, table);
+            error!(error = %e, table=table, "Database operation failed");
             DatabaseError::from(e)
         })?;
 
@@ -53,7 +45,7 @@ impl Database {
             return Err(DatabaseError::NotFound { entity: table, id });
         }
 
-        info!(id = id, "{} operation successful on {}", operation, table);
+        info!(id = id, table = table, "Database operation successful");
         Ok(())
     }
 
@@ -68,8 +60,6 @@ impl Database {
     where
         F: FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
     {
-        debug!(id = id, "{}", format!("Fetching {}", table));
-
         let item = self
             .conn()?
             .query_row(sql_query, params![id], |row| row_mapper(row))
@@ -84,7 +74,7 @@ impl Database {
                 };
             })?;
 
-        debug!(id = id, "{}", format!("{} found", table));
+        debug!(id = id, table = table, "Fetched entry");
 
         Ok(item)
     }
@@ -132,6 +122,12 @@ impl Database {
                 .conn()?
                 .query_row(&query, params, |row| row.get::<_, i64>(0))?);
 
+        debug!(
+            calculated_position = position,
+            called_by = table,
+            "Command position"
+        );
+
         Ok(position)
     }
 
@@ -145,6 +141,7 @@ impl Database {
                     .chars()
                     .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
                 {
+                    error!("Invalid env variable key: {}", key);
                     return Err(DatabaseError::InvalidData {
                         field: "env_vars",
                         reason: format!(
@@ -160,6 +157,7 @@ impl Database {
 
     pub(crate) fn validate_non_empty(&self, field: &'static str, value: &str) -> Result<()> {
         if value.trim().is_empty() {
+            error!("Empty field: {}", field);
             Err(DatabaseError::InvalidData {
                 field,
                 reason: format!("{} cannot be empty", field),
@@ -186,6 +184,7 @@ impl Database {
         F: FnMut(Option<i64>, i64) -> Result<(i64, Option<i64>)>,
     {
         if prev_id.is_none() && next_id.is_none() {
+            debug!("Invalid method call, Cannot move item between non-empty items");
             return Err(DatabaseError::InvalidData {
                 field: "item_id",
                 reason: "Invalid positons. Either prev_id or next_id must be provided".to_string(),
@@ -198,6 +197,7 @@ impl Database {
         if (next_id.is_some() && next_parent != parent_id)
             || (prev_id.is_some() && prev_parent != parent_id)
         {
+            debug!("Invalid method call, Cannot move between different parent items");
             return Err(DatabaseError::InvalidData {
                 field: "parent_id",
                 reason: "Invalid data, all groups must be from same parent".to_string(),
@@ -216,14 +216,7 @@ impl Database {
         }
 
         let query = format!("UPDATE {} SET position = ?1 WHERE id = ?2", table);
-        let rows = self.conn()?.execute(&query, params![new_pos, item_id])?;
-
-        if rows == 0 {
-            return Err(DatabaseError::NotFound {
-                entity: table,
-                id: item_id,
-            });
-        }
+        self.execute_db(table, item_id, &query, params![new_pos, item_id])?;
 
         info!(entity = table, id = item_id, "Workflow position updated");
 

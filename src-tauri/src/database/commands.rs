@@ -13,8 +13,6 @@ impl Database {
         let position =
             self.get_position(COMMANDS_TABLE, Some(COMMAND_GROUP_COLUMN), cmd.group_id)?;
 
-        debug!(calculated_position = position, "Command position");
-
         self.create(
             COMMANDS_TABLE,
             "INSERT INTO
@@ -90,7 +88,7 @@ impl Database {
             "Updating command"
         );
 
-        self.update(
+        self.execute_db(
             COMMANDS_TABLE,
             "UPDATE",
             cmd.id,
@@ -155,7 +153,7 @@ impl Database {
 
     #[instrument(skip(self))]
     pub fn delete_command(&self, id: i64) -> Result<()> {
-        self.update(
+        self.execute_db(
             COMMANDS_TABLE,
             "DELETE",
             id,
@@ -167,7 +165,7 @@ impl Database {
     #[instrument(skip(self))]
     pub fn toggle_command_favorite(&self, id: i64) -> Result<()> {
         debug!(command_id = id, "Toggling favorite");
-        self.update(
+        self.execute_db(
             COMMANDS_TABLE,
             "UPDATE",
             id,
