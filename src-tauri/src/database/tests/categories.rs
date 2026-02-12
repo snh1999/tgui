@@ -1,8 +1,8 @@
 use super::*;
-use crate::database::builders::CommandBuilder;
+use crate::constants::CATEGORIES_TABLE;
 
 #[test]
-fn test_create_category_and_get_category() {
+fn test_create_and_get_category() {
     let test_db = TestDb::setup_test_db();
     let cat_name = "Development";
     let cat_id = test_db.create_test_category(cat_name);
@@ -67,7 +67,7 @@ fn test_get_category_not_found() {
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
-            entity: "category",
+            entity: CATEGORIES_TABLE,
             id: 99999
         })
     ));
@@ -110,7 +110,7 @@ fn test_update_category_not_found() {
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
-            entity: "category",
+            entity: CATEGORIES_TABLE,
             id: 99999
         })
     ));
@@ -156,7 +156,7 @@ fn test_delete_category_not_found() {
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
-            entity: "category",
+            entity: CATEGORIES_TABLE,
             id: 99999
         })
     ));

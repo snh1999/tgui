@@ -1,63 +1,60 @@
 use super::{Database, DatabaseError, Group, Result};
-use rusqlite::params;
+use crate::constants::{GROUPS_TABLE, GROUP_PARENT_GROUP_COLUMN};
+use rusqlite::{named_params, params};
 use std::collections::HashSet;
+use tracing::{debug, instrument, warn};
 
 impl Database {
+    #[instrument(skip(self, group), fields(name = %group.name))]
     pub fn create_group(&self, group: &Group) -> Result<i64> {
         self.validate_group(group)?;
+        let env_vars = Self::hashmap_to_string(&group.env_vars)?;
 
-        let env_vars_json = group
-            .env_vars
-            .as_ref()
-            .map(|vars| serde_json::to_string(vars))
-            .transpose()?;
-
-        let position: i64 =
-            self.get_position("groups", "parent_group_id", group.parent_group_id)?;
-
-        self.conn()?.execute(
-            "INSERT INTO groups (name, description, parent_group_id, position, working_directory, env_vars, shell, category_id, is_favorite, icon)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
-            params![
-                group.name,
-                group.description,
-                group.parent_group_id,
-                position,
-                group.working_directory,
-                env_vars_json,
-                group.shell,
-                group.category_id,
-                group.is_favorite,
-                group.icon,
-            ],
+        let position: i64 = self.get_position(
+            GROUPS_TABLE,
+            Some(GROUP_PARENT_GROUP_COLUMN),
+            group.parent_group_id,
         )?;
 
-        Ok(self.conn()?.last_insert_rowid())
+        self.create(
+            GROUPS_TABLE,
+            "INSERT INTO groups (name, description, parent_group_id, position, working_directory, env_vars, shell, category_id, is_favorite, icon)
+             VALUES (:name, :description, :parent_group_id, :position, :working_directory, :env_vars, :shell, :category_id, :is_favorite, :icon)",
+            named_params! {
+                ":name": group.name,
+                ":description": group.description,
+                ":parent_group_id": group.parent_group_id,
+                ":position": position,
+                ":working_directory": group.working_directory,
+                ":env_vars": env_vars,
+                ":shell": group.shell,
+                ":category_id": group.category_id,
+                ":is_favorite": group.is_favorite,
+                ":icon": group.icon,
+            },
+        )
     }
 
+    #[instrument(skip(self), ret)]
     pub fn get_group(&self, id: i64) -> Result<Group> {
-        self.conn()?
-            .query_row("SELECT * FROM groups WHERE id = ?1", params![id], |row| {
-                Self::row_to_group(row)
-            })
-            .map_err(|e| match e {
-                rusqlite::Error::QueryReturnedNoRows => DatabaseError::NotFound {
-                    entity: "group",
-                    id,
-                },
-                _ => e.into(),
-            })
+        self.query_row(
+            GROUPS_TABLE,
+            id,
+            "SELECT * FROM groups WHERE id = ?1",
+            Self::row_to_group,
+        )
     }
 
+    #[instrument(skip(self))]
     pub fn get_groups(
         &self,
         parent_id: Option<i64>,
         category_id: Option<i64>,
         favorites_only: bool,
     ) -> Result<Vec<Group>> {
-        self.get_items(
-            "groups",
-            "parent_group_id",
+        self.get_items_groups_commands(
+            GROUPS_TABLE,
+            GROUP_PARENT_GROUP_COLUMN,
             parent_id,
             category_id,
             favorites_only,
@@ -65,6 +62,7 @@ impl Database {
         )
     }
 
+    #[instrument(skip(self))]
     pub fn update_group(&self, group: &Group) -> Result<()> {
         self.validate_group(group)?;
 
@@ -72,46 +70,42 @@ impl Database {
             self.validate_no_circular_reference(group.id, parent_id)?;
         }
 
-        let env_vars_json = group
-            .env_vars
-            .as_ref()
-            .map(|vars| serde_json::to_string(vars))
-            .transpose()?;
+        let env_vars = Self::hashmap_to_string(&group.env_vars)?;
 
-        let rows_affected = self.conn()?.execute(
+        debug!(
+            command_id = group.id,
+            has_env_vars = group.env_vars.is_some(),
+            "Updating Group"
+        );
+
+        self.execute_db(
+            GROUPS_TABLE,
+            group.id,
             "UPDATE groups SET
-            name = ?1,
-            description = ?2,
-            parent_group_id = ?3,
-            working_directory = ?4,
-            env_vars = ?5,
-            shell = ?6,
-            category_id = ?7,
-icon = ?8
-            WHERE id = ?9",
-            params![
-                group.name,
-                group.description,
-                group.parent_group_id,
-                group.working_directory,
-                env_vars_json,
-                group.shell,
-                group.category_id,
-                group.icon,
-                group.id
-            ],
-        )?;
-
-        if rows_affected == 0 {
-            return Err(DatabaseError::NotFound {
-                entity: "group",
-                id: group.id,
-            });
-        }
-
-        Ok(())
+            name = :name,
+            description = :description,
+            parent_group_id = :parent_group_id,
+            working_directory = :working_directory,
+            env_vars = :env_vars,
+            shell = :shell,
+            category_id = :category_id,
+            icon = :icon
+            WHERE id = :id",
+            named_params! {
+                ":name": group.name,
+                ":description": group.description,
+                ":parent_group_id": group.parent_group_id,
+                ":working_directory": group.working_directory,
+                ":env_vars": env_vars,
+                ":shell": group.shell,
+                ":category_id": group.category_id,
+                ":icon": group.icon,
+                ":id": group.id
+            },
+        )
     }
 
+    #[instrument(skip(self))]
     pub fn move_group_between(
         &self,
         group_id: i64,
@@ -120,24 +114,15 @@ icon = ?8
     ) -> Result<()> {
         let group = self.get_group(group_id)?;
 
-        let rows = self.move_item_between(
+        self.move_item_between(
             "groups",
-            "parent_group_id",
             group_id,
             prev_id,
             next_id,
+            Some(GROUP_PARENT_GROUP_COLUMN),
             group.parent_group_id,
             |id, default| self.get_group_position_parent(id, default),
-        )?;
-
-        if rows == 0 {
-            return Err(DatabaseError::NotFound {
-                entity: "group",
-                id: group_id,
-            });
-        }
-
-        Ok(())
+        )
     }
 
     fn get_group_position_parent(
@@ -151,31 +136,27 @@ icon = ?8
             .unwrap_or((default_val, None)))
     }
 
+    #[instrument(skip(self))]
     pub fn delete_group(&self, id: i64) -> Result<()> {
-        let rows_affected = self
-            .conn()?
-            .execute("DELETE FROM groups WHERE id = ?1", params![id])?;
-
-        if rows_affected == 0 {
-            return Err(DatabaseError::NotFound {
-                entity: "group",
-                id,
-            });
-        }
-
-        Ok(())
+        self.execute_db(
+            GROUPS_TABLE,
+            id,
+            "DELETE FROM groups WHERE id = ?1",
+            params![id],
+        )
     }
 
+    #[instrument(skip(self))]
     pub fn get_group_command_count(&self, id: i64) -> Result<i64> {
-        self.conn()?
-            .query_row(
-                "SELECT COUNT(*) FROM commands WHERE group_id = ?",
-                params![id],
-                |row| row.get(0),
-            )
-            .map_err(Into::into)
+        self.query_row(
+            GROUPS_TABLE,
+            id,
+            "SELECT COUNT(*) FROM commands WHERE group_id = ?",
+            |row| row.get(0),
+        )
     }
 
+    #[instrument(skip(self))]
     pub fn get_group_tree(&self, root_id: i64) -> Result<Vec<Group>> {
         self.query_database(
             "WITH RECURSIVE tree AS (
@@ -190,6 +171,7 @@ icon = ?8
         )
     }
 
+    #[instrument(skip(self))]
     pub fn get_group_path(&self, group_id: i64) -> Result<Vec<String>> {
         let sql = "
         WITH RECURSIVE group_path AS (
@@ -211,39 +193,36 @@ icon = ?8
         Ok(path)
     }
 
+    #[instrument(skip(self))]
     pub fn toggle_group_favorite(&self, id: i64) -> Result<()> {
-        let rows_affected = self.conn()?.execute(
+        debug!(command_id = id, "Toggling favorite");
+
+        self.execute_db(
+            GROUPS_TABLE,
+            id,
             "UPDATE groups SET is_favorite = NOT is_favorite WHERE id = ?1",
             params![id],
-        )?;
-
-        if rows_affected == 0 {
-            return Err(DatabaseError::NotFound {
-                entity: "group",
-                id,
-            });
-        }
-
-        Ok(())
+        )
     }
 
     fn row_to_group(row: &rusqlite::Row) -> rusqlite::Result<Group> {
-        let env_vars_json: Option<String> = row.get(6)?;
+        let env_vars_json: Option<String> = row.get("env_vars")?;
+        let env_vars = Self::string_to_hashmap(env_vars_json);
 
         Ok(Group {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            description: row.get(2)?,
-            parent_group_id: row.get(3)?,
-            position: row.get(4)?,
-            working_directory: row.get(5)?,
-            env_vars: env_vars_json.and_then(|json| serde_json::from_str(&json).ok()),
-            shell: row.get(7)?,
-            category_id: row.get(8)?,
-            is_favorite: row.get(9)?,
-            icon: row.get(10)?,
-            created_at: row.get(11)?,
-            updated_at: row.get(12)?,
+            id: row.get("id")?,
+            name: row.get("name")?,
+            description: row.get("description")?,
+            parent_group_id: row.get("parent_group_id")?,
+            position: row.get("position")?,
+            working_directory: row.get("working_directory")?,
+            env_vars,
+            shell: row.get("shell")?,
+            category_id: row.get("category_id")?,
+            is_favorite: row.get("is_favorite")?,
+            icon: row.get("icon")?,
+            created_at: row.get("created_at")?,
+            updated_at: row.get("updated_at")?,
         })
     }
 

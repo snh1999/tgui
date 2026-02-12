@@ -1,11 +1,83 @@
+pub use crate::database::errors::{DatabaseError, Result};
 use crate::database::Database;
 use rusqlite::params;
+use serde_json::Error;
 use std::collections::HashMap;
-
-pub use crate::database::errors::{DatabaseError, Result};
+use tracing::{debug, error, info, instrument, warn};
 
 impl Database {
     pub(crate) const POSITION_GAP: i64 = 1000;
+
+    pub(crate) fn create<P: rusqlite::Params>(
+        &self,
+        table: &'static str,
+        sql: &str,
+        params: P,
+    ) -> Result<i64> {
+        let sql = format!("{} RETURNING id", sql);
+
+        let row_id: i64 = self
+            .conn()?
+            .query_row(&sql, params, |row| row.get(0))
+            .map_err(|e| {
+                error!(error = %e, table = table, "Failed to create");
+                DatabaseError::from(e)
+            })?;
+
+        info!(id = row_id, entity = table, "created successfully");
+        Ok(row_id)
+    }
+
+    pub(crate) fn execute_db<P: rusqlite::Params>(
+        &self,
+        table: &'static str,
+        id: i64,
+        sql: &str,
+        params: P,
+    ) -> Result<()> {
+        let rows_affected = self.conn()?.execute(sql, params).map_err(|e| {
+            error!(error = %e, table=table, "Database operation failed");
+            DatabaseError::from(e)
+        })?;
+
+        if rows_affected == 0 {
+            error!(id = id, table = table, "Not found");
+            return Err(DatabaseError::NotFound { entity: table, id });
+        }
+
+        info!(id = id, table = table, "Database operation successful");
+        Ok(())
+    }
+
+    /// query_row can be used only for query by id (only param)
+    pub(crate) fn query_row<T, F>(
+        &self,
+        table: &'static str,
+        id: i64,
+        sql_query: &str,
+        mut row_mapper: F,
+    ) -> Result<T>
+    where
+        F: FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
+    {
+        let item = self
+            .conn()?
+            .query_row(sql_query, params![id], |row| row_mapper(row))
+            .map_err(|e| {
+                error!(error = %e, "Query failed");
+
+                return match e {
+                    rusqlite::Error::QueryReturnedNoRows => {
+                        DatabaseError::NotFound { entity: table, id }
+                    }
+                    _ => e.into(),
+                };
+            })?;
+
+        debug!(id = id, table = table, "Fetched entry");
+
+        Ok(item)
+    }
 
     pub(crate) fn query_database<T, F, P>(
         &self,
@@ -30,20 +102,31 @@ impl Database {
     pub(crate) fn get_position(
         &self,
         table: &'static str,
-        column_name: &'static str,
-        group_id: Option<i64>,
+        parent_column: Option<&'static str>,
+        parent_id: Option<i64>,
     ) -> Result<i64> {
-        let query = format!(
-            "SELECT COALESCE(MAX(position), -1) + 1 FROM {} WHERE {} IS ?1",
-            table, column_name
-        );
+        let mut query = format!("SELECT COALESCE(MAX(position), -1) + 1 FROM {} ", table);
+
+        if let Some(parent_column) = parent_column {
+            query.push_str(&format!(" WHERE {} IS ?1", parent_column));
+        }
+
+        let params = if parent_column.is_some() {
+            params![parent_id]
+        } else {
+            params![]
+        };
 
         let position = Self::POSITION_GAP
-            + (self.conn()?.query_row(
-                &query,
-                params![group_id],
-                |row| row.get::<_, i64>(0),
-            )?);
+            + (self
+                .conn()?
+                .query_row(&query, params, |row| row.get::<_, i64>(0))?);
+
+        debug!(
+            calculated_position = position,
+            called_by = table,
+            "Command position"
+        );
 
         Ok(position)
     }
@@ -58,6 +141,7 @@ impl Database {
                     .chars()
                     .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
                 {
+                    error!("Invalid env variable key: {}", key);
                     return Err(DatabaseError::InvalidData {
                         field: "env_vars",
                         reason: format!(
@@ -73,6 +157,7 @@ impl Database {
 
     pub(crate) fn validate_non_empty(&self, field: &'static str, value: &str) -> Result<()> {
         if value.trim().is_empty() {
+            error!("Empty field: {}", field);
             Err(DatabaseError::InvalidData {
                 field,
                 reason: format!("{} cannot be empty", field),
@@ -88,17 +173,18 @@ impl Database {
     pub(crate) fn move_item_between<F>(
         &self,
         table: &'static str,
-        group_column: &'static str,
         item_id: i64,
         prev_id: Option<i64>,
         next_id: Option<i64>,
-        parent_group_id: Option<i64>,
+        parent_column: Option<&'static str>,
+        parent_id: Option<i64>,
         mut get_position_parent: F,
-    ) -> Result<usize>
+    ) -> Result<()>
     where
         F: FnMut(Option<i64>, i64) -> Result<(i64, Option<i64>)>,
     {
         if prev_id.is_none() && next_id.is_none() {
+            debug!("Invalid method call, Cannot move item between non-empty items");
             return Err(DatabaseError::InvalidData {
                 field: "item_id",
                 reason: "Invalid positons. Either prev_id or next_id must be provided".to_string(),
@@ -108,9 +194,10 @@ impl Database {
         let (prev_pos, prev_parent) = get_position_parent(prev_id, 0)?;
         let (next_pos, next_parent) = get_position_parent(next_id, prev_pos + Self::POSITION_GAP)?;
 
-        if (next_id.is_some() && next_parent != parent_group_id)
-            || (prev_id.is_some() && prev_parent != parent_group_id)
+        if (next_id.is_some() && next_parent != parent_id)
+            || (prev_id.is_some() && prev_parent != parent_id)
         {
+            debug!("Invalid method call, Cannot move between different parent items");
             return Err(DatabaseError::InvalidData {
                 field: "parent_id",
                 reason: "Invalid data, all groups must be from same parent".to_string(),
@@ -121,7 +208,7 @@ impl Database {
 
         // Gap exhausted - renumber entire group
         if new_pos == prev_pos || new_pos == next_pos {
-            self.renumber_position(table, group_column, parent_group_id)?;
+            self.renumber_position(table, parent_column, parent_id)?;
 
             let (prev_pos, _) = get_position_parent(prev_id, 0)?;
             let (next_pos, _) = get_position_parent(next_id, prev_pos + Self::POSITION_GAP)?;
@@ -129,28 +216,38 @@ impl Database {
         }
 
         let query = format!("UPDATE {} SET position = ?1 WHERE id = ?2", table);
-        let rows = self.conn()?.execute(&query, params![new_pos, item_id])?;
-        Ok(rows)
+        self.execute_db(table, item_id, &query, params![new_pos, item_id])?;
+
+        info!(entity = table, id = item_id, "Workflow position updated");
+
+        Ok(())
     }
 
     fn renumber_position(
         &self,
         table: &'static str,
-        column_name: &'static str,
-        group_id: Option<i64>,
+        parent_column_name: Option<&'static str>,
+        parent_id: Option<i64>,
     ) -> Result<()> {
         let mut connection = self.conn()?;
         let tx = connection.transaction()?;
 
-        // Fetch all items in current order (by position, then id as tiebreaker)
-        let query = format!(
-            "SELECT id FROM {} WHERE {} IS ? ORDER BY position, id",
-            table, column_name
-        );
+        let mut query = format!("SELECT id FROM {}", table);
+
+        if let Some(parent_column_name) = parent_column_name {
+            query.push_str(&format!(" WHERE {} IS ? ", parent_column_name));
+        }
+        query.push_str(" ORDER BY position, id");
+
+        let params = if parent_column_name.is_some() {
+            params![parent_id]
+        } else {
+            params![]
+        };
 
         let ids: Vec<i64> = tx
             .prepare(&query)?
-            .query_map(params![group_id], |row| row.get(0))?
+            .query_map(params, |row| row.get(0))?
             .collect::<rusqlite::Result<_>>()?;
 
         let update_query = format!("UPDATE {} SET position = ? WHERE id = ?", table);
@@ -163,7 +260,25 @@ impl Database {
         tx.commit().map_err(DatabaseError::from)
     }
 
-    pub(crate) fn get_items<T, F>(
+    pub(crate) fn hashmap_to_string(
+        hashmap: &Option<HashMap<String, String>>,
+    ) -> std::result::Result<Option<String>, Error> {
+        hashmap
+            .as_ref()
+            .map(|val| serde_json::to_string(val))
+            .transpose()
+    }
+
+    pub(crate) fn string_to_hashmap(vars_json: Option<String>) -> Option<HashMap<String, String>> {
+        vars_json.and_then(|json| {
+            serde_json::from_str(&json).ok().or_else(|| {
+                warn!("Failed to parse env_vars, using None");
+                None
+            })
+        })
+    }
+
+    pub(crate) fn get_items_groups_commands<T, F>(
         &self,
         table: &'static str,
         column: &'static str,

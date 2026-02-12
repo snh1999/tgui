@@ -1,5 +1,5 @@
 use super::*;
-use crate::database::builders::CommandBuilder;
+use crate::constants::COMMANDS_TABLE;
 use rusqlite::params;
 use std::collections::HashMap;
 
@@ -186,7 +186,7 @@ fn test_get_command_not_found() {
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
-            entity: "command",
+            entity: COMMANDS_TABLE,
             id: 99999
         })
     ));
@@ -376,7 +376,7 @@ fn test_update_command_not_found() {
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
-            entity: "command",
+            entity: COMMANDS_TABLE,
             id: 99999
         })
     ));
@@ -388,9 +388,9 @@ fn test_update_command_preserves_position() {
     let group_id = test_db.create_test_group("Test");
     let cmd_id = test_db.create_test_command("Test", "echo", Some(group_id));
 
-    let original_pos = test_db.db.get_command(cmd_id).unwrap().position;
-
     let mut cmd = test_db.db.get_command(cmd_id).unwrap();
+    let original_pos = cmd.position;
+
     cmd.position = 9999;
     test_db.db.update_command(&cmd).unwrap();
 
@@ -417,8 +417,7 @@ fn test_update_command_validation() {
 #[test]
 fn test_toggle_favorite() {
     let test_db = TestDb::setup_test_db();
-    let group_id = test_db.create_test_group("Test Group");
-    let cmd_id = test_db.create_test_command("Test", "echo", Some(group_id));
+    let cmd_id = test_db.create_test_command("Test", "echo", None);
 
     let initial = test_db.db.get_command(cmd_id).unwrap().is_favorite;
     test_db.db.toggle_command_favorite(cmd_id).unwrap();
@@ -436,7 +435,7 @@ fn test_toggle_favorite_not_found() {
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
-            entity: "command",
+            entity: COMMANDS_TABLE,
             id: 99999
         })
     ));
@@ -461,7 +460,7 @@ fn test_delete_command_not_found() {
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
-            entity: "command",
+            entity: COMMANDS_TABLE,
             id: 99999
         })
     ));
@@ -544,7 +543,8 @@ fn test_position_gap_exhaustion_triggers_renumber() {
     // Manually set positions to simulate exhaustion
     test_db
         .db
-        .conn().unwrap()
+        .conn()
+        .unwrap()
         .execute(
             "UPDATE commands SET position = 1000 WHERE id = ?1",
             params![id1],
@@ -554,7 +554,8 @@ fn test_position_gap_exhaustion_triggers_renumber() {
     let id2 = test_db.create_test_command("B", "echo 2", Some(group_id));
     test_db
         .db
-        .conn().unwrap()
+        .conn()
+        .unwrap()
         .execute(
             "UPDATE commands SET position = 1001 WHERE id = ?1",
             params![id2],

@@ -4,19 +4,18 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-pub mod categories;
-pub mod commands;
-pub mod groups;
-pub(crate) mod helpers;
+mod categories;
+mod commands;
+mod groups;
+mod helpers;
 mod settings;
 
-pub mod builders;
+mod errors;
+mod models;
+mod workflows;
 
-pub mod models;
-pub use models::*;
-
-pub mod errors;
 pub use errors::{DatabaseError, Result};
+pub use models::*;
 
 #[cfg(test)]
 mod tests;

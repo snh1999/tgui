@@ -3,8 +3,15 @@ mod database;
 mod handlers;
 
 use crate::database::Database;
-use crate::handlers::{categories, commands, groups};
+use crate::handlers::{categories, commands, groups, settings, workflows};
+use handlers::logger;
 use tauri::Manager;
+use tracing::{error, info};
+
+fn error_map(error_message: &str) -> &str {
+    error!(error_message);
+    error_message
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -14,14 +21,26 @@ pub fn run() {
             let app_dir = app
                 .path()
                 .app_data_dir()
-                .map_err(|_| "Failed to get app data dir")?;
+                .map_err(|_| error_map("Failed to get app data dir"))?;
 
-            std::fs::create_dir_all(&app_dir).map_err(|_| "Failed to create app data dir")?;
+            std::fs::create_dir_all(&app_dir)
+                .map_err(|_| error_map("Failed to create app data dir"))?;
+
+            let guard =
+                logger::init(&app_dir).map_err(|_| error_map("Failed to initialize logger"))?;
+
+            info!("TGUI starting");
 
             let db_path = app_dir.join("commands.db");
-            let db = Database::new(&db_path).expect("Failed to initialize database");
+            let db = Database::new(&db_path).map_err(|e| {
+                error!(error = %e, "Database initialization failed");
+                e
+            })?;
 
-            app.manage(db); // Directly manage the Database struct
+            info!(db_path = %db_path.display(), "Database initialized successfully");
+
+            app.manage(guard);
+            app.manage(db);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -49,6 +68,33 @@ pub fn run() {
             commands::search_commands,
             commands::move_command_between,
             commands::toggle_command_favorite,
+            workflows::create_workflow,
+            workflows::get_workflow,
+            workflows::get_workflows,
+            workflows::update_workflow,
+            workflows::delete_workflow,
+            workflows::toggle_favorite_workflow,
+            workflows::get_workflow_count_for_category,
+            workflows::move_workflow_between,
+            workflows::create_workflow_step,
+            workflows::get_workflow_step,
+            workflows::get_workflow_steps,
+            workflows::get_workflow_steps_command_populated,
+            workflows::update_workflow_step,
+            workflows::delete_workflow_step,
+            workflows::move_workflow_step_between,
+            workflows::toggle_workflow_step_enabled,
+            workflows::get_workflow_step_count,
+            logger::logs_dir,
+            logger::list_log_files,
+            logger::delete_logs_older_than,
+            logger::delete_log_by_date,
+            logger::delete_all_logs,
+            logger::get_recent_logs,
+            settings::get_setting,
+            settings::set_setting,
+            settings::reset_settings,
+            settings::get_all_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

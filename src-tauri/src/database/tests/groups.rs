@@ -1,5 +1,5 @@
 use super::*;
-use crate::database::builders::GroupBuilder;
+use crate::constants::GROUPS_TABLE;
 
 #[test]
 fn test_group_builder_pattern() {
@@ -161,7 +161,7 @@ fn test_get_group_not_found() {
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
-            entity: "group",
+            entity: GROUPS_TABLE,
             id: 99999
         })
     ));
@@ -259,7 +259,7 @@ fn test_toggle_favorite_group_not_found() {
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
-            entity: "group",
+            entity: GROUPS_TABLE,
             id: 99999
         })
     ));
@@ -314,7 +314,7 @@ fn test_update_group_not_found() {
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
-            entity: "group",
+            entity: GROUPS_TABLE,
             id: 0
         })
     ));
@@ -393,7 +393,7 @@ fn test_delete_group_not_found() {
     assert!(matches!(
         result,
         Err(DatabaseError::NotFound {
-            entity: "group",
+            entity: GROUPS_TABLE,
             id: 99999
         })
     ));
