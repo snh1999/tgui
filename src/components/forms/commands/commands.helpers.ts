@@ -1,25 +1,10 @@
-import { z } from "zod";
-
-export interface ICommand {
-  id: number;
-  name: string;
-  description?: string;
-  command: string;
-  arguments?: string[];
-  env_vars?: Map<string, string>;
-  group_id?: number;
-  category_id?: number;
-  position: number;
-  working_directory?: string;
-  shell?: string;
-  is_favorite?: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
+import {z} from "zod";
 
 const argumentSchema = z.string().refine(
   (val) => {
-    if (val === "") return true;
+    if (val === "") {
+      return true;
+    }
 
     const hasUnbalancedQuotes = (val.match(/"/g) || []).length % 2 !== 0;
     return !hasUnbalancedQuotes;

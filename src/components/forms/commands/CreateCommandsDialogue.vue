@@ -1,15 +1,19 @@
 <script setup lang="ts">
-  import { ref } from "vue";
-  import { AddIcon } from "@/assets/Icons";
-  import OpenDialog from "@/components/ui/tgui/OpenDialog.vue";
-  import { Button } from "@/components/ui/button";
-  import CreateCommandForm from "@/components/forms/commands/CreateCommandForm.vue";
-  import { Field } from "@/components/ui/field";
-  import { COMMAND_FORM_ID } from "@/app.constants.ts";
+import {ref} from "vue";
+import {COMMAND_FORM_ID} from "@/app.constants.ts";
+import {AddIcon} from "@/assets/Icons";
+import CreateCommandForm from "@/components/forms/commands/CreateCommandForm.vue";
+import {Button} from "@/components/ui/button";
+import {Field} from "@/components/ui/field";
+import OpenDialog from "@/components/ui/tgui/OpenDialog.vue";
 
-  const newCommandOpen = ref(false);
-  const openNewCommand = () => (newCommandOpen.value = true);
-  const closeNewCommand = () => (newCommandOpen.value = false);
+const newCommandOpen = ref(false);
+  const openNewCommand = () => {
+    newCommandOpen.value = true;
+  };
+  const closeNewCommand = () => {
+    newCommandOpen.value = false;
+  };
 
   const createCommandFormRef = ref<InstanceType<
     typeof CreateCommandForm
@@ -23,7 +27,11 @@
       New Command
     </Button>
 
-    <OpenDialog v-model:open="newCommandOpen" title="Create New Command">
+    <OpenDialog
+      class="min-w-[50%]"
+      v-model:open="newCommandOpen"
+      title="Create New Command"
+    >
       <CreateCommandForm
         :onSuccess="closeNewCommand"
         ref="createCommandFormRef"
