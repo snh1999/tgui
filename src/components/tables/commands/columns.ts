@@ -1,5 +1,5 @@
 import { h } from "vue";
-import { ColumnDef } from "@tanstack/vue-table";
+import type { ColumnDef } from "@tanstack/vue-table";
 import { Button } from "@/components/ui/button";
 import {
   DirectoryIcon,
@@ -74,17 +74,24 @@ export const columns: ColumnDef<Command>[] = [
             // onClick: () => toggleFavorite(command.id)
           },
           [
-            command.isFavorite
-              ? h(FilledStarIcon, { class: "h-4 w-4 text-yellow-500" })
-              : h(StarIcon, { class: "h-4 w-4 text-muted-foreground" }),
+            h(command.isFavorite ? FilledStarIcon : StarIcon, {
+              class: command.isFavorite ? "text-yellow-500" : "text-foreground",
+              style: { width: "20px", height: "20px" },
+            }),
           ]
         ),
         h("div", { class: "flex flex-col min-w-0" }, [
-          h("span", { class: "font-medium truncate" }, command.name),
+          h(
+            "span",
+            { class: "font-semibold mb-1 text-base truncate" },
+            command.name
+          ),
           command.description
             ? h(
                 "span",
-                { class: "text-xs text-muted-foreground truncate" },
+                {
+                  class: "text-xs tracking-wide text-muted-foreground truncate",
+                },
                 command.description
               )
             : null,
@@ -102,7 +109,7 @@ export const columns: ColumnDef<Command>[] = [
       return h("div", { class: "flex flex-col gap-1" }, [
         h("div", { class: "flex items-center gap-2" }, [
           h("span", { class: `h-2 w-2 rounded-full ${style.dot}` }),
-          h("span", { class: "text-sm font-medium capitalize" }, status),
+          h("span", { class: "text-sm text-xs mb-1 capitalize" }, status),
         ]),
         h(
           "div",
@@ -123,7 +130,7 @@ export const columns: ColumnDef<Command>[] = [
       return h("div", { class: "flex flex-col gap-0.5" }, [
         h(
           "span",
-          { class: "text-sm text-muted-foreground" },
+          { class: "text-xs text-muted-foreground" },
           command.activityTime
         ),
         command.pid
@@ -138,9 +145,9 @@ export const columns: ColumnDef<Command>[] = [
   },
   {
     id: "actions",
-    header: () => h("div", { class: "text-right" }, "Actions"),
+    header: () => h("div", { class: "text-center" }, "Actions"),
     cell: ({ row }) => {
-      return h("div", { class: "flex items-center justify-end gap-1" }, [
+      return h("div", { class: "flex items-center justify-center gap-1" }, [
         h(
           Button,
           {

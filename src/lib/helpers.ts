@@ -5,7 +5,7 @@ export function transformEnvVars<
 >(values: T) {
   return {
     ...values,
-    env_vars: Object.fromEntries(
+    env_vars: new Map(
       values.env_vars
         .map((e) => ({ key: e.key.trim(), value: e.value }))
         .filter((e) => e.key.length > 0)

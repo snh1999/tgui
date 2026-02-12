@@ -14,11 +14,13 @@
     TableHeader,
     TableRow,
   } from "@/components/ui/table/index.ts";
+  import TableFooter from "@/components/ui/table/TableFooter.vue";
 
   const props = defineProps<{
     columns: ColumnDef<TData, TValue>[];
     data: TData[];
     emptyMessage?: string;
+    footerContent?: string;
   }>();
 
   const table = useVueTable({
@@ -81,6 +83,14 @@
           </TableRow>
         </template>
       </TableBody>
+
+      <TableFooter v-if="footerContent">
+        <TableRow>
+          <TableCell :colspan="columns.length" class="table-footer">
+            {{ footerContent }}
+          </TableCell>
+        </TableRow>
+      </TableFooter>
     </Table>
   </div>
 </template>
@@ -94,5 +104,13 @@
     color: #666;
     font-weight: 600;
     letter-spacing: 0.5px;
+  }
+
+  .table-footer {
+    text-align: left;
+    padding: 12px 20px;
+    font-size: 11px;
+    color: #666;
+    font-weight: 600;
   }
 </style>
