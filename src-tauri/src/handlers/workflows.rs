@@ -116,11 +116,11 @@ pub fn delete_workflow_step(db: State<'_, Database>, id: i64) -> Result<(), Seri
 #[tauri::command]
 pub fn move_workflow_step_between(
     db: State<'_, Database>,
-    workflow_id: i64,
+    id: i64,
     prev_id: Option<i64>,
     next_id: Option<i64>,
 ) -> Result<(), SerializableError> {
-    db.move_workflow_step_between(workflow_id, prev_id, next_id)
+    db.move_workflow_step_between(id, prev_id, next_id)
         .map_err(|err| err.into())
 }
 

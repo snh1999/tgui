@@ -31,11 +31,11 @@ pub fn update_group(db: State<'_, Database>, group: Group) -> Result<(), Seriali
 #[tauri::command]
 pub fn move_group_between(
     db: State<'_, Database>,
-    group_id: i64,
+    id: i64,
     prev_id: Option<i64>,
     next_id: Option<i64>,
 ) -> Result<(), SerializableError> {
-    db.move_group_between(group_id, prev_id, next_id)
+    db.move_group_between(id, prev_id, next_id)
         .map_err(|e| e.into())
 }
 
@@ -60,9 +60,9 @@ pub fn get_group_tree(
 #[tauri::command]
 pub fn get_group_path(
     db: State<'_, Database>,
-    group_id: i64,
+    root_id: i64,
 ) -> Result<Vec<String>, SerializableError> {
-    db.get_group_path(group_id).map_err(|err| err.into())
+    db.get_group_path(root_id).map_err(|err| err.into())
 }
 
 #[tauri::command]
