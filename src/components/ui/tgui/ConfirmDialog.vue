@@ -9,16 +9,13 @@
     AlertDialogHeader,
     AlertDialogTitle,
   } from "@/components/ui/alert-dialog";
-  import { computed } from "vue";
 
-  const { variant } = defineProps<{
+  defineProps<{
     title?: string;
     description: string;
     actionText?: string;
-    variant?: "primary" | "secondary" | "success" | "warning" | "destructive";
     action: () => void;
   }>();
-  const buttonStyle = computed(() => `bg-${variant ?? "primary"}`);
 
   const open = defineModel<boolean>("open");
 </script>
@@ -32,7 +29,7 @@
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel>Cancel</AlertDialogCancel>
-        <AlertDialogAction :class="buttonStyle" @click="action">
+        <AlertDialogAction @click="action">
           {{ actionText ?? "Ok" }}
         </AlertDialogAction>
       </AlertDialogFooter>

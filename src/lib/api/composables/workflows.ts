@@ -112,7 +112,7 @@ export function useCategoryWorkflowCount(id: MaybeRef<number>) {
 
 export function useGetWorkflowSteps(filter: MaybeRef<IWorkflowStepFilter>) {
   return useQuery({
-    queryKey: queryKeys.workflowSteps.filteredList(filter),
+    queryKey: queryKeys.workflowSteps.filteredList(unref(filter)),
     queryFn: () => workflowStepApi.getAll(unref(filter)),
   });
 }
