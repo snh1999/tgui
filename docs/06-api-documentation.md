@@ -1,14 +1,15 @@
-# 10. API Documentation
+# 06. API Documentation
 
 ### Update Log
 
 - **12-12-2025**: Initial API documentation plan
 - **23-01-2026**: Updated based on actual implementation
+- **13-02-2026**: Added Workflow Management API (section 6.5)
 
 This document defines the IPC (Inter-Process Communication) contract between the Tauri Rust backend
 and Vue frontend.
 
-## 10.1 Command Management
+## 6.1 Command Management
 
 ## Command Management
 
@@ -22,17 +23,17 @@ and Vue frontend.
 
 ```rust
 struct CommandPayload {
-  name: String,
-  command: String,              // Executable name/path
-  arguments: Vec<String>,       // JSON array: ["arg1", "arg2"]
-  description: Option<String>,
-  group_id: Option<i64>,        // NULL = top-level/root command
-  working_directory: Option<String>,
-  env_vars: Option<HashMap<String, String>>, // Merged with group defaults
-  shell: Option<String>,        // NULL = use group/system default
-  category_id: Option<i64>,
-  is_favorite: bool,
-  state: State
+    name: String,
+    command: String,              // Executable name/path
+    arguments: Vec<String>,       // JSON array: ["arg1", "arg2"]
+    description: Option<String>,
+    group_id: Option<i64>,        // NULL = top-level/root command
+    working_directory: Option<String>,
+    env_vars: Option<HashMap<String, String>>, // Merged with group defaults
+    shell: Option<String>,        // NULL = use group/system default
+    category_id: Option<i64>,
+    is_favorite: bool,
+    state: State
 }
 ```
 
@@ -62,17 +63,17 @@ struct CommandPayload {
 **Usage**:
 
 ```typescript
-import { invoke } from '@tauri-apps/api/tauri'
+import {invoke} from '@tauri-apps/api/tauri'
 
 const commandId = await invoke('create_command', {
-  name: 'Start Dev Server',
-  command: 'npm',
-  arguments: ['run', 'dev'],
-  description: 'Starts Vite dev server',
-  workingDirectory: '/home/user/project',
-  categoryId: 1,
-  isFavorite: false,
-  envVars: { NODE_ENV: 'development' }
+    name: 'Start Dev Server',
+    command: 'npm',
+    arguments: ['run', 'dev'],
+    description: 'Starts Vite dev server',
+    workingDirectory: '/home/user/project',
+    categoryId: 1,
+    isFavorite: false,
+    envVars: {NODE_ENV: 'development'}
 })
 ```
 
@@ -149,9 +150,9 @@ Filter:
 
 ```rust
 struct CommandFilter {
-  category_id: Option<i64>,
-  group_id: Option<i64>,
-  is_favorite: Option<bool>,
+    category_id: Option<i64>,
+    group_id: Option<i64>,
+    is_favorite: Option<bool>,
 }
 ```
 
@@ -170,27 +171,27 @@ struct CommandFilter {
 
 ```typescript
 interface Command {
-  id: number
-  name: string
-  command: string
-  arguments: string[]
-  description?: string
-  workingDirectory: string
-  categoryId?: number
-  isFavorite: boolean
-  envVars?: Record
-  createdAt: string
-  updatedAt: string
+    id: number
+    name: string
+    command: string
+    arguments: string[]
+    description?: string
+    workingDirectory: string
+    categoryId?: number
+    isFavorite: boolean
+    envVars?: Record
+    createdAt: string
+    updatedAt: string
 }
 
 const topLevelCommands = await invoke('get_commands', {
-  groupId: null,
-  favoritesOnly: false
+    groupId: null,
+    favoritesOnly: false
 })
 
 const favoriteCommands = await invoke('get_commands', {
-  groupId: 1,
-  favoritesOnly: true
+    groupId: 1,
+    favoritesOnly: true
 })
 ```
 
@@ -248,23 +249,23 @@ indexing.
 ```typescript
 // Move command 5 between commands 2 and 7
 await invoke('move_command_between', {
-  cmdId: 5,
-  prevId: 2,
-  nextId: 7
+    cmdId: 5,
+    prevId: 2,
+    nextId: 7
 })
 
 // Move to top of list
 await invoke('move_command_between', {
-  cmdId: 5,
-  prevId: null,
-  nextId: 2  // first command
+    cmdId: 5,
+    prevId: null,
+    nextId: 2  // first command
 })
 
 // Move to bottom
 await invoke('move_command_between', {
-  cmdId: 5,
-  prevId: 7,  // last command
-  nextId: null
+    cmdId: 5,
+    prevId: 7,  // last command
+    nextId: null
 })
 ```
 
@@ -288,12 +289,12 @@ await invoke('move_command_between', {
 **Usage**:
 
 ```typescript
-await invoke('toggle_favorite', { id: 5 })
+await invoke('toggle_favorite', {id: 5})
 ```
 
 ---
 
-## 10.2 Group Management
+## 6.2 Group Management
 
 ### Create Group
 
@@ -305,14 +306,14 @@ await invoke('toggle_favorite', { id: 5 })
 
 ```rust
 struct Group {
-  name: String,                 // Required, non-empty
-  description: Option<String>,
-  parent_group_id: Option<i64>, // NULL = top-level group
-  position: i64,                // Auto-calculated, don't set manually
-  working_directory: Option<String>,
-  env_vars: Option<HashMap<String, String>>,
-  shell: Option<String>,
-  category_id: Option<i64>,
+    name: String,                 // Required, non-empty
+    description: Option<String>,
+    parent_group_id: Option<i64>, // NULL = top-level group
+    position: i64,                // Auto-calculated, don't set manually
+    working_directory: Option<String>,
+    env_vars: Option<HashMap<String, String>>,
+    shell: Option<String>,
+    category_id: Option<i64>,
 }
 ```
 
@@ -327,13 +328,13 @@ struct Group {
 
 ```typescript
 const groupId = await invoke('create_group', {
-  name: 'Docker Services',
-  description: 'All Docker-related commands',
-  parentGroupId: null,
-  workingDirectory: '/home/user/docker',
-  envVars: { DOCKER_HOST: 'unix:///var/run/docker.sock' },
-  shell: '/bin/bash',
-  categoryId: 2
+    name: 'Docker Services',
+    description: 'All Docker-related commands',
+    parentGroupId: null,
+    workingDirectory: '/home/user/docker',
+    envVars: {DOCKER_HOST: 'unix:///var/run/docker.sock'},
+    shell: '/bin/bash',
+    categoryId: 2
 })
 ```
 
@@ -368,22 +369,22 @@ const groupId = await invoke('create_group', {
 
 ```typescript
 interface Group {
-  id: number
-  name: string
-  description?: string
-  parentGroupId?: number
-  position: number
-  workingDirectory?: string
-  envVars?: Record<string, string>
-  shell?: string
-  categoryId?: number
-  createdAt: string
-  updatedAt: string
+    id: number
+    name: string
+    description?: string
+    parentGroupId?: number
+    position: number
+    workingDirectory?: string
+    envVars?: Record<string, string>
+    shell?: string
+    categoryId?: number
+    createdAt: string
+    updatedAt: string
 }
 
-const topGroups = await invoke('get_groups', { parentId: null })
+const topGroups = await invoke('get_groups', {parentId: null})
 
-const childGroups = await invoke('get_groups', { parentId: 3 })
+const childGroups = await invoke('get_groups', {parentId: 3})
 ```
 
 ---
@@ -410,11 +411,11 @@ const childGroups = await invoke('get_groups', { parentId: 3 })
 
 ```typescript
 await invoke('update_group', {
-  id: 5,
-  name: 'Updated Group',
-  description: 'New description',
-  parentGroupId: 2,  // Moving to different parent
-  // ... other fields
+    id: 5,
+    name: 'Updated Group',
+    description: 'New description',
+    parentGroupId: 2,  // Moving to different parent
+    // ... other fields
 })
 ```
 
@@ -466,7 +467,7 @@ await invoke('update_group', {
 **Usage**:
 
 ```typescript
-const count = await invoke('get_group_command_count', { id: 5 })
+const count = await invoke('get_group_command_count', {id: 5})
 ```
 
 ---
@@ -483,7 +484,7 @@ const count = await invoke('get_group_command_count', { id: 5 })
 
 ```typescript
 // Get entire subtree starting from group 3
-const tree = await invoke('get_group_tree', { rootId: 3 })
+const tree = await invoke('get_group_tree', {rootId: 3})
 // Returns [group_3, child_1, child_2, grandchild_1, ...]
 ```
 
@@ -500,14 +501,14 @@ const tree = await invoke('get_group_tree', { rootId: 3 })
 **Usage**:
 
 ```typescript
-const path = await invoke('get_group_path', { groupId: 8 })
+const path = await invoke('get_group_path', {groupId: 8})
 // Returns: ['Root', 'Docker', 'Production', 'Database']
 // Useful for displaying: Root > Docker > Production > Database
 ```
 
 ---
 
-## 10.3 Category Management
+## 6.3 Category Management
 
 ### Create Category
 
@@ -527,9 +528,9 @@ const path = await invoke('get_group_path', { groupId: 8 })
 
 ```typescript
 const categoryId = await invoke('create_category', {
-  name: 'Docker',
-  icon: '🐳',
-  color: '#2496ed'
+    name: 'Docker',
+    icon: '🐳',
+    color: '#2496ed'
 })
 ```
 
@@ -562,12 +563,12 @@ const categoryId = await invoke('create_category', {
 
 ```typescript
 interface Category {
-  id: number
-  name: string
-  icon?: string
-  color?: string
-  createdAt: string
-  updatedAt: string
+    id: number
+    name: string
+    icon?: string
+    color?: string
+    createdAt: string
+    updatedAt: string
 }
 
 const categories = await invoke('get_categories')
@@ -612,12 +613,12 @@ to NULL (FK ON DELETE SET NULL in schema))
 **Usage**:
 
 ```typescript
-const count = await invoke('get_category_command_count', { id: 2 })
+const count = await invoke('get_category_command_count', {id: 2})
 ```
 
 ---
 
-## 10.4 Settings
+## 6.4 Settings
 
 ### Get Setting
 
@@ -643,7 +644,7 @@ const count = await invoke('get_category_command_count', { id: 2 })
 **Usage**:
 
 ```typescript
-const theme = await invoke('get_setting', { key: 'theme' })
+const theme = await invoke('get_setting', {key: 'theme'})
 ```
 
 ---
@@ -669,13 +670,13 @@ const theme = await invoke('get_setting', { key: 'theme' })
 
 ```typescript
 await invoke('set_setting', {
-  key: 'theme',
-  value: 'dark'
+    key: 'theme',
+    value: 'dark'
 })
 
 await invoke('set_setting', {
-  key: 'log_buffer_size',
-  value: '20000'
+    key: 'log_buffer_size',
+    value: '20000'
 })
 ```
 
@@ -724,7 +725,488 @@ await invoke('reset_settings')
 
 ---
 
-## 10.5 Process Control
+## 6.5 Workflow Management
+
+### Create Workflow
+
+`create_workflow(workflow: Workflow) -> Result<i64>`
+
+**Description**: Creates a new workflow that can contain multiple workflow steps.
+
+**Payload**:
+
+```rust
+struct Workflow {
+    name: String,
+    description: Option<String>,
+    category_id: Option<i64>,
+    is_favorite: bool,
+    position: i64,  // Auto-calculated using fractional indexing
+}
+```
+
+**Parameters**:
+
+- `name`: Display name for the workflow
+- `description`: Optional description
+- `category_id`: Optional category ID
+- `is_favorite`: Star the workflow
+- `position`: Auto-calculated position (don't set manually)
+
+**Returns**:
+
+- `Ok(id)`: Workflow ID (i64) on success
+- `Err(msg)`: Error message
+
+**Errors**:
+
+- **Invalid data**: Empty name
+- **Database error**: SQLite error
+
+**Usage**:
+
+```typescript
+import {invoke} from '@tauri-apps/api/tauri'
+
+const workflowId = await invoke('create_workflow', {
+    workflow: {
+        name: 'Deploy to Production',
+        description: 'Full deployment workflow',
+        categoryId: 2,
+        isFavorite: true,
+        position: 0
+    }
+})
+```
+
+---
+
+### Get Workflow
+
+`get_workflow(id: i64) -> Result<Workflow>`
+
+**Description**: Retrieves a single workflow by ID.
+
+**Parameters**:
+
+- `id`: Workflow ID
+
+**Returns**:
+
+- `Ok(workflow)`: Workflow object
+- `Err("Workflow not found")`: Invalid ID
+
+---
+
+### Get Workflows
+
+`get_workflows(category_id: Option<i64>, favorites_only: bool) -> Result<Vec<Workflow>>`
+
+**Description**: Get workflows with optional filtering.
+
+**Parameters**:
+
+- `category_id`: Filter by category (None for all categories)
+- `favorites_only`: Show only favorited workflows
+
+**Returns**:
+
+- `Ok(workflows)`: Array of workflows ordered by position
+- `Err(msg)`: Database error
+
+**Usage**:
+
+```typescript
+interface Workflow {
+    id: number
+    name: string
+    description?: string
+    categoryId?: number
+    isFavorite: boolean
+    position: number
+    createdAt: string
+    updatedAt: string
+}
+
+// Get all workflows
+const allWorkflows = await invoke('get_workflows', {
+    categoryId: null,
+    favoritesOnly: false
+})
+
+// Get favorite workflows in category 2
+const favoriteWorkflows = await invoke('get_workflows', {
+    categoryId: 2,
+    favoritesOnly: true
+})
+```
+
+---
+
+### Update Workflow
+
+`update_workflow(workflow: Workflow) -> Result<()>`
+
+**Description**: Updates an existing workflow.
+
+**Parameters**: Workflow object with updated fields
+
+**Returns**:
+
+- `Ok(())`: Success
+- `Err(msg)`: Error message
+
+**Errors**:
+
+- **Not found**: Invalid workflow ID
+- **Invalid data**: Empty name
+
+---
+
+### Delete Workflow
+
+`delete_workflow(id: i64) -> Result<()>`
+
+**Description**: Deletes a workflow and all associated workflow steps.
+
+**Parameters**:
+
+- `id`: Workflow ID
+
+**Returns**:
+
+- `Ok(())`: Success
+- `Err("Workflow not found")`: Invalid ID
+
+**Note**: This will cascade delete all workflow steps associated with this workflow.
+
+---
+
+### Toggle Favorite Workflow
+
+`toggle_favorite_workflow(id: i64) -> Result<()>`
+
+**Description**: Toggles the `is_favorite` flag for a workflow.
+
+**Parameters**:
+
+- `id`: Workflow ID
+
+**Returns**:
+
+- `Ok(())`: Success
+- `Err(NotFound)`: Workflow not found
+
+**Usage**:
+
+```typescript
+await invoke('toggle_favorite_workflow', {id: 3})
+```
+
+---
+
+### Get Workflow Count for Category
+
+`get_workflow_count_for_category(category_id: Option<i64>) -> Result<i64>`
+
+**Description**: Returns the count of workflows in a category.
+
+**Parameters**:
+
+- `category_id`: Category ID (None for uncategorized workflows)
+
+**Returns**: Count of workflows
+
+---
+
+### Move Workflow Between Positions
+
+`move_workflow_between(workflow_id: i64, prev_id: Option<i64>, next_id: Option<i64>) -> Result<()>`
+
+**Description**: Reorder a workflow by placing it between two other workflows using fractional
+indexing.
+
+**Parameters**:
+
+- `workflow_id`: Workflow to move
+- `prev_id`: Workflow before the new position (None = move to top)
+- `next_id`: Workflow after the new position (None = move to bottom)
+
+**Behavior**: Same fractional indexing logic as command reordering
+
+**Returns**:
+
+- `Ok(())`: Success
+- `Err(NotFound)`: Workflow ID not found
+
+**Usage**:
+
+```typescript
+// Move workflow 5 between workflows 2 and 7
+await invoke('move_workflow_between', {
+    workflowId: 5,
+    prevId: 2,
+    nextId: 7
+})
+```
+
+---
+
+## 6.5.1 Workflow Steps
+
+### Create Workflow Step
+
+`create_workflow_step(flow_steps: WorkflowStep) -> Result<i64>`
+
+**Description**: Creates a new step in a workflow that references a command.
+
+**Payload**:
+
+```rust
+struct WorkflowStep {
+    workflow_id: i64,
+    command_id: i64,
+    position: i64,  // Auto-calculated using fractional indexing
+    enabled: bool,
+    wait_for_completion: bool,
+    delay_seconds: Option<i64>,
+}
+```
+
+**Parameters**:
+
+- `workflow_id`: Parent workflow ID
+- `command_id`: Command to execute in this step
+- `position`: Auto-calculated position (don't set manually)
+- `enabled`: Whether this step is active
+- `wait_for_completion`: If true, wait for this command to complete before proceeding
+- `delay_seconds`: Optional delay before executing this step
+
+**Returns**:
+
+- `Ok(id)`: Workflow step ID (i64) on success
+- `Err(msg)`: Error message
+
+**Usage**:
+
+```typescript
+const stepId = await invoke('create_workflow_step', {
+    flowSteps: {
+        workflowId: 1,
+        commandId: 5,
+        position: 0,
+        enabled: true,
+        waitForCompletion: true,
+        delaySeconds: 5
+    }
+})
+```
+
+---
+
+### Get Workflow Step
+
+`get_workflow_step(id: i64) -> Result<WorkflowStep>`
+
+**Description**: Retrieves a single workflow step by ID.
+
+**Parameters**:
+
+- `id`: Workflow step ID
+
+**Returns**:
+
+- `Ok(step)`: WorkflowStep object
+- `Err("Workflow step not found")`: Invalid ID
+
+---
+
+### Get Workflow Steps
+
+`get_workflow_steps(workflow_id: Option<i64>, command_id: Option<i64>, enabled_only: bool) -> Result<Vec<WorkflowStep>>`
+
+**Description**: Get workflow steps with optional filtering.
+
+**Parameters**:
+
+- `workflow_id`: Filter by workflow (None for all workflows)
+- `command_id`: Filter by command (None for all commands)
+- `enabled_only`: Show only enabled steps
+
+**Returns**: Array of workflow steps ordered by position
+
+**Usage**:
+
+```typescript
+interface WorkflowStep {
+    id: number
+    workflowId: number
+    commandId: number
+    position: number
+    enabled: boolean
+    waitForCompletion: boolean
+    delaySeconds?: number
+    createdAt: string
+    updatedAt: string
+}
+
+// Get all steps for workflow 1
+const steps = await invoke('get_workflow_steps', {
+    workflowId: 1,
+    commandId: null,
+    enabledOnly: false
+})
+
+// Get enabled steps that use command 5
+const enabledSteps = await invoke('get_workflow_steps', {
+    workflowId: null,
+    commandId: 5,
+    enabledOnly: true
+})
+```
+
+---
+
+### Get Workflow Steps with Command Data
+
+`get_workflow_steps_command_populated(workflow_id: i64, enabled_only: bool) -> Result<Vec<(WorkflowStep, Command)>>`
+
+**Description**: Get workflow steps with their associated command objects populated. Useful for
+displaying workflow execution details.
+
+**Parameters**:
+
+- `workflow_id`: Workflow ID
+- `enabled_only`: Show only enabled steps
+
+**Returns**: Array of tuples containing (WorkflowStep, Command)
+
+**Usage**:
+
+```typescript
+const stepsWithCommands = await invoke('get_workflow_steps_command_populated', {
+    workflowId: 1,
+    enabledOnly: true
+})
+
+// Returns: Array<[WorkflowStep, Command]>
+stepsWithCommands.forEach(([step, command]) => {
+    console.log(`Step ${step.id}: ${command.name}`)
+})
+```
+
+---
+
+### Update Workflow Step
+
+`update_workflow_step(workflow: WorkflowStep) -> Result<()>`
+
+**Description**: Updates an existing workflow step.
+
+**Parameters**: WorkflowStep object with updated fields
+
+**Returns**:
+
+- `Ok(())`: Success
+- `Err(msg)`: Error message
+
+---
+
+### Delete Workflow Step
+
+`delete_workflow_step(id: i64) -> Result<()>`
+
+**Description**: Deletes a workflow step.
+
+**Parameters**:
+
+- `id`: Workflow step ID
+
+**Returns**:
+
+- `Ok(())`: Success
+- `Err("Workflow step not found")`: Invalid ID
+
+---
+
+### Move Workflow Step Between Positions
+
+`move_workflow_step_between(workflow_id: i64, prev_id: Option<i64>, next_id: Option<i64>) -> Result<()>`
+
+**Description**: Reorder a workflow step within its workflow using fractional indexing.
+
+**Parameters**:
+
+- `workflow_id`: Workflow step to move
+- `prev_id`: Step before the new position (None = move to top)
+- `next_id`: Step after the new position (None = move to bottom)
+
+**Returns**:
+
+- `Ok(())`: Success
+- `Err(NotFound)`: Workflow step ID not found
+
+**Usage**:
+
+```typescript
+// Move step 10 between steps 8 and 12
+await invoke('move_workflow_step_between', {
+    workflowId: 10,
+    prevId: 8,
+    nextId: 12
+})
+```
+
+---
+
+### Toggle Workflow Step Enabled
+
+`toggle_workflow_step_enabled(id: i64) -> Result<()>`
+
+**Description**: Toggles the `enabled` flag for a workflow step.
+
+**Parameters**:
+
+- `id`: Workflow step ID
+
+**Returns**:
+
+- `Ok(())`: Success
+- `Err(NotFound)`: Workflow step not found
+
+**Usage**:
+
+```typescript
+await invoke('toggle_workflow_step_enabled', {id: 15})
+```
+
+---
+
+### Get Workflow Step Count
+
+`get_workflow_step_count(id: i64) -> Result<i64>`
+
+**Description**: Returns the count of steps in a workflow.
+
+**Parameters**:
+
+- `id`: Workflow ID
+
+**Returns**: Count of workflow steps
+
+**Usage**:
+
+```typescript
+const stepCount = await invoke('get_workflow_step_count', {id: 1})
+```
+
+---
+
+## 6.6 Execution history management
+
+---
+
+## 6.7 Process Control
 
 ### Command Execution
 
@@ -768,16 +1250,16 @@ await invoke('reset_settings')
 **Usage**:
 
 ```typescript
-import { listen } from '@tauri-apps/api/event'
+import {listen} from '@tauri-apps/api/event'
 
 // Start listening for logs
 const unlisten = await listen('log-line', (event) => {
-  const { pid, line, source, timestamp } = event.payload
-  console.log(`[${ pid }] ${ source }: ${ line }`)
+    const {pid, line, source, timestamp} = event.payload
+    console.log(`[${pid}] ${source}: ${line}`)
 })
 
 // Execute command
-const pid = await invoke('spawn_command', { id: commandId })
+const pid = await invoke('spawn_command', {id: commandId})
 
 // Clean up listener when done
 unlisten()
@@ -811,10 +1293,10 @@ unlisten()
 
 ```typescript
 // Graceful stop
-await invoke('kill_process', { pid: 12345, force: true })
+await invoke('kill_process', {pid: 12345, force: true})
 
 // Force kill (after confirmation)
-await invoke('kill_process', { pid: 12345, force: true })
+await invoke('kill_process', {pid: 12345, force: true})
 ```
 
 ---
@@ -829,13 +1311,13 @@ await invoke('kill_process', { pid: 12345, force: true })
 
 ```typescript
 interface ProcessInfo {
-  pid: number
-  commandId: number
-  commandName: string
-  command: string
-  status: 'Running' | 'Stopping' | 'Stopped' | 'Error'
-  startTime: number // Unix timestamp
-  exitCode?: number
+    pid: number
+    commandId: number
+    commandName: string
+    command: string
+    status: 'Running' | 'Stopping' | 'Stopped' | 'Error'
+    startTime: number // Unix timestamp
+    exitCode?: number
 }
 
 const processes = await invoke('get_running_processes')
@@ -853,11 +1335,11 @@ const processes = await invoke('get_running_processes')
 
 ```rust
 enum ProcessStatus {
-  Idle,
-  Running { pid: i64, start_time: u64 },
-  Stopping,
-  Stopped { exit_code: i32 },
-  Error { exit_code: i32, message: String },
+    Idle,
+    Running { pid: i64, start_time: u64 },
+    Stopping,
+    Stopped { exit_code: i32 },
+    Error { exit_code: i32, message: String },
 }
 ```
 
@@ -883,7 +1365,7 @@ enum ProcessStatus {
 
 ---
 
-## 10.6 Logs
+## 6.8 Logs
 
 ### Event: `log-line`
 
@@ -893,10 +1375,10 @@ enum ProcessStatus {
 
 ```rust
 struct LogLine {
-  pid: i64,
-  timestamp: u64,        // Unix millis
-  line: String,
-  is_stderr: bool,
+    pid: i64,
+    timestamp: u64,        // Unix millis
+    line: String,
+    is_stderr: bool,
 }
 ```
 
@@ -910,9 +1392,9 @@ struct LogLine {
 
 ```rust
 struct ProcessStatusEvent {
-  pid: i64,
-  old_status: ProcessStatus,
-  new_status: ProcessStatus,
+    pid: i64,
+    old_status: ProcessStatus,
+    new_status: ProcessStatus,
 }
 ```
 
@@ -934,15 +1416,15 @@ memory)
 
 ```typescript
 interface LogLine {
-  line: string
-  source: 'stdout' | 'stderr'
-  timestamp: number
+    line: string
+    source: 'stdout' | 'stderr'
+    timestamp: number
 }
 
 const logs = await invoke('get_log_buffer', {
-  pid: 12345,
-  offset: 0,
-  limit: 1000,
+    pid: 12345,
+    offset: 0,
+    limit: 1000,
 })
 ```
 
@@ -956,7 +1438,7 @@ const logs = await invoke('get_log_buffer', {
 
 ---
 
-## 10.7 Template Management
+## 6.9 Template Management
 
 ### Create Template
 
@@ -968,9 +1450,9 @@ Payload:
 
 ```rust
 struct TemplatePayload {
-  name: String,
-  description: Option<String>,
-  structure: TemplateStructure, // JSON matching schema from ADR-006
+    name: String,
+    description: Option<String>,
+    structure: TemplateStructure, // JSON matching schema from ADR-006
 }
 ```
 
@@ -978,56 +1460,56 @@ struct TemplatePayload {
 
 ```typescript
 interface TemplateCommand {
-  name: string
-  command: string
-  arguments: string[]
-  workingDirectory: string // Can contain {{variables}}
-  categoryName?: string
-  envVars?: Record
+    name: string
+    command: string
+    arguments: string[]
+    workingDirectory: string // Can contain {{variables}}
+    categoryName?: string
+    envVars?: Record
 }
 
 interface TemplateVariable {
-  key: string
-  label: string
-  type: 'string' | 'path' | 'number'
-  default?: string
-  required: boolean
+    key: string
+    label: string
+    type: 'string' | 'path' | 'number'
+    default?: string
+    required: boolean
 }
 
 const templateId = await invoke('create_template', {
-  name: 'Python Development',
-  description: 'Common Python project commands',
-  commands: [
-    {
-      name: 'Create venv',
-      command: 'python',
-      arguments: ['-m', 'venv', '{{venv_name}}'],
-      workingDirectory: '{{directory}}',
-      categoryName: 'Python'
-    },
-    {
-      name: 'Install deps',
-      command: '{{directory}}/{{venv_name}}/bin/pip',
-      arguments: ['install', '-r', 'requirements.txt'],
-      workingDirectory: '{{directory}}',
-      categoryName: 'Python'
-    }
-  ],
-  variables: [
-    {
-      key: 'directory',
-      label: 'Project Directory',
-      type: 'path',
-      required: true
-    },
-    {
-      key: 'venv_name',
-      label: 'Virtual Environment Name',
-      type: 'string',
-      default: 'venv',
-      required: false
-    }
-  ]
+    name: 'Python Development',
+    description: 'Common Python project commands',
+    commands: [
+        {
+            name: 'Create venv',
+            command: 'python',
+            arguments: ['-m', 'venv', '{{venv_name}}'],
+            workingDirectory: '{{directory}}',
+            categoryName: 'Python'
+        },
+        {
+            name: 'Install deps',
+            command: '{{directory}}/{{venv_name}}/bin/pip',
+            arguments: ['install', '-r', 'requirements.txt'],
+            workingDirectory: '{{directory}}',
+            categoryName: 'Python'
+        }
+    ],
+    variables: [
+        {
+            key: 'directory',
+            label: 'Project Directory',
+            type: 'path',
+            required: true
+        },
+        {
+            key: 'venv_name',
+            label: 'Virtual Environment Name',
+            type: 'string',
+            default: 'venv',
+            required: false
+        }
+    ]
 })
 ```
 
@@ -1059,11 +1541,11 @@ const templateId = await invoke('create_template', {
 
 ```typescript
 const commandIds = await invoke('apply_template', {
-  templateId: 1,
-  variableValues: {
-    directory: '/home/user/my-project',
-    venv_name: 'venv'
-  }
+    templateId: 1,
+    variableValues: {
+        directory: '/home/user/my-project',
+        venv_name: 'venv'
+    }
 })
 ```
 
@@ -1099,7 +1581,7 @@ const commandIds = await invoke('apply_template', {
 
 ---
 
-## 10.8 Others
+## 6.10 Others
 
 ### System Tray
 
@@ -1111,9 +1593,9 @@ const commandIds = await invoke('apply_template', {
 
 ```rust
 struct TrayStatus {
-  running_count: i64,
-  error_count: i64,
-  total_commands: i64,
+    running_count: i64,
+    error_count: i64,
+    total_commands: i64,
 }
 ```
 
@@ -1133,20 +1615,20 @@ All database operations return structured errors:
 
 ```rust
 enum DatabaseError {
-  NotFound {
-    entity: &'static str,  // "command", "group", "category", "setting"
-    id: i64
-  },
-  InvalidData {
-    field: &'static str,
-    reason: String
-  },
-  CircularReference {
-    group_id: i64,
-    parent_id: i64
-  },
-  DatabaseError(rusqlite::Error),
-  SerializationError(serde_json::Error),
+    NotFound {
+        entity: &'static str,  // "command", "group", "category", "setting"
+        id: i64
+    },
+    InvalidData {
+        field: &'static str,
+        reason: String
+    },
+    CircularReference {
+        group_id: i64,
+        parent_id: i64
+    },
+    DatabaseError(rusqlite::Error),
+    SerializationError(serde_json::Error),
 }
 ```
 
@@ -1154,17 +1636,17 @@ enum DatabaseError {
 
 ```typescript
 try {
-  await invoke('delete_command', { id: 5 })
+    await invoke('delete_command', {id: 5})
 } catch (error) {
-  if (error.includes('NotFound')) {
-    showToast('Command not found', 'error')
-  } else if (error.includes('InvalidData')) {
-    showToast('Validation failed: ' + error, 'error')
-  } else if (error.includes('CircularReference')) {
-    showToast('Cannot create circular group hierarchy', 'error')
-  } else {
-    showToast('Database error: ' + error, 'error')
-  }
+    if (error.includes('NotFound')) {
+        showToast('Command not found', 'error')
+    } else if (error.includes('InvalidData')) {
+        showToast('Validation failed: ' + error, 'error')
+    } else if (error.includes('CircularReference')) {
+        showToast('Cannot create circular group hierarchy', 'error')
+    } else {
+        showToast('Database error: ' + error, 'error')
+    }
 }
 ```
 
@@ -1173,16 +1655,16 @@ try {
 Frontend subscribes to events via Tauri's listen:
 
 ```typeScript
-import { listen } from '@tauri-apps/api/event'
+import {listen} from '@tauri-apps/api/event'
 
 listen('log-line', (event) => {
-  const { pid, line, is_stderr } = event.payload
-  logStore.append(pid, line, is_stderr)
+    const {pid, line, is_stderr} = event.payload
+    logStore.append(pid, line, is_stderr)
 })
 
 listen('process-status-changed', (event) => {
-  const { pid, new_status } = event.payload
-  processStore.updateStatus(pid, new_status)
+    const {pid, new_status} = event.payload
+    processStore.updateStatus(pid, new_status)
 })
 ```
 
