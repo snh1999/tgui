@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import {ref} from "vue";
-import {COMMAND_FORM_ID} from "@/app.constants.ts";
-import {AddIcon} from "@/assets/Icons";
-import UpsertCommandForm from "@/components/forms/commands/UpsertCommandForm.vue";
-import {Button} from "@/components/ui/button";
-import {Field} from "@/components/ui/field";
-import OpenDialog from "@/components/ui/tgui/OpenDialog.vue";
-import {Spinner} from "@/components/ui/spinner";
+  import { ref } from "vue";
+  import { COMMAND_FORM_ID } from "@/app.constants.ts";
+  import { AddIcon } from "@/assets/Icons";
+  import UpsertCommandForm from "@/components/forms/commands/UpsertCommandForm.vue";
+  import { Button } from "@/components/ui/button";
+  import { Field } from "@/components/ui/field";
+  import OpenDialog from "@/components/ui/tgui/OpenDialog.vue";
+  import { Spinner } from "@/components/ui/spinner";
 
-const newCommandOpen = ref(false);
+  const newCommandOpen = ref(false);
   const openNewCommand = () => {
     newCommandOpen.value = true;
   };

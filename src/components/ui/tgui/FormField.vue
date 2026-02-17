@@ -61,6 +61,8 @@
       id: fieldId.value,
       name: props.name,
       ...field,
+      modelValue: field.value,
+      "onUpdate:modelValue": field.onChange,
       "aria-invalid": !!errors.length,
     };
 

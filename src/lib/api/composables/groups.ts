@@ -1,15 +1,15 @@
-import {useMutation, useQuery, useQueryClient} from "@tanstack/vue-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 
-import type {MaybeRef} from "vue";
-import {unref} from "vue";
-import {queryKeys} from "@/lib/api/api.keys.ts";
-import {groupsApi} from "@/lib/api/api.tauri.ts";
+import type { MaybeRef } from "vue";
+import { unref } from "vue";
+import { queryKeys } from "@/lib/api/api.keys.ts";
+import { groupsApi } from "@/lib/api/api.tauri.ts";
 import type {
-    ICommandGroupFilter,
-    IMovePosition,
-    TUpsertGroupPayload,
+  ICommandGroupFilter,
+  IMovePosition,
+  TUpsertGroupPayload,
 } from "@/lib/api/api.types.ts";
-import {useOptimisticUpdate} from "@/lib/api/composables/helpers.ts";
+import { useOptimisticUpdate } from "@/lib/api/composables/helpers.ts";
 
 export function useGetGroups(filters?: MaybeRef<ICommandGroupFilter>) {
   return useQuery({

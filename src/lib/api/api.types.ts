@@ -6,8 +6,8 @@ export interface SerializedError {
 export interface ICategory {
   id: number;
   name: string;
-  icon?: string;
-  color?: string;
+  icon?: string | null;
+  color?: string | null;
   createdAt?: Date;
 }
 
@@ -27,7 +27,7 @@ interface ICommonPositionFields extends ICommonFields {
 
 interface IGroupCommandCommon extends ICommonPositionFields {
   envVars?: Map<string, string>;
-  categoryId?: number;
+  categoryId?: number | null;
   workingDirectory?: string;
   shell?: string;
 }
@@ -35,7 +35,7 @@ interface IGroupCommandCommon extends ICommonPositionFields {
 export interface ICommand extends IGroupCommandCommon {
   command: string;
   arguments?: string[];
-  groupId?: number;
+  groupId?: number | null;
 }
 
 export interface ICommandGroupFilter {

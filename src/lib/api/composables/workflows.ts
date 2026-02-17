@@ -1,21 +1,26 @@
-import {QueryClient, useMutation, useQuery, useQueryClient,} from "@tanstack/vue-query";
-import type {MaybeRef} from "vue";
-import {unref} from "vue";
 import {
-    CATEGORY_WORKFLOW_COUNT,
-    COMMAND_POPULATED_STEP,
-    queryKeys,
-    WORKFLOW_STEP_COUNT,
+  QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/vue-query";
+import type { MaybeRef } from "vue";
+import { unref } from "vue";
+import {
+  CATEGORY_WORKFLOW_COUNT,
+  COMMAND_POPULATED_STEP,
+  queryKeys,
+  WORKFLOW_STEP_COUNT,
 } from "@/lib/api/api.keys.ts";
-import {workflowsApi, workflowStepApi} from "@/lib/api/api.tauri.ts";
+import { workflowsApi, workflowStepApi } from "@/lib/api/api.tauri.ts";
 import type {
-    ICommandGroupFilter,
-    IMovePosition,
-    IWorkflowStepFilter,
-    TUpsertWorkflowPayload,
-    TUpsertWorkflowStepsPayload,
+  ICommandGroupFilter,
+  IMovePosition,
+  IWorkflowStepFilter,
+  TUpsertWorkflowPayload,
+  TUpsertWorkflowStepsPayload,
 } from "@/lib/api/api.types.ts";
-import {useOptimisticUpdate} from "@/lib/api/composables/helpers.ts";
+import { useOptimisticUpdate } from "@/lib/api/composables/helpers.ts";
 
 export function useGetWorkflows(filter: MaybeRef<ICommandGroupFilter>) {
   return useQuery({
