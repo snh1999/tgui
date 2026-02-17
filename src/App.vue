@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import {Toaster} from "vue-sonner";
-import MainSidebar from "@/components/shared/MainSidebar.vue";
-import {SidebarProvider} from "@/components/ui/sidebar";
+  import MainSidebar from "@/components/shared/MainSidebar.vue";
+  import { SidebarProvider } from "@/components/ui/sidebar";
+  import { Toaster } from "@/components/ui/sonner";
 </script>
 
 <template>
