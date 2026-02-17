@@ -1,4 +1,4 @@
-import {QueryClient} from "@tanstack/vue-query";
+import { QueryClient } from "@tanstack/vue-query";
 
 export const apiClient = new QueryClient({
   defaultOptions: {

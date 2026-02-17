@@ -1,7 +1,7 @@
 import type {
-    ICommandGroupFilter,
-    IQueryKeyTypes,
-    IWorkflowStepFilter,
+  ICommandGroupFilter,
+  IQueryKeyTypes,
+  IWorkflowStepFilter,
 } from "@/lib/api/api.types.ts";
 
 type TQueryKeys =

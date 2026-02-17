@@ -1,9 +1,9 @@
-import {useMutation, useQuery, useQueryClient} from "@tanstack/vue-query";
-import type {MaybeRef} from "vue";
-import {unref} from "vue";
-import {queryKeys} from "@/lib/api/api.keys.ts";
-import {categoriesApi} from "@/lib/api/api.tauri.ts";
-import type {TUpsertCategoryPayload} from "@/lib/api/api.types.ts";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
+import type { MaybeRef } from "vue";
+import { unref } from "vue";
+import { queryKeys } from "@/lib/api/api.keys.ts";
+import { categoriesApi } from "@/lib/api/api.tauri.ts";
+import type { TUpsertCategoryPayload } from "@/lib/api/api.types.ts";
 
 export function useGetCategories() {
   return useQuery({

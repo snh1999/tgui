@@ -1,4 +1,4 @@
-import {z} from "zod";
+import { z } from "zod";
 
 const argumentSchema = z.string().refine(
   (val) => {
@@ -30,13 +30,13 @@ export const commandFormSchema = z.object({
   command: z.string().min(1, "Command text can not be empty."),
   arguments: z.array(argumentSchema).default([""]),
   description: z.string().optional(),
-  group_id: z.number().optional(),
+  groupId: z.number().nullable().optional(),
   position: z.number().default(0),
   id: z.number().default(0),
-  working_directory: z.string().optional(),
+  workingDirectory: z.string().optional(),
   // using array because form input processing is easier that way
-  env_vars: z.array(envVarEntrySchema).default([]),
+  envVars: z.array(envVarEntrySchema).default([]),
   shell: z.string().optional(),
-  category_id: z.number().optional(),
-  is_favorite: z.boolean().default(false),
+  categoryId: z.number().nullable().optional(),
+  isFavorite: z.boolean().default(false),
 });

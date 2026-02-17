@@ -1,11 +1,15 @@
-import {useMutation, useQuery, useQueryClient} from "@tanstack/vue-query";
-import type {MaybeRef} from "vue";
-import {unref} from "vue";
-import {toast} from "vue-sonner";
-import {queryKeys} from "@/lib/api/api.keys.ts";
-import {commandsApi} from "@/lib/api/api.tauri.ts";
-import {useOptimisticUpdate} from "@/lib/api/composables/helpers.ts";
-import type {ICommandGroupFilter, IMovePosition, TUpsertCommandPayload,} from "../api.types";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
+import type { MaybeRef } from "vue";
+import { unref } from "vue";
+import { toast } from "vue-sonner";
+import { queryKeys } from "@/lib/api/api.keys.ts";
+import { commandsApi } from "@/lib/api/api.tauri.ts";
+import { useOptimisticUpdate } from "@/lib/api/composables/helpers.ts";
+import type {
+  ICommandGroupFilter,
+  IMovePosition,
+  TUpsertCommandPayload,
+} from "../api.types";
 
 export function useGetCommands(filters?: MaybeRef<ICommandGroupFilter>) {
   return useQuery({
@@ -40,8 +44,11 @@ export function useCreateCommand() {
   return useMutation({
     mutationFn: (payload: TUpsertCommandPayload) => commandsApi.create(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.commands.lists() });
       toast.success("Command created!");
+      queryClient.invalidateQueries({ queryKey: queryKeys.commands.lists() });
+    },
+    onError: (error) => {
+      toast.error(typeof error === "string" ? error : error.message);
     },
   });
 }
@@ -64,6 +71,9 @@ export function useUpdateCommand() {
       queryClient.invalidateQueries({ queryKey: queryKeys.commands.lists() });
       toast.success("Command updated!");
     },
+    onError: (error) => {
+      toast.error(typeof error === "string" ? error : error.message);
+    },
   });
 }
 
@@ -76,6 +86,9 @@ export function useDeleteCommand() {
       queryClient.removeQueries({ queryKey: queryKeys.commands.detail(id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.commands.lists() });
       toast.info("Command deleted!");
+    },
+    onError: (error) => {
+      toast.error(typeof error === "string" ? error : error.message);
     },
   });
 }

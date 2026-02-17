@@ -1,18 +1,18 @@
-import {invoke} from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import type {
-    ICategory,
-    ICommand,
-    ICommandGroupFilter,
-    IGroup,
-    IMovePosition,
-    IWorkflow,
-    IWorkflowStep,
-    IWorkflowStepFilter,
-    TUpsertCategoryPayload,
-    TUpsertCommandPayload,
-    TUpsertGroupPayload,
-    TUpsertWorkflowPayload,
-    TUpsertWorkflowStepsPayload,
+  ICategory,
+  ICommand,
+  ICommandGroupFilter,
+  IGroup,
+  IMovePosition,
+  IWorkflow,
+  IWorkflowStep,
+  IWorkflowStepFilter,
+  TUpsertCategoryPayload,
+  TUpsertCommandPayload,
+  TUpsertGroupPayload,
+  TUpsertWorkflowPayload,
+  TUpsertWorkflowStepsPayload,
 } from "@/lib/api/api.types.ts";
 
 export const categoriesApi = {
@@ -44,17 +44,22 @@ export const commandsApi = {
 
   create: (payload: TUpsertCommandPayload) =>
     invoke<number>("create_command", {
-      ...payload,
-      id: 0,
-      position: 0,
+      cmd: {
+        ...payload,
+        id: 0,
+        position: 0,
+      },
     }),
 
   update: (id: number, payload: TUpsertCommandPayload) =>
-    invoke<void>("update_command", { id, ...payload }),
+    invoke<void>("update_command", {
+      cmd: { id, ...payload },
+    }),
 
   delete: (id: number) => invoke<void>("delete_command", { id }),
 
-  toggleFavorite: (id: number) => invoke<void>("toggle_favorite", { id }),
+  toggleFavorite: (id: number) =>
+    invoke<void>("toggle_command_favorite", { id }),
 
   move: (movePosition: IMovePosition) =>
     invoke<void>("move_command_between", { ...movePosition }),
