@@ -21,7 +21,7 @@ export const categoriesApi = {
   getById: (id: number) => invoke<ICategory>("get_category", { id }),
 
   create: (payload: TUpsertCategoryPayload) =>
-    invoke<number>("create_category", { payload, id: 0 }),
+    invoke<number>("create_category", { ...payload, id: 0 }),
 
   update: (id: number, payload: TUpsertCategoryPayload) =>
     invoke<void>("update_category", { id, ...payload }),
@@ -47,7 +47,6 @@ export const commandsApi = {
       cmd: {
         ...payload,
         id: 0,
-        position: 0,
       },
     }),
 
@@ -80,13 +79,14 @@ export const groupsApi = {
 
   create: (payload: TUpsertGroupPayload) =>
     invoke<number>("create_group", {
-      ...payload,
-      id: 0,
-      position: 0,
+      group: {
+        ...payload,
+        id: 0,
+      },
     }),
 
   update: (id: number, payload: TUpsertGroupPayload) =>
-    invoke<void>("update_group", { id, ...payload }),
+    invoke<void>("update_group", { group: { id, ...payload } }),
 
   toggleFavorite: (id: number) => invoke<void>("toggle_group_favorite", { id }),
 
@@ -109,9 +109,9 @@ export const workflowsApi = {
     }),
   getById: (id: number) => invoke<IWorkflow>("get_workflow", { id }),
   create: (payload: TUpsertWorkflowPayload) =>
-    invoke<number>("create_workflow", { ...payload, id: 0 }),
+    invoke<number>("create_workflow", { workflow: { ...payload, id: 0 } }),
   update: (id: number, payload: TUpsertWorkflowPayload) =>
-    invoke<void>("update_workflow", { id, ...payload }),
+    invoke<void>("update_workflow", { workflow: { id, ...payload } }),
   delete: (id: number) => invoke<void>("delete_workflow", { id }),
   toggleFavorite: (id: number) =>
     invoke<void>("toggle_favorite_workflow", { id }),
@@ -141,15 +141,16 @@ export const workflowStepApi = {
 
   create: (payload: TUpsertWorkflowStepsPayload) =>
     invoke<number>("create_workflow_step", {
-      ...payload,
-      id: 0,
-      position: 0,
+      flow_steps: {
+        ...payload,
+        id: 0,
+      },
     }),
   update: (id: number, payload: TUpsertWorkflowStepsPayload) =>
-    invoke<void>("update_workflow_step", { id, ...payload }),
+    invoke<void>("update_workflow_step", { flow_steps: { id, ...payload } }),
   delete: (id: number) => invoke<void>("delete_workflow_step", { id }),
   move: (movePosition: IMovePosition) =>
-    invoke<void>("move_workflow_between", { ...movePosition }),
+    invoke<void>("move_workflow_step_between", { ...movePosition }),
   toggleEnabled: (id: number) =>
     invoke<void>("toggle_workflow_step_enabled", { id }),
   getWorkflowStepCount: (id: number) =>

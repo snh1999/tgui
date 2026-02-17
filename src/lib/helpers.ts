@@ -22,9 +22,9 @@ export function envVarsToArray<
   return {
     ...values,
     envVars: values.envVars
-      ? Object.keys(values.envVars).map((key) => ({
+      ? Array.from(values.envVars.entries()).map(([key, value]) => ({
           key,
-          value: values.envVars?.get(key) ?? "",
+          value,
         }))
       : undefined,
   };

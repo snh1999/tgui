@@ -126,7 +126,7 @@
           placeholder="Add Argument"
         />
         <MapInput
-          name="env_vars"
+          name="envVars"
           label="Environment Variables"
           keyPlaceholder="Enter Key"
           valuePlaceholder="Enter value"
@@ -136,7 +136,7 @@
 
         <!--      TODO: add file picker-->
         <FormField
-          name="working_directory"
+          name="workingDirectory"
           :form-id="COMMAND_FORM_ID"
           label="Working Directory"
         >

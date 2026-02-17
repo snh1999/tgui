@@ -32,7 +32,6 @@
       <span
         v-if="command.description"
         class="text-xs tracking-wide text-muted-foreground truncate"
-        ,
       >
         {{ command.description }}
       </span>

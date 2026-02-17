@@ -23,7 +23,7 @@
     typeof UpsertCommandForm
   > | null>(null);
 
-  const prop = defineProps<{
+  const props = defineProps<{
     id: number;
     viewTrigger?: boolean;
   }>();
@@ -34,7 +34,7 @@
     isError,
     error,
     refetch,
-  } = useGetCommand(prop.id);
+  } = useGetCommand(props.id);
 </script>
 
 <template>
