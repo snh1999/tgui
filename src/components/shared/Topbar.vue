@@ -8,7 +8,7 @@
   import { ref } from "vue";
   import { Button } from "@/components/ui/button";
   import { SidebarTrigger } from "@/components/ui/sidebar";
-  import CreateCommandsDialogue from "@/components/forms/commands/CreateCommandsDialogue.vue";
+  import CreateCommandsDialog from "@/components/forms/commands/CreateCommandsDialog.vue";
 
   const resultCount = ref("");
 </script>
@@ -31,6 +31,6 @@
       Settings
     </Button>
 
-    <CreateCommandsDialogue />
+    <CreateCommandsDialog />
   </header>
 </template>

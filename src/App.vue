@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import MainSidebar from "@/components/shared/MainSidebar.vue";
   import { SidebarProvider } from "@/components/ui/sidebar";
+  import { Toaster } from "@/components/ui/sonner";
 </script>
 
 <template>
@@ -12,6 +13,7 @@
       <slot />
       <RouterView />
     </main>
+    <Toaster />
   </SidebarProvider>
 </template>
 

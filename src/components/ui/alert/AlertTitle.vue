@@ -8,10 +8,10 @@
 </script>
 
 <template>
-  <tr
-    data-slot="table-row"
-    :class="cn('hover:bg-muted/50 data-[state=selected]:bg-muted border-b border-b-muted transition-colors', props.class)"
+  <div
+    data-slot="alert-title"
+    :class="cn('col-start-2 line-clamp-1 min-h-4 font-medium tracking-tight', props.class)"
   >
     <slot />
-  </tr>
+  </div>
 </template>

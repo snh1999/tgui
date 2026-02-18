@@ -1,17 +1,21 @@
 <script setup lang="ts">
   import type { HTMLAttributes } from "vue";
+  import type { AlertVariants } from ".";
   import { cn } from "@/lib/utils";
+  import { alertVariants } from ".";
 
   const props = defineProps<{
     class?: HTMLAttributes["class"];
+    variant?: AlertVariants["variant"];
   }>();
 </script>
 
 <template>
-  <tr
-    data-slot="table-row"
-    :class="cn('hover:bg-muted/50 data-[state=selected]:bg-muted border-b border-b-muted transition-colors', props.class)"
+  <div
+    data-slot="alert"
+    :class="cn(alertVariants({ variant }), props.class)"
+    role="alert"
   >
     <slot />
-  </tr>
+  </div>
 </template>

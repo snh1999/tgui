@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Category {
     pub id: i64,
     pub name: String,
@@ -12,6 +13,7 @@ pub struct Category {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Group {
     pub id: i64,
     pub name: String,
@@ -32,6 +34,7 @@ pub struct Group {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Command {
     pub id: i64,
     pub name: String,
@@ -53,6 +56,7 @@ pub struct Command {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Template {
     pub id: i64,
     pub name: String,
@@ -66,6 +70,7 @@ pub struct Template {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Workflow {
     pub id: i64,
     pub name: String,
@@ -116,6 +121,7 @@ pub enum StepCondition {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct WorkflowStep {
     pub id: i64,
     pub workflow_id: i64,
@@ -149,3 +155,4 @@ impl StepCondition {
         }
     }
 }
+

@@ -1,11 +1,15 @@
 /** biome-ignore-all lint/performance/noBarrelFile: <barrel export imports only one file> */
 
+export { default as EditIcon } from "~icons/iconamoon/edit-fill";
+export { default as ExternalIcon } from "~icons/iconamoon/link-external-bold";
 export { default as MenuDotsIcon } from "~icons/iconamoon/menu-kebab-vertical-bold";
 export { default as RestartIcon } from "~icons/iconamoon/restart-fill";
 export { default as SettingsIcon } from "~icons/iconamoon/settings-fill";
 export { default as AddIcon } from "~icons/material-symbols/add-rounded";
 export { default as DashboardIcon } from "~icons/material-symbols/dashboard-rounded";
+export { default as DeleteIcon } from "~icons/material-symbols/delete-rounded";
 export { default as ErrorIcon } from "~icons/material-symbols/error";
+export { default as HomeIcon } from "~icons/material-symbols/home-rounded";
 export { default as ListIcon } from "~icons/material-symbols/list-rounded";
 export { default as SearchIcon } from "~icons/material-symbols/search-rounded";
 export { default as StarIcon } from "~icons/material-symbols/star-outline-rounded";
@@ -16,5 +20,3 @@ export { default as MoonIcon } from "~icons/solar/moon-bold";
 export { default as PlayIcon } from "~icons/solar/play-bold";
 export { default as PlayCircleIcon } from "~icons/solar/play-circle-bold";
 export { default as SunIcon } from "~icons/solar/sun-bold-duotone";
-export { default as HomeIcon } from "~icons/material-symbols/home-rounded";
-export { default as DeleteIcon } from "~icons/material-symbols/delete-rounded";

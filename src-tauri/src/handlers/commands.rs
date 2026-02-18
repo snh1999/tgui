@@ -15,11 +15,11 @@ pub fn get_command(db: State<'_, Database>, id: i64) -> Result<Command, Serializ
 #[tauri::command]
 pub fn get_commands(
     db: State<'_, Database>,
-    group_id: Option<i64>,
+    parent_id: Option<i64>,
     category_id: Option<i64>,
     favorites_only: bool,
 ) -> Result<Vec<Command>, SerializableError> {
-    db.get_commands(group_id, category_id, favorites_only)
+    db.get_commands(parent_id, category_id, favorites_only)
         .map_err(|e| e.into())
 }
 
@@ -31,11 +31,11 @@ pub fn update_command(db: State<'_, Database>, cmd: Command) -> Result<(), Seria
 #[tauri::command]
 pub fn move_command_between(
     db: State<'_, Database>,
-    cmd_id: i64,
+    id: i64,
     prev_id: Option<i64>,
     next_id: Option<i64>,
 ) -> Result<(), SerializableError> {
-    db.move_command_between(cmd_id, prev_id, next_id)
+    db.move_command_between(id, prev_id, next_id)
         .map_err(|e| e.into())
 }
 
