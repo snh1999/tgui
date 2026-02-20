@@ -3,7 +3,7 @@ use crate::database::Database;
 use rusqlite::params;
 use serde_json::Error;
 use std::collections::HashMap;
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{debug, error, info, warn};
 
 impl Database {
     pub(crate) const POSITION_GAP: i64 = 1000;
@@ -35,10 +35,7 @@ impl Database {
         sql: &str,
         params: P,
     ) -> Result<()> {
-        let rows_affected = self.conn()?.execute(sql, params).map_err(|e| {
-            error!(error = %e, table=table, "Database operation failed");
-            DatabaseError::from(e)
-        })?;
+        let rows_affected = self.execute_db_raw(table, sql, params)?;
 
         if rows_affected == 0 {
             error!(id = id, table = table, "Not found");
@@ -47,6 +44,18 @@ impl Database {
 
         info!(id = id, table = table, "Database operation successful");
         Ok(())
+    }
+
+    pub(crate) fn execute_db_raw<P: rusqlite::Params>(
+        &self,
+        table: &'static str,
+        sql: &str,
+        params: P,
+    ) -> Result<usize> {
+        self.conn()?.execute(sql, params).map_err(|e| {
+            error!(error = %e, table=table, "Database operation failed");
+            DatabaseError::from(e)
+        })
     }
 
     /// query_row can be used only for query by id (only param)
