@@ -11,6 +11,9 @@ pub const GROUP_PARENT_GROUP_COLUMN: &'static str = "parent_group_id";
 pub const WORKFLOWS_TABLE: &'static str = "workflows";
 pub const WORKFLOW_STEPS_TABLE: &'static str = "workflow_steps";
 
+pub const EXECUTION_HISTORY_TABLE: &'static str = "execution_history";
+pub const EXECUTION_HISTORY_LIMIT: i64 = 100;
+
 pub const CONNECTION_FAILED_MESSAGE: &'static str =
     "Database connection poisoned by previous panic";
 pub const DATABASE_LOCKED_MESSAGE: &'static str =

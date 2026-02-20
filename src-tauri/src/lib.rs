@@ -1,6 +1,7 @@
 mod constants;
 mod database;
 mod handlers;
+mod process;
 
 use crate::database::Database;
 use crate::handlers::{categories, commands, groups, settings, workflows};
