@@ -60,6 +60,20 @@ fn test_create_workflow_empty_name() {
 }
 
 #[test]
+fn test_create_workflow_all_execution_modes() {
+    let test_db = TestDb::setup_test_db();
+
+    for mode in [ExecutionMode::Sequential, ExecutionMode::Parallel, ExecutionMode::Conditional] {
+        let wf = WorkflowBuilder::new(&format!("Mode {:?}", mode))
+            .with_mode(mode.clone())
+            .build();
+        let id = test_db.save_workflow_to_db(&wf);
+        let row = test_db.db.get_workflow(id).unwrap();
+        assert_eq!(row.execution_mode, mode);
+    }
+}
+
+#[test]
 fn test_create_workflow_whitespace_name() {
     let test_db = TestDb::setup_test_db();
     let workflow = WorkflowBuilder::new("   ").build();
@@ -659,7 +673,10 @@ fn test_delete_workflow_step() {
     let command_id = test_db.create_test_command("Test", "Echo test", None);
 
     let id = test_db.create_test_workflow_step(workflow_id, command_id);
+
+    assert_eq!(test_db.db.get_workflow_step_count(workflow_id).unwrap(), 1);
     test_db.db.delete_workflow_step(id).unwrap();
+    assert_eq!(test_db.db.get_workflow_step_count(workflow_id).unwrap(), 0);
 
     let result = test_db.db.get_workflow_step(id);
     assert!(matches!(
@@ -746,15 +763,20 @@ fn test_get_workflow_step_count() {
     let test_db = TestDb::setup_test_db();
 
     let workflow_id_1 = test_db.create_test_workflow("Test");
+    let workflow_id_2 = test_db.create_test_workflow("Test 2");
     let command_id_1 = test_db.create_test_command("Test", "Echo test", None);
     let command_id_2 = test_db.create_test_command("Test", "Echo test", None);
 
+    test_db.create_test_workflow_step(workflow_id_2, command_id_1);
     test_db.create_test_workflow_step(workflow_id_1, command_id_1);
     test_db.create_test_workflow_step(workflow_id_1, command_id_2);
     test_db.create_test_workflow_step(workflow_id_1, command_id_2);
 
     let count = test_db.db.get_workflow_step_count(workflow_id_1).unwrap();
     assert_eq!(count, 3);
+
+    let count = test_db.db.get_workflow_step_count(workflow_id_2).unwrap();
+    assert_eq!(count, 1);
 }
 
 #[test]

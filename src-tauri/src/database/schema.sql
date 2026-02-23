@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS execution_history (
         (command_id IS NULL AND workflow_id IS NOT NULL AND workflow_step_id IS NULL) OR
         (command_id IS NOT NULL AND workflow_id IS NOT NULL AND workflow_step_id IS NOT NULL)
     ),
-    CHECK(status IN ('running', 'success', 'failed', 'timeout', 'cancelled', 'skipped')),
+    CHECK(status IN ('idle', 'running', 'success', 'interrupted', 'paused', 'failed', 'timeout', 'cancelled', 'skipped', 'completed')),
     CHECK(triggered_by IN ('manual', 'workflow', 'schedule'))
 );
 
