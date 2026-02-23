@@ -5,6 +5,8 @@
 - **12-12-2025**: Initial API documentation plan
 - **23-01-2026**: Updated based on actual implementation
 - **13-02-2026**: Added Workflow Management API (section 6.5)
+- **20-02-2026**: Added Execution History API (section 6.6)
+
 
 This document defines the IPC (Inter-Process Communication) contract between the Tauri Rust backend
 and Vue frontend.
@@ -1203,6 +1205,138 @@ const stepCount = await invoke('get_workflow_step_count', {id: 1})
 ---
 
 ## 6.6 Execution history management
+
+
+```rust
+// status, exit_code, started_at, completed_at — those are set by the DB/process layer.
+struct ExecutionHistory {
+id:               i64,
+command_id:       Option<i64>,
+workflow_id:      Option<i64>,
+workflow_step_id: Option<i64>,
+pid:              Option<i64>,        // set after spawn via update_execution_pid()
+status:           Status,             // default: Status::Running on create
+exit_code:        Option<i32>,
+started_at:       String,             // DATETIME, set by DB DEFAULT
+completed_at:     Option<String>,     // set by DB trigger on terminal transition
+triggered_by:     TriggeredBy,
+context:          Option<String>,     // optional JSON metadata
+}
+
+enum Status {
+    Running, Success, Failed, TimedOut, Cancelled, Skipped, Idle, Interrupted, Paused,
+    // Completed is used as a safe fallback when deserialising unknown status values from DB;
+    // it is NOT a valid value to write — use Success instead.
+    Completed,
+}
+
+enum TriggeredBy { Manual, Workflow, Schedule }
+```
+
+Valid command_id / workflow_id / workflow_step_id combinations (enforced by both DB CHECK and validate_execution_history_input()):
+Typecommand_idworkflow_idworkflow_step_idStandalone command✓NULLNULLWorkflow runNULL✓NULLWorkflow step✓✓✓
+Passing any other combination returns DatabaseError::InvalidData.
+
+Create Execution History
+create_execution_history(history: &ExecutionHistory) -> Result<i64>
+Description: Insert a new row with status = 'running'. Validates that all referenced IDs exist in the database before inserting.
+Returns: Ok(id) — the new execution_history.id, used as the key in ProcessManager.
+Errors:
+
+NotFound — command_id, workflow_id, or workflow_step_id does not exist
+InvalidData — invalid ID combination (see table above)
+
+
+Get Execution History
+get_execution_history(id: i64) -> Result<ExecutionHistory>
+Description: Fetch a single history row by ID.
+Errors: NotFound if the row doesn't exist.
+
+Get Command Execution History
+get_command_execution_history(command_id: i64, limit: Option<i64>) -> Result<Vec<ExecutionHistory>>
+Description: All history rows for a command, most-recent first.
+Parameters:
+
+limit — max rows to return. Defaults to EXECUTION_HISTORY_LIMIT (100) if None.
+
+
+Get Workflow Execution History
+get_workflow_execution_history(workflow_id: i64, limit: Option<i64>) -> Result<Vec<ExecutionHistory>>
+Description: All history rows for a workflow (includes step-level rows), most-recent first.
+Parameters:
+
+limit — max rows to return. Defaults to EXECUTION_HISTORY_LIMIT (100) if None.
+
+
+Get Running Commands
+get_running_commands(command_id: Option<i64>, workflow_id: Option<i64>) -> Result<Vec<ExecutionHistory>>
+Description: Returns all rows with status = 'running'. Used at startup for orphan detection and by the frontend's active-process list.
+Parameters (mutually exclusive — pass at most one):
+
+command_id — filter to a specific command's running executions
+workflow_id — filter to a specific workflow's running executions
+both None — returns all currently running executions
+
+Errors: InvalidData if both command_id and workflow_id are Some.
+
+Update Execution PID
+update_execution_pid(id: i64, pid: u32) -> Result<()>
+Description: Stores the OS process ID once child.spawn() has succeeded. Called immediately after spawn before any log streaming begins.
+Why separate from create: The PID is only available after the OS process actually starts, which happens after the DB row is created.
+
+Update Execution History Status
+update_execution_history_status(id: i64, status: Status, exit_code: Option<i32>) -> Result<()>
+Description: Transition a running execution to a terminal state. The completed_at timestamp is set automatically by the execution_history_timestamps DB trigger.
+Valid terminal transitions from Running:
+
+Status::Success — process exited with code 0
+Status::Failed — process exited with non-zero code
+Status::TimedOut — process exceeded step timeout_seconds
+Status::Cancelled — process was stopped by user (SIGTERM or SIGKILL)
+
+Parameters:
+
+status — target terminal state (not Running or Skipped)
+exit_code — OS exit code; None for signals/cancellation
+
+
+Note: Status::Skipped is written directly on insert (never transitions from Running). The application layer is responsible for not calling this method on already-terminal rows.
+
+
+Cancel Execution History
+cancel_execution_history(id: i64) -> Result<()>
+Description: Convenience wrapper — calls update_execution_history_status(id, Status::Cancelled, None). Used when a spawn fails after the history row was already created (e.g. build_exec returned an error).
+
+Delete Execution History
+delete_execution_history(id: i64) -> Result<()>
+Description: Hard-delete a single history row. Note that deleting the parent command or workflow cascades to delete all associated history automatically.
+
+Cleanup Command History
+cleanup_command_history(command_id: i64, keep_last: i64) -> Result<()>
+Description: Retains only the most recent keep_last entries for a command; older rows are deleted. Implements the ADR-007 retention strategy.
+Default: keep_last = 100 (matches EXECUTION_HISTORY_LIMIT).
+
+TODO: Add equivalent cleanup for workflow and workflow-step history.
+
+
+Cleanup History Older Than
+cleanup_history_older_than(days: i64) -> Result<()>
+Description: Deletes all history rows where started_at < NOW - days. Skips rows with status = 'running' to avoid deleting live sessions. Called on app startup based on the log_retention_days setting.
+
+Get Command Execution Stats
+get_command_execution_stats(command_id: i64, status: Option<Status>) -> Result<i64>
+Description: Returns a count of execution history rows for a command.
+Parameters:
+
+status: None — count of all executions for the command
+status: Some(s) — count of executions with that specific status
+
+Example usage:
+rustlet total   = db.get_command_execution_stats(cmd_id, None)?;
+let success = db.get_command_execution_stats(cmd_id, Some(Status::Success))?;
+let failed  = db.get_command_execution_stats(cmd_id, Some(Status::Failed))?;
+let rate    = success as f64 / total as f64 * 100.0;
+
 
 ---
 

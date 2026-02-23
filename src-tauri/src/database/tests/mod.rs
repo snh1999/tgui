@@ -10,6 +10,7 @@ mod workflows;
 use tempfile::TempDir;
 
 use crate::database::{Command, ExecutionMode, Group, StepCondition, Workflow, WorkflowStep};
+use crate::utils::get_utc_timestamp_string;
 use std::collections::HashMap;
 
 pub struct TestDb {
@@ -198,6 +199,11 @@ impl WorkflowBuilder {
         self
     }
 
+    pub(crate) fn with_mode(mut self, mode: ExecutionMode) -> Self {
+        self.workflow.execution_mode = mode;
+        self
+    }
+
     pub(crate) fn build(self) -> Workflow {
         self.workflow
     }
@@ -244,9 +250,9 @@ impl ExecutionHistoryBuilder {
                 workflow_id: None,
                 workflow_step_id: None,
                 pid: None,
-                status: Status::Running,
+                status: ExecutionStatus::Running,
                 exit_code: None,
-                started_at: time::OffsetDateTime::now_utc().to_string(),
+                started_at: get_utc_timestamp_string(),
                 completed_at: None,
                 triggered_by: TriggeredBy::Manual,
                 context: Some("test context".to_string()),
@@ -280,7 +286,7 @@ impl ExecutionHistoryBuilder {
             .with_trigger(TriggeredBy::Workflow)
     }
 
-    pub(crate) fn build(mut self) -> ExecutionHistory {
+    pub(crate) fn build(self) -> ExecutionHistory {
         self.execution_history
     }
 }

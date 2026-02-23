@@ -1,5 +1,5 @@
 use super::{
-    Database, DatabaseError, ExecutionHistory, Result, Status, TriggeredBy,
+    Database, DatabaseError, ExecutionHistory, ExecutionStatus, Result, TriggeredBy,
 };
 use crate::constants::{EXECUTION_HISTORY_LIMIT, EXECUTION_HISTORY_TABLE};
 use rusqlite::{named_params, params};
@@ -65,6 +65,7 @@ impl Database {
             Self::row_to_execution_history,
         )
     }
+    
 
     #[instrument(skip(self))]
     pub fn get_command_execution_history(
@@ -146,7 +147,7 @@ impl Database {
     pub fn update_execution_history_status(
         &self,
         id: i64,
-        status: Status,
+        status: ExecutionStatus,
         exit_code: Option<i32>,
     ) -> Result<()> {
         let status = status.as_str();
@@ -185,7 +186,7 @@ impl Database {
 
     /// Cancel an execution that never actually spawned (e.g., build_exec failed).
     pub fn cancel_execution_history(&self, id: i64) -> Result<()> {
-        self.update_execution_history_status(id, Status::Cancelled, None)
+        self.update_execution_history_status(id, ExecutionStatus::Cancelled, None)
     }
 
     #[instrument(skip(self))]
@@ -231,7 +232,7 @@ impl Database {
     }
 
     #[instrument(skip(self))]
-    pub fn get_command_execution_stats(&self, command_id: i64, status: Option<Status>) -> Result<i64> {
+    pub fn get_command_execution_stats(&self, command_id: i64, status: Option<ExecutionStatus>) -> Result<i64> {
         let query = match status {
             Some(status) => &format!("SELECT COUNT(*) AS total FROM execution_history WHERE command_id = ?1 AND status = '{}'", status.as_str()),
             None => "SELECT COUNT(*) AS total FROM execution_history WHERE command_id = ?1",
@@ -247,9 +248,9 @@ impl Database {
 
     fn row_to_execution_history(row: &rusqlite::Row) -> rusqlite::Result<ExecutionHistory> {
         let status_str: String = row.get("status")?;
-        let status = Status::from_str(&status_str).unwrap_or_else(|e| {
+        let status = ExecutionStatus::from_str(&status_str).unwrap_or_else(|e| {
             warn!(error = %e, "Invalid execution mode, defaulting to completed");
-            Status::Completed
+            ExecutionStatus::Completed
         });
 
         let workflow_id: Option<i64> = row.get("workflow_id")?;

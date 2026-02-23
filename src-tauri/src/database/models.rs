@@ -1,3 +1,4 @@
+use crate::utils::get_utc_timestamp_string;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -169,7 +170,7 @@ pub struct ExecutionHistory {
     #[serde(skip_deserializing, default)]
     pub pid: Option<i64>,
     #[serde(skip_deserializing, default)]
-    pub status: Status,
+    pub status: ExecutionStatus,
     #[serde(skip_deserializing, default)]
     pub exit_code: Option<i32>,
     #[serde(skip_deserializing, default)]
@@ -179,6 +180,24 @@ pub struct ExecutionHistory {
     pub triggered_by: TriggeredBy,
     /// Optional JSON for extra metadata (e.g., workflow context)
     pub context: Option<String>,
+}
+
+impl ExecutionHistory {
+    pub fn new_with_command(command_id: i64, triggered_by: TriggeredBy) -> ExecutionHistory {
+        ExecutionHistory {
+            id: 0,
+            command_id: Some(command_id),
+            workflow_id: None,
+            workflow_step_id: None,
+            pid: None,
+            status: ExecutionStatus::Running,
+            exit_code: None,
+            started_at: get_utc_timestamp_string(),
+            completed_at: None,
+            triggered_by,
+            context: None,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -209,7 +228,7 @@ impl TriggeredBy {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
 #[serde(rename_all = "snake_case")]
-pub enum Status {
+pub enum ExecutionStatus {
     Idle,
     #[default]
     Running,
@@ -223,33 +242,33 @@ pub enum Status {
     Completed
 }
 
-impl Status {
+impl ExecutionStatus {
     pub fn as_str(&self) -> &str {
         match self {
-            Status::Idle => "idle",
-            Status::Running => "running",
-            Status::Success => "success",
-            Status::Interrupted => "interrupted",
-            Status::Paused => "paused",
-            Status::Failed => "failed",
-            Status::TimedOut => "timed-out",
-            Status::Cancelled => "cancelled",
-            Status::Skipped => "skipped",
-            Status::Completed => "completed"
+            ExecutionStatus::Idle => "idle",
+            ExecutionStatus::Running => "running",
+            ExecutionStatus::Success => "success",
+            ExecutionStatus::Interrupted => "interrupted",
+            ExecutionStatus::Paused => "paused",
+            ExecutionStatus::Failed => "failed",
+            ExecutionStatus::TimedOut => "timeout",
+            ExecutionStatus::Cancelled => "cancelled",
+            ExecutionStatus::Skipped => "skipped",
+            ExecutionStatus::Completed => "completed"
         }
     }
     pub fn from_str(s: &str) -> Result<Self, String> {
         match s {
-            "idle" => Ok(Status::Idle),
-            "running" => Ok(Status::Running),
-            "success" => Ok(Status::Success),
-            "interrupted" => Ok(Status::Interrupted),
-            "paused" => Ok(Status::Paused),
-            "failed" => Ok(Status::Failed),
-            "timed-out" => Ok(Status::TimedOut),
-            "cancelled" => Ok(Status::Cancelled),
-            "skipped" => Ok(Status::Skipped),
-            "completed" => Ok(Status::Completed),
+            "idle" => Ok(ExecutionStatus::Idle),
+            "running" => Ok(ExecutionStatus::Running),
+            "success" => Ok(ExecutionStatus::Success),
+            "interrupted" => Ok(ExecutionStatus::Interrupted),
+            "paused" => Ok(ExecutionStatus::Paused),
+            "failed" => Ok(ExecutionStatus::Failed),
+            "timed-out" => Ok(ExecutionStatus::TimedOut),
+            "cancelled" => Ok(ExecutionStatus::Cancelled),
+            "skipped" => Ok(ExecutionStatus::Skipped),
+            "completed" => Ok(ExecutionStatus::Completed),
             _ => Err(format!("Invalid execution mode: {}", s)),
         }
     }
