@@ -1,10 +1,11 @@
 mod constants;
 mod database;
 mod handlers;
+mod utils;
 mod process;
 
 use crate::database::Database;
-use crate::handlers::{categories, commands, groups, settings, workflows};
+use crate::handlers::{categories, commands, groups, process_handler, settings, workflows};
 use handlers::logger;
 use tauri::Manager;
 use tracing::{error, info};
@@ -86,6 +87,14 @@ pub fn run() {
             workflows::move_workflow_step_between,
             workflows::toggle_workflow_step_enabled,
             workflows::get_workflow_step_count,
+            process_handler::spawn_command,
+            process_handler::kill_process,
+            process_handler::get_running_processes,
+            process_handler::get_process_status,
+            process_handler::get_log_buffer,
+            process_handler::clear_log_buffer,
+            process_handler::stop_all_processes,
+            process_handler::get_tray_status,
             logger::logs_dir,
             logger::list_log_files,
             logger::delete_logs_older_than,

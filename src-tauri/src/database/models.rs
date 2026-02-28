@@ -234,7 +234,7 @@ pub enum ExecutionStatus {
     Success,
     Paused,
     Failed,
-    TimedOut,
+    TimeOut,
     Cancelled,
     Skipped,
     Completed
@@ -247,7 +247,7 @@ impl ExecutionStatus {
             ExecutionStatus::Success => "success",
             ExecutionStatus::Paused => "paused",
             ExecutionStatus::Failed => "failed",
-            ExecutionStatus::TimedOut => "timeout",
+            ExecutionStatus::TimeOut => "timeout",
             ExecutionStatus::Cancelled => "cancelled",
             ExecutionStatus::Skipped => "skipped",
             ExecutionStatus::Completed => "completed"
@@ -259,7 +259,7 @@ impl ExecutionStatus {
             "success" => Ok(ExecutionStatus::Success),
             "paused" => Ok(ExecutionStatus::Paused),
             "failed" => Ok(ExecutionStatus::Failed),
-            "timed-out" => Ok(ExecutionStatus::TimedOut),
+            "timeout" => Ok(ExecutionStatus::TimeOut),
             "cancelled" => Ok(ExecutionStatus::Cancelled),
             "skipped" => Ok(ExecutionStatus::Skipped),
             "completed" => Ok(ExecutionStatus::Completed),
