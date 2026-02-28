@@ -229,11 +229,9 @@ impl TriggeredBy {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecutionStatus {
-    Idle,
     #[default]
     Running,
     Success,
-    Interrupted,
     Paused,
     Failed,
     TimedOut,
@@ -245,10 +243,8 @@ pub enum ExecutionStatus {
 impl ExecutionStatus {
     pub fn as_str(&self) -> &str {
         match self {
-            ExecutionStatus::Idle => "idle",
             ExecutionStatus::Running => "running",
             ExecutionStatus::Success => "success",
-            ExecutionStatus::Interrupted => "interrupted",
             ExecutionStatus::Paused => "paused",
             ExecutionStatus::Failed => "failed",
             ExecutionStatus::TimedOut => "timeout",
@@ -259,10 +255,8 @@ impl ExecutionStatus {
     }
     pub fn from_str(s: &str) -> Result<Self, String> {
         match s {
-            "idle" => Ok(ExecutionStatus::Idle),
             "running" => Ok(ExecutionStatus::Running),
             "success" => Ok(ExecutionStatus::Success),
-            "interrupted" => Ok(ExecutionStatus::Interrupted),
             "paused" => Ok(ExecutionStatus::Paused),
             "failed" => Ok(ExecutionStatus::Failed),
             "timed-out" => Ok(ExecutionStatus::TimedOut),

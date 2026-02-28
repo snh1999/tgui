@@ -65,7 +65,7 @@ impl Database {
             Self::row_to_execution_history,
         )
     }
-    
+
 
     #[instrument(skip(self))]
     pub fn get_command_execution_history(
@@ -129,11 +129,11 @@ impl Database {
         self.query_database(&query, params, Self::row_to_execution_history)
     }
 
-    /// Store the OS PID once the process has actually been spawned.
-    /// Called immediately after `child.spawn()` succeeds.
+    /// Store the OS PID once the process has actually been spawned (called immediately after `child.spawn()` succeeds).
     #[instrument(skip(self))]
     pub fn update_execution_pid(&self, id: i64, pid: u32) -> Result<()> {
         debug!(execution_id = id, pid, "Storing PID");
+
         self.execute_db(
             EXECUTION_HISTORY_TABLE,
             id,
@@ -142,7 +142,6 @@ impl Database {
         )
     }
 
-    /// Transition from 'running' to a terminal state ('success' | 'failed' | 'timeout' | 'cancelled')
     #[instrument(skip(self))]
     pub fn update_execution_history_status(
         &self,
@@ -150,43 +149,33 @@ impl Database {
         status: ExecutionStatus,
         exit_code: Option<i32>,
     ) -> Result<()> {
-        let status = status.as_str();
-        debug!(execution_id = id, status, exit_code, "Finalising execution");
+        let status_str = status.as_str();
+
+        let history = self.get_execution_history(id)?;
+        if history.status != ExecutionStatus::Running || status == ExecutionStatus::Running {
+            return Err(DatabaseError::InvalidData {
+                field: "status",
+                reason: format!("Invalid status of {}", status_str),
+            });
+        }
+
+        debug!(execution_id = id, status = status_str, exit_code, "Finalising execution");
         self.execute_db(
             "execution_history",
             id,
             "UPDATE execution_history
-             SET status = :status, exit_code = :exit_code
-             WHERE id = :id",
+             SET status =:status, exit_code =:exit_code
+             WHERE id =:id",
             named_params! {
-                ":status":      status,
-                ":exit_code":   exit_code,
-                ":id":          id,
+                ":status": status_str,
+                ":exit_code": exit_code,
+                ":id": id,
             },
         )
     }
 
-    // /// Mark as 'cancelled' when the kill signal was sent but before the process
-    // /// has exited. This gives the UI immediate feedback (FR-07: update in <500ms).
-    // /// The wait task will call `finish_execution_history` once the process is gone.
-    // ///
-    // /// This is a no-op if the row is already in a terminal state (the DB trigger
-    // /// prevents the update and we silently ignore that error here).
-    // pub fn mark_execution_stopping(&self, id: i64) -> Result<()> {
-    //     // We don't have a 'stopping' status in the DB — we use the in-memory
-    //     // ProcessStatusEvent::Killed for the UI indicator and leave DB as 'running'
-    //     // until the process actually exits. This method is intentionally a no-op at
-    //     // the DB level; the caller emits the frontend event directly.
-    //     debug!(
-    //         execution_id = id,
-    //         "mark_execution_stopping (no-op at DB level)"
-    //     );
-    //     Ok(())
-    // }
-
-    /// Cancel an execution that never actually spawned (e.g., build_exec failed).
-    pub fn cancel_execution_history(&self, id: i64) -> Result<()> {
-        self.update_execution_history_status(id, ExecutionStatus::Cancelled, None)
+    pub fn cancel_execution(&self, id: i64) -> Result<()> {
+        self.update_execution_history_status(id, ExecutionStatus::Failed, None)
     }
 
     #[instrument(skip(self))]
