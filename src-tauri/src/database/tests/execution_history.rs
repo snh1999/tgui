@@ -67,6 +67,39 @@ fn test_create_execution_history_builder_with_workflow_step() {
 }
 
 #[test]
+fn test_create_execution_history_builder_with_workflow_step_invalid_workflow() {
+    let test_db = TestDb::setup_test_db();
+    let cmd_id = test_db.create_test_command("Test", "echo", None);
+
+    let flow_id = test_db.create_test_workflow("test");
+    let flow_id_2 = test_db.create_test_workflow("test");
+    let flow_step_id = test_db.create_test_workflow_step(flow_id, cmd_id);
+
+    let history = ExecutionHistoryBuilder::new()
+        .with_workflow_step(cmd_id, flow_id_2, flow_step_id)
+        .build();
+    let result = test_db.db.create_execution_history(&history);
+    assert!(matches!(result, Err(DatabaseError::InvalidData { field: "workflow_step_id", ..})));
+}
+
+#[test]
+fn test_create_execution_history_builder_with_workflow_step_invalid_command() {
+    let test_db = TestDb::setup_test_db();
+    let cmd_id = test_db.create_test_command("Test", "echo", None);
+    let cmd_id_2 = test_db.create_test_command("Test", "echo", None);
+
+    let flow_id = test_db.create_test_workflow("test");
+    let flow_step_id = test_db.create_test_workflow_step(flow_id, cmd_id);
+
+    let history = ExecutionHistoryBuilder::new()
+        .with_workflow_step(cmd_id_2, flow_id, flow_step_id)
+        .build();
+    let result = test_db.db.create_execution_history(&history);
+    assert!(matches!(result, Err(DatabaseError::InvalidData { field: "workflow_step_id", ..})));
+
+}
+
+#[test]
 fn test_create_execution_history_builder_with_invalid_combination() {
     let test_db = TestDb::setup_test_db();
     let cmd_id = test_db.create_test_command("Test", "echo", None);
@@ -369,12 +402,12 @@ fn test_finish_execution_history_failed() {
 }
 
 #[test]
-fn test_cancel_execution_history() {
+fn test_kill_failed_execution_history() {
     let test_db = TestDb::setup_test_db();
     let cmd_id = test_db.create_test_command("Test", "echo", None);
     let history = ExecutionHistoryBuilder::new().with_command(cmd_id).build();
     let history_id = test_db.save_execution_history(&history);
-    test_db.db.cancel_execution(history_id).unwrap();
+    test_db.db.kill_failed_execution(history_id).unwrap();
 
     let retrieved = test_db.db.get_execution_history(history_id).unwrap();
     assert_eq!(retrieved.status, ExecutionStatus::Failed);
@@ -549,7 +582,7 @@ fn test_execution_history_stats_after_mixed_runs() {
         (ExecutionStatus::Success, Some(0)),
         (ExecutionStatus::Failed, Some(1)),
         (ExecutionStatus::Cancelled, None),
-        (ExecutionStatus::TimedOut, None),
+        (ExecutionStatus::TimeOut, None),
     ];
 
     for (status, exit_code) in &outcomes {
@@ -563,7 +596,7 @@ fn test_execution_history_stats_after_mixed_runs() {
     assert_eq!(test_db.db.get_command_execution_stats(cmd_id, Some(ExecutionStatus::Success)).unwrap(), 2);
     assert_eq!(test_db.db.get_command_execution_stats(cmd_id, Some(ExecutionStatus::Failed)).unwrap(), 1);
     assert_eq!(test_db.db.get_command_execution_stats(cmd_id, Some(ExecutionStatus::Cancelled)).unwrap(), 1);
-    assert_eq!(test_db.db.get_command_execution_stats(cmd_id, Some(ExecutionStatus::TimedOut)).unwrap(), 1);
+    assert_eq!(test_db.db.get_command_execution_stats(cmd_id, Some(ExecutionStatus::TimeOut)).unwrap(), 1);
 }
 
 
@@ -576,8 +609,8 @@ fn test_execution_history_spawn_failure_cancels_row() {
         &ExecutionHistory::new_with_command(cmd_id, TriggeredBy::Manual)
     ).unwrap();
 
-    // spawn failed — cancel immediately, no PID ever stored
-    test_db.db.cancel_execution(exec_id).unwrap();
+    // spawn failed — kill immediately, no PID ever stored
+    test_db.db.kill_failed_execution(exec_id).unwrap();
 
     let row = test_db.db.get_execution_history(exec_id).unwrap();
     assert_eq!(row.status, ExecutionStatus::Failed);

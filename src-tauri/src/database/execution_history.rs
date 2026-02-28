@@ -36,7 +36,13 @@ impl Database {
         }
 
         if let Some(workflow_step_id) = history.workflow_step_id {
-            self.get_workflow_step(workflow_step_id)?;
+            let workflow_step = self.get_workflow_step(workflow_step_id)?;
+            if Some(workflow_step.command_id) != history.command_id || Some(workflow_step.workflow_id) != history.workflow_id {
+                return Err(DatabaseError::InvalidData {
+                    field: "workflow_step_id",
+                    reason: "Invalid workflow_step reference".to_string()
+                })
+            }
         }
 
         let (cmd, flow, flow_step) = (
@@ -174,7 +180,7 @@ impl Database {
         )
     }
 
-    pub fn cancel_execution(&self, id: i64) -> Result<()> {
+    pub fn kill_failed_execution(&self, id: i64) -> Result<()> {
         self.update_execution_history_status(id, ExecutionStatus::Failed, None)
     }
 
@@ -223,8 +229,8 @@ impl Database {
     #[instrument(skip(self))]
     pub fn get_command_execution_stats(&self, command_id: i64, status: Option<ExecutionStatus>) -> Result<i64> {
         let query = match status {
-            Some(status) => &format!("SELECT COUNT(*) AS total FROM execution_history WHERE command_id = ?1 AND status = '{}'", status.as_str()),
-            None => "SELECT COUNT(*) AS total FROM execution_history WHERE command_id = ?1",
+            Some(status) => format!("SELECT COUNT(*) AS total FROM execution_history WHERE command_id = ?1 AND status = '{}'", status.as_str()),
+            None => "SELECT COUNT(*) AS total FROM execution_history WHERE command_id = ?1".to_string(),
         };
 
         self.query_row(
