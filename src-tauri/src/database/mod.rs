@@ -11,8 +11,10 @@ mod helpers;
 mod settings;
 
 mod errors;
-mod models;
+pub mod models;
 mod workflows;
+mod execution_history;
+
 
 pub use errors::{DatabaseError, Result};
 pub use models::*;

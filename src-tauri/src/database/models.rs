@@ -1,3 +1,4 @@
+use crate::utils::get_utc_timestamp_string;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -126,6 +127,7 @@ pub struct WorkflowStep {
     pub id: i64,
     pub workflow_id: i64,
     pub command_id: i64,
+    #[serde(skip_deserializing, default)]
     pub position: i64,
     pub condition: StepCondition,
     pub timeout_seconds: Option<u32>,
@@ -156,3 +158,112 @@ impl StepCondition {
     }
 }
 
+
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ExecutionHistory {
+    pub id: i64,
+    pub command_id: Option<i64>,
+    pub workflow_id: Option<i64>,
+    pub workflow_step_id: Option<i64>,
+    #[serde(skip_deserializing, default)]
+    pub pid: Option<i64>,
+    #[serde(skip_deserializing, default)]
+    pub status: ExecutionStatus,
+    #[serde(skip_deserializing, default)]
+    pub exit_code: Option<i32>,
+    #[serde(skip_deserializing, default)]
+    pub started_at: String,
+    #[serde(skip_deserializing, default)]
+    pub completed_at: Option<String>,
+    pub triggered_by: TriggeredBy,
+    /// Optional JSON for extra metadata (e.g., workflow context)
+    pub context: Option<String>,
+}
+
+impl ExecutionHistory {
+    pub fn new_with_command(command_id: i64, triggered_by: TriggeredBy) -> ExecutionHistory {
+        ExecutionHistory {
+            id: 0,
+            command_id: Some(command_id),
+            workflow_id: None,
+            workflow_step_id: None,
+            pid: None,
+            status: ExecutionStatus::Running,
+            exit_code: None,
+            started_at: get_utc_timestamp_string(),
+            completed_at: None,
+            triggered_by,
+            context: None,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum TriggeredBy {
+    Manual,
+    Workflow,
+    Schedule,
+}
+
+impl TriggeredBy {
+    pub fn as_str(&self) -> &str {
+        match self {
+            TriggeredBy::Manual => "manual",
+            TriggeredBy::Workflow => "workflow",
+            TriggeredBy::Schedule => "schedule",
+        }
+    }
+    pub fn from_str(s: &str) -> Result<Self, String> {
+        match s {
+            "manual" => Ok(TriggeredBy::Manual),
+            "workflow" => Ok(TriggeredBy::Workflow),
+            "schedule" => Ok(TriggeredBy::Schedule),
+            _ => Err(format!("Invalid trigger: {}", s)),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ExecutionStatus {
+    #[default]
+    Running,
+    Success,
+    Paused,
+    Failed,
+    TimeOut,
+    Cancelled,
+    Skipped,
+    Completed
+}
+
+impl ExecutionStatus {
+    pub fn as_str(&self) -> &str {
+        match self {
+            ExecutionStatus::Running => "running",
+            ExecutionStatus::Success => "success",
+            ExecutionStatus::Paused => "paused",
+            ExecutionStatus::Failed => "failed",
+            ExecutionStatus::TimeOut => "timeout",
+            ExecutionStatus::Cancelled => "cancelled",
+            ExecutionStatus::Skipped => "skipped",
+            ExecutionStatus::Completed => "completed"
+        }
+    }
+    pub fn from_str(s: &str) -> Result<Self, String> {
+        match s {
+            "running" => Ok(ExecutionStatus::Running),
+            "success" => Ok(ExecutionStatus::Success),
+            "paused" => Ok(ExecutionStatus::Paused),
+            "failed" => Ok(ExecutionStatus::Failed),
+            "timeout" => Ok(ExecutionStatus::TimeOut),
+            "cancelled" => Ok(ExecutionStatus::Cancelled),
+            "skipped" => Ok(ExecutionStatus::Skipped),
+            "completed" => Ok(ExecutionStatus::Completed),
+            _ => Err(format!("Invalid execution mode: {}", s)),
+        }
+    }
+}

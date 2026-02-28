@@ -96,21 +96,20 @@ CREATE TABLE IF NOT EXISTS execution_history (
     command_id INTEGER REFERENCES commands(id) ON DELETE CASCADE,
     workflow_id INTEGER REFERENCES workflows(id) ON DELETE CASCADE,
     workflow_step_id INTEGER REFERENCES workflow_steps(id) ON DELETE CASCADE,
-    status TEXT,
+    pid INTEGER,
+    status TEXT NOT NULL DEFAULT 'running',
     exit_code INTEGER,
     started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     completed_at DATETIME,
-    triggered_by TEXT,
-    context TEXT,
-    stop_reason TEXT,
+    triggered_by TEXT NOT NULL DEFAULT 'manual',
+    context TEXT, -- json metadata
     CHECK (
         (command_id IS NOT NULL AND workflow_id IS NULL AND workflow_step_id IS NULL) OR
         (command_id IS NULL AND workflow_id IS NOT NULL AND workflow_step_id IS NULL) OR
         (command_id IS NOT NULL AND workflow_id IS NOT NULL AND workflow_step_id IS NOT NULL)
     ),
-    CHECK(status IN ('running', 'success', 'failed', 'timeout', 'cancelled', 'skipped')),
-    CHECK(triggered_by IN ('manual', 'workflow', 'schedule')),
-    CHECK(stop_reason IN ('error', 'user_cancelled', 'timeout', 'completed'))
+    CHECK(status IN ('running', 'success', 'paused', 'failed', 'timeout', 'cancelled', 'skipped')),
+    CHECK(triggered_by IN ('manual', 'workflow', 'schedule'))
 );
 
 CREATE TABLE IF NOT EXISTS settings (
@@ -147,6 +146,8 @@ CREATE INDEX IF NOT EXISTS idx_execution_history_status ON execution_history(sta
 CREATE INDEX IF NOT EXISTS idx_execution_history_command_status ON execution_history(command_id, status);
 CREATE INDEX IF NOT EXISTS idx_execution_history_workflow_status ON execution_history(workflow_id, status);
 CREATE INDEX IF NOT EXISTS idx_execution_history_time ON execution_history(completed_at);
+CREATE INDEX IF NOT EXISTS idx_execution_history_running ON execution_history(status);
+
 
 -- Triggers
 -- Updated At time

@@ -1,13 +1,16 @@
 use super::*;
 mod categories;
 mod commands;
+mod execution_history;
 mod groups;
 mod integration;
 mod settings;
 mod workflows;
+
 use tempfile::TempDir;
 
 use crate::database::{Command, ExecutionMode, Group, StepCondition, Workflow, WorkflowStep};
+use crate::utils::get_utc_timestamp_string;
 use std::collections::HashMap;
 
 pub struct TestDb {
@@ -65,6 +68,10 @@ impl TestDb {
         self.db
             .create_workflow_step(&WorkflowStepBuilder::new(workflow_id, command_id).build())
             .unwrap()
+    }
+
+    fn save_execution_history(&self, history: &ExecutionHistory) -> i64 {
+        self.db.create_execution_history(history).unwrap()
     }
 }
 
@@ -192,6 +199,11 @@ impl WorkflowBuilder {
         self
     }
 
+    pub(crate) fn with_mode(mut self, mode: ExecutionMode) -> Self {
+        self.workflow.execution_mode = mode;
+        self
+    }
+
     pub(crate) fn build(self) -> Workflow {
         self.workflow
     }
@@ -222,5 +234,59 @@ impl WorkflowStepBuilder {
 
     pub(crate) fn build(self) -> WorkflowStep {
         self.workflow_step
+    }
+}
+
+pub(crate) struct ExecutionHistoryBuilder {
+    execution_history: ExecutionHistory,
+}
+
+impl ExecutionHistoryBuilder {
+    pub(crate) fn new() -> Self {
+        Self {
+            execution_history: ExecutionHistory {
+                id: 0,
+                command_id: None,
+                workflow_id: None,
+                workflow_step_id: None,
+                pid: None,
+                status: ExecutionStatus::Running,
+                exit_code: None,
+                started_at: get_utc_timestamp_string(),
+                completed_at: None,
+                triggered_by: TriggeredBy::Manual,
+                context: Some("test context".to_string()),
+            },
+        }
+    }
+
+    pub(crate) fn with_command(mut self, command_id: i64) -> Self {
+        self.execution_history.command_id = Some(command_id);
+        self
+    }
+
+    pub(crate) fn with_workflow(mut self, workflow_id: i64) -> Self {
+        self.execution_history.workflow_id = Some(workflow_id);
+        self
+    }
+
+    pub(crate) fn with_trigger(mut self, triggered_by: TriggeredBy) -> Self {
+        self.execution_history.triggered_by = triggered_by;
+        self
+    }
+    pub(crate) fn with_workflow_step(
+        mut self,
+        command_id: i64,
+        workflow_id: i64,
+        workflow_step_id: i64,
+    ) -> Self {
+        self.execution_history.workflow_step_id = Some(workflow_step_id);
+        self.with_command(command_id)
+            .with_workflow(workflow_id)
+            .with_trigger(TriggeredBy::Workflow)
+    }
+
+    pub(crate) fn build(self) -> ExecutionHistory {
+        self.execution_history
     }
 }

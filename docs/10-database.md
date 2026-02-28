@@ -4,6 +4,7 @@
 
 - **14-12-2025**: Initial security guidelines
 - **06-02-2026**: Updates groups and settings table
+- **12-02-2026**: Adds workflow and execution history table
 
 ## Database Location
 
@@ -229,11 +230,11 @@ for type safety across three execution types.
 | workflow_step_id | INTEGER  | NULL, FK → workflow_steps(id) ON DELETE CASCADE | Specific step (if any)                                            |
 | status           | TEXT     | NOT NULL                                        | 'running', 'success', 'failed', 'timeout', 'cancelled', 'skipped' |
 | exit_code        | INTEGER  | NULL                                            | Process exit code                                                 |
-| started_at       | DATETIME | NOT NULL DEFAULT CURRENT_TIMESTAMP              | Execution start                                                   |
+| started_at       | DATETIME | NULL DEFAULT CURRENT_TIMESTAMP                  | Execution start                                                   |
 | completed_at     | DATETIME | NULL                                            | Execution end (NULL if running)                                   |
-| triggered_by     | TEXT     | NOT NULL                                        | 'manual', 'workflow', 'schedule'                                  |
+| triggered_by     | TEXT     | NOT NULL DEFAULT 'manual                        | 'manual', 'workflow', 'schedule'                                  |
 | context          | TEXT     | NULL                                            | Optional JSON for execution notes                                 |
-| stop_reason      | TEXT     | NULL                                            | 'error', 'user_cancelled', 'timeout', 'completed'                 |
+| pid              | INTEGER  | NULL                                            | OS process ID (set after spawn, NULL until then)                  |
 
 **Indexes**:
 
@@ -249,7 +250,6 @@ for type safety across three execution types.
 
 - `status IN ('running', 'success', 'failed', 'timeout', 'cancelled', 'skipped')`
 - `triggered_by IN ('manual', 'workflow', 'schedule')`
-- `stop_reason IN ('error', 'user_cancelled', 'timeout', 'completed')`
 - **Type enforcement**: Exactly one of three execution types:
   ```sql
   (command_id IS NOT NULL AND workflow_id IS NULL AND workflow_step_id IS NULL) OR
@@ -272,9 +272,11 @@ running → success/failed/timeout/cancelled
 
 **Triggers**:
 
-- Auto-set `completed_at` when status becomes terminal
-- Prevent updating completed executions
-- Validate status transitions (e.g., can't go running → skipped)
+`execution_history_timestamps`: Auto-sets completed_at when status transitions to a terminal state 
+`(success, failed, timeout, cancelled)`
+
+Note: Status transition validation and "prevent updating completed executions" guards are enforced
+at the application layer in update_execution_history_status(), not via additional DB triggers.
 
 **Security Considerations** (from ADR-007, ADR-005):
 
