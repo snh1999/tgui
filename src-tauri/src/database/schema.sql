@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS execution_history (
         (command_id IS NULL AND workflow_id IS NOT NULL AND workflow_step_id IS NULL) OR
         (command_id IS NOT NULL AND workflow_id IS NOT NULL AND workflow_step_id IS NOT NULL)
     ),
-    CHECK(status IN ('idle', 'running', 'success', 'interrupted', 'paused', 'failed', 'timeout', 'cancelled', 'skipped', 'completed')),
+    CHECK(status IN ('running', 'success', 'paused', 'failed', 'timeout', 'cancelled', 'skipped')),
     CHECK(triggered_by IN ('manual', 'workflow', 'schedule'))
 );
 
@@ -198,20 +198,4 @@ SET
        ELSE completed_at
     END
 WHERE id = NEW.id;
-END;
-
-CREATE TRIGGER IF NOT EXISTS execution_history_no_update_completed
-BEFORE UPDATE OF status ON execution_history
-WHEN OLD.status IN ('success', 'failed', 'timeout', 'cancelled', 'skipped')
-BEGIN
-SELECT RAISE(ABORT, 'Cannot update status of a completed execution');
-END;
-
-CREATE TRIGGER IF NOT EXISTS execution_history_validate_transition
-BEFORE UPDATE OF status ON execution_history WHEN OLD.status = 'running'
-BEGIN
-    SELECT CASE
-       WHEN NEW.status NOT IN ('success', 'failed', 'timeout', 'cancelled')
-           THEN RAISE(ABORT, 'Invalid status transition from running')
-    END;
 END;

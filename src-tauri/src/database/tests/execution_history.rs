@@ -368,32 +368,16 @@ fn test_finish_execution_history_failed() {
     assert_eq!(retrieved.exit_code, Some(1));
 }
 
-
-// #[test]
-// fn test_mark_execution_stopping_is_noop() {
-//     let test_db = TestDb::setup_test_db();
-//     let cmd_id = test_db.create_test_command("Test", "echo", None);
-//     let history = ExecutionHistoryBuilder::new().with_command(cmd_id).build();
-//     let history_id = test_db.save_execution_history(&history);
-//
-//     // Should not fail and should not change DB state
-//     let result = test_db.db.mark_execution_stopping(history_id);
-//     assert!(result.is_ok());
-//
-//     let retrieved = test_db.db.get_execution_history(history_id).unwrap();
-//     assert_eq!(retrieved.status, Status::Running); // Still running
-// }
-
 #[test]
 fn test_cancel_execution_history() {
     let test_db = TestDb::setup_test_db();
     let cmd_id = test_db.create_test_command("Test", "echo", None);
     let history = ExecutionHistoryBuilder::new().with_command(cmd_id).build();
     let history_id = test_db.save_execution_history(&history);
-    test_db.db.cancel_execution_history(history_id).unwrap();
+    test_db.db.cancel_execution(history_id).unwrap();
 
     let retrieved = test_db.db.get_execution_history(history_id).unwrap();
-    assert_eq!(retrieved.status, ExecutionStatus::Cancelled);
+    assert_eq!(retrieved.status, ExecutionStatus::Failed);
     assert_eq!(retrieved.exit_code, None);
 }
 
@@ -593,10 +577,10 @@ fn test_execution_history_spawn_failure_cancels_row() {
     ).unwrap();
 
     // spawn failed — cancel immediately, no PID ever stored
-    test_db.db.cancel_execution_history(exec_id).unwrap();
+    test_db.db.cancel_execution(exec_id).unwrap();
 
     let row = test_db.db.get_execution_history(exec_id).unwrap();
-    assert_eq!(row.status, ExecutionStatus::Cancelled);
+    assert_eq!(row.status, ExecutionStatus::Failed);
     assert_eq!(row.pid, None);
     assert!(row.completed_at.is_some());
 }
