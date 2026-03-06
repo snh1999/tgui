@@ -10,6 +10,11 @@ use crate::process::manager::ProcessManager;
 use crate::process::models::{ProcessStatus, SpawnContext};
 use crate::process::tests::{spawn_context, WAIT_TIMEOUT};
 
+#[cfg(unix)]
+use nix::sys::signal::{kill as nix_kill, Signal};
+#[cfg(unix)]
+use nix::unistd::Pid;
+
 fn create_test_command(db: &Database) -> i64 {
     db.create_command(&CommandBuilder::new("test_command", "echo test").build())
         .expect("Failed to create test command")
@@ -46,6 +51,7 @@ fn make_manager_with_db() -> (Arc<ProcessManager>, Database, i64) {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn spawn_creates_execution_history_row_with_running_status() {
     let (pm, db, cmd_id) = make_manager_with_db();
     let id = pm
@@ -65,6 +71,7 @@ async fn spawn_creates_execution_history_row_with_running_status() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn spawn_writes_pid_to_execution_history() {
     let (pm, db, cmd_id) = make_manager_with_db();
     let id = pm
@@ -224,6 +231,7 @@ async fn natural_exit_nonzero_updates_db_to_failed() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn graceful_kill_updates_db_to_cancelled() {
     let (pm, db, cmd_id) = make_manager_with_db();
     let id = pm
@@ -248,6 +256,7 @@ async fn graceful_kill_updates_db_to_cancelled() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn stop_all_graceful_sends_sigterm() {
     let (pm, db, cmd_id) = make_manager_with_db();
     let id = pm
@@ -270,6 +279,7 @@ async fn stop_all_graceful_sends_sigterm() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn stop_all_skips_already_exited_processes_in_count() {
     let (pm, _, cmd_id) = make_manager_with_db();
 
@@ -318,6 +328,7 @@ async fn stop_all_skips_already_exited_processes_in_count() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn force_kill_updates_db_to_cancelled() {
     let (pm, db, cmd_id) = make_manager_with_db();
     let id = pm
@@ -346,6 +357,7 @@ async fn kill_unknown_execution_id_returns_not_found() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn stop_all_kills_all_running_processes() {
     let (pm, db, cmd_id) = make_manager_with_db();
 
@@ -392,6 +404,7 @@ async fn stop_all_on_empty_manager_returns_zero() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn stop_all_does_not_double_kill_already_stopping_processes() {
     let (pm, _, cmd_id) = make_manager_with_db();
     let id = pm
@@ -420,6 +433,7 @@ async fn running_count_zero_on_fresh_manager() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn running_count_tracks_spawned_processes() {
     let (pm, _, cmd_id) = make_manager_with_db();
 
@@ -457,6 +471,7 @@ async fn running_count_decreases_after_process_exits() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn get_process_info_returns_correct_fields_for_running_process() {
     let (pm, _, cmd_id) = make_manager_with_db();
 
@@ -481,6 +496,7 @@ async fn get_process_info_returns_correct_fields_for_running_process() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn get_running_processes_excludes_stopped_processes() {
     let (pm, _, cmd_id) = make_manager_with_db();
 
@@ -586,6 +602,7 @@ async fn process_removed_from_map_after_cleanup_delay() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn get_process_info_returns_none_for_unknown_id() {
     let pm = make_manager();
     assert!(pm.get_process_info(999_999).await.is_none());
@@ -812,8 +829,6 @@ async fn detect_orphans_null_pid_row_marked_failed_not_in_result() {
 #[tokio::test]
 #[cfg(unix)]
 async fn detect_orphans_dead_pid_row_marked_failed_in_result_with_still_running_false() {
-    use nix::sys::signal::{kill as nix_kill, Signal};
-    use nix::unistd::Pid;
 
     let db = create_test_db();
     let cmd_id = create_test_command(&db);
@@ -867,62 +882,51 @@ async fn detect_orphans_dead_pid_row_marked_failed_in_result_with_still_running_
 #[tokio::test]
 #[cfg(unix)]
 async fn detect_orphans_alive_pid_in_result_with_still_running_true() {
-    use nix::sys::signal::{kill as nix_kill, Signal};
-    use nix::unistd::Pid;
-
     let db = create_test_db();
     let cmd_id = create_test_command(&db);
 
-    let (pm_temp, _) = (ProcessManager::new(db.clone(), None), ());
-    let id = pm_temp
-        .spawn_command(
-            spawn_context(cmd_id, "sleep", vec!["60"]),
-            TriggeredBy::Manual,
-        )
-        .await
-        .expect("spawn failed");
+    // Spawn process and immediately drop the ProcessManager
+    // so it doesn't concurrently update DB state during detect
+    let id = {
+        let pm_temp = ProcessManager::new(db.clone(), None);
+        let id = pm_temp
+            .spawn_command(spawn_context(cmd_id, "sleep", vec!["60"]), TriggeredBy::Manual)
+            .await
+            .expect("spawn failed");
+        sleep(Duration::from_millis(100)).await;
+        id
+        // pm_temp dropped here — no concurrent DB updates
+    };
 
-    sleep(Duration::from_millis(100)).await;
     let pid = db.get_execution_history(id).unwrap().pid.unwrap() as u32;
 
-    // Simulate restart without killing the process
+    // Simulate restart with a fresh ProcessManager
     let pm2 = ProcessManager::new(db.clone(), None);
     let orphans = pm2.detect_and_mark_orphans();
 
+    // Give OS time to process SIGKILL before checking
+    sleep(Duration::from_millis(100)).await;
+
+    // Orphan should be in results with still_running=true
     let orphan = orphans
         .iter()
         .find(|o| o.execution_id == id)
         .expect("alive orphan not in result");
-    assert!(
-        orphan.still_running,
-        "alive process should have still_running=true"
-    );
 
-    // BUG: DB row is still 'running' — should be canceled after killing
+    assert!(orphan.still_running, "alive process should have still_running=true");
+
+    // DB row should be Canceled — implementation kills and marks alive orphans
     let h = db.get_execution_history(id).unwrap();
-    assert_eq!(
-        h.status,
-        ExecutionStatus::Cancelled,
-        "This assertion confirms the bug: row stays running for alive orphans"
-    );
+    assert_eq!(h.status, ExecutionStatus::Cancelled, "alive orphan should be marked Cancelled");
 
-    // BUG: OS process is still alive — should have been killed
+    // OS process should be dead — implementation SIGKILLs alive orphans
     let still_alive = nix_kill(Pid::from_raw(pid as i32), Signal::SIGCONT).is_ok();
-    assert!(
-        still_alive,
-        "This assertion confirms the bug: orphan OS process not killed"
-    );
-
-    // Cleanup
-    let _ = nix_kill(Pid::from_raw(pid as i32), Signal::SIGKILL);
+    assert!(!still_alive, "orphan OS process should have been killed");
 }
 
 #[tokio::test]
 #[cfg(unix)]
 async fn detect_orphans_mixed_dead_and_alive_handled_independently() {
-    use nix::sys::signal::{kill as nix_kill, Signal};
-    use nix::unistd::Pid;
-
     let db = create_test_db();
     let cmd_id = create_test_command(&db);
 
