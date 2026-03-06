@@ -9,9 +9,8 @@ mod workflows;
 
 use tempfile::TempDir;
 
-use crate::database::{Command, ExecutionMode, Group, StepCondition, Workflow, WorkflowStep};
+use crate::database::{Command, ExecutionMode, StepCondition, Workflow};
 use crate::utils::get_utc_timestamp_string;
-use std::collections::HashMap;
 
 pub struct TestDb {
     pub db: Database,
@@ -19,7 +18,7 @@ pub struct TestDb {
 }
 
 impl TestDb {
-    fn setup_test_db() -> Self {
+    pub fn setup_test_db() -> Self {
         let temp_dir = TempDir::new().unwrap();
         let db_path = temp_dir.path().join("test.db");
         let db = Database::new(&db_path).unwrap();
@@ -75,12 +74,12 @@ impl TestDb {
     }
 }
 
-pub(crate) struct CommandBuilder {
+pub struct CommandBuilder {
     command: Command,
 }
 
 impl CommandBuilder {
-    pub(crate) fn new(name: &str, cmd: &str) -> Self {
+    pub fn new(name: &str, cmd: &str) -> Self {
         Self {
             command: Command {
                 id: 0,
@@ -101,38 +100,41 @@ impl CommandBuilder {
         }
     }
 
-    pub(crate) fn with_group(mut self, group_id: i64) -> Self {
+    pub fn with_group(mut self, group_id: i64) -> Self {
         self.command.group_id = Some(group_id);
         self
     }
 
-    pub(crate) fn with_args(mut self, args: Vec<&str>) -> Self {
+    pub fn with_args(mut self, args: Vec<&str>) -> Self {
         self.command.arguments = args.into_iter().map(String::from).collect();
         self
     }
 
-    pub(crate) fn with_env(mut self, key: &str, value: &str) -> Self {
+    pub fn with_env(mut self, key: &str, value: &str) -> Self {
         let env = self.command.env_vars.get_or_insert_with(HashMap::new);
         env.insert(key.to_string(), value.to_string());
         self
     }
 
-    pub(crate) fn with_category(mut self, category_id: i64) -> Self {
+    pub fn with_category(mut self, category_id: i64) -> Self {
         self.command.category_id = Some(category_id);
         self
     }
 
-    pub(crate) fn build(self) -> Command {
+    pub fn build(self) -> Command {
         self.command
     }
 }
 
-pub(crate) struct GroupBuilder {
+use crate::database::Group;
+use std::collections::HashMap;
+
+pub struct GroupBuilder {
     group: Group,
 }
 
 impl GroupBuilder {
-    pub(crate) fn new(name: &str) -> Self {
+    pub fn new(name: &str) -> Self {
         Self {
             group: Group {
                 id: 0,
@@ -152,33 +154,33 @@ impl GroupBuilder {
         }
     }
 
-    pub(crate) fn with_parent(mut self, parent_id: i64) -> Self {
+    pub fn with_parent(mut self, parent_id: i64) -> Self {
         self.group.parent_group_id = Some(parent_id);
         self
     }
 
-    pub(crate) fn with_category(mut self, category_id: i64) -> Self {
+    pub fn with_category(mut self, category_id: i64) -> Self {
         self.group.category_id = Some(category_id);
         self
     }
 
-    pub(crate) fn with_env(mut self, key: &str, value: &str) -> Self {
+    pub fn with_env(mut self, key: &str, value: &str) -> Self {
         let env = self.group.env_vars.get_or_insert_with(HashMap::new);
         env.insert(key.to_string(), value.to_string());
         self
     }
 
-    pub(crate) fn build(self) -> Group {
+    pub fn build(self) -> Group {
         self.group
     }
 }
 
-pub(crate) struct WorkflowBuilder {
+pub struct WorkflowBuilder {
     workflow: Workflow,
 }
 
 impl WorkflowBuilder {
-    pub(crate) fn new(name: &str) -> Self {
+    pub fn new(name: &str) -> Self {
         Self {
             workflow: Workflow {
                 id: 0,
@@ -194,27 +196,27 @@ impl WorkflowBuilder {
         }
     }
 
-    pub(crate) fn with_category(mut self, category_id: i64) -> Self {
+    pub fn with_category(mut self, category_id: i64) -> Self {
         self.workflow.category_id = Some(category_id);
         self
     }
 
-    pub(crate) fn with_mode(mut self, mode: ExecutionMode) -> Self {
+    pub fn with_mode(mut self, mode: ExecutionMode) -> Self {
         self.workflow.execution_mode = mode;
         self
     }
 
-    pub(crate) fn build(self) -> Workflow {
+    pub fn build(self) -> Workflow {
         self.workflow
     }
 }
 
-pub(crate) struct WorkflowStepBuilder {
+pub struct WorkflowStepBuilder {
     workflow_step: WorkflowStep,
 }
 
 impl WorkflowStepBuilder {
-    pub(crate) fn new(workflow_id: i64, command_id: i64) -> Self {
+    pub fn new(workflow_id: i64, command_id: i64) -> Self {
         Self {
             workflow_step: WorkflowStep {
                 id: 0,
@@ -232,7 +234,7 @@ impl WorkflowStepBuilder {
         }
     }
 
-    pub(crate) fn build(self) -> WorkflowStep {
+    pub fn build(self) -> WorkflowStep {
         self.workflow_step
     }
 }
