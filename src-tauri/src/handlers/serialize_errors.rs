@@ -11,14 +11,12 @@ pub struct SerializableError {
 
 impl From<String> for SerializableError {
     fn from(s: String) -> Self {
-        SerializableError{
+        SerializableError {
             code: "INTERNAL".to_string(),
             message: s,
         }
     }
 }
-
-
 
 impl From<DatabaseError> for SerializableError {
     fn from(err: DatabaseError) -> Self {
@@ -71,26 +69,29 @@ impl From<ProcessKillError> for SerializableError {
                 code: "SIGNAL_FAILED".to_string(),
                 message,
             },
-            ProcessKillError::WaitFailed(message) => SerializableError{
-                code:"TIMEOUT".to_string(),
-                message
+            ProcessKillError::WaitFailed(message) => SerializableError {
+                code: "TIMEOUT".to_string(),
+                message,
             },
-            ProcessKillError::AlreadyExited =>SerializableError {
-                code:"INVALID_OPERATION".to_string(),
+            ProcessKillError::AlreadyExited => SerializableError {
+                code: "INVALID_OPERATION".to_string(),
                 message: "".to_string(),
             },
-            ProcessKillError::PermissionDenied => SerializableError{
-                code:"NO_PERMISSION".to_string(),
+            ProcessKillError::PermissionDenied => SerializableError {
+                code: "NO_PERMISSION".to_string(),
                 message: "".to_string(),
-
             },
-            ProcessKillError::PlatformError(message) => SerializableError{
-                code:"PLATFORM_ERROR".to_string(),
-                message
+            ProcessKillError::PlatformError(message) => SerializableError {
+                code: "PLATFORM_ERROR".to_string(),
+                message,
             },
-            ProcessKillError::NotFound(id) => SerializableError{
-                code:"NOT_FOUND".to_string(),
+            ProcessKillError::NotFound(id) => SerializableError {
+                code: "NOT_FOUND".to_string(),
                 message: format!("{} with ID {} not found", id, id),
+            },
+            ProcessKillError::Invalid => SerializableError {
+                code: "INVALID".to_string(),
+                message: "Invalid data provided".to_string(),
             },
         }
     }

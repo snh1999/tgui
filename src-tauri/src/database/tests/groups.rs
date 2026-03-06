@@ -420,6 +420,224 @@ fn test_get_group_tree() {
 }
 
 #[test]
+fn tree_includes_multiple_levels_of_nesting() {
+    let test_db = TestDb::setup_test_db();
+    let root_id = test_db.create_test_group("Root");
+    let child_id =
+        test_db.save_group_to_db(&GroupBuilder::new("Child").with_parent(root_id).build());
+    let grandchild_id = test_db.save_group_to_db(
+        &GroupBuilder::new("Grandchild")
+            .with_parent(child_id)
+            .build(),
+    );
+    let great_id = test_db.save_group_to_db(
+        &GroupBuilder::new("Great")
+            .with_parent(grandchild_id)
+            .build(),
+    );
+
+    let tree = test_db.db.get_group_tree(root_id).unwrap();
+    let ids: Vec<i64> = tree.iter().map(|g| g.id).collect();
+
+    assert_eq!(tree.len(), 4);
+    assert!(ids.contains(&root_id));
+    assert!(ids.contains(&child_id));
+    assert!(ids.contains(&grandchild_id));
+    assert!(ids.contains(&great_id));
+}
+
+#[test]
+fn tree_includes_all_siblings_and_preserves_order() {
+    let test_db = TestDb::setup_test_db();
+    let root_id = test_db.create_test_group("Root");
+
+    // Two branches under root
+    let branch1_id =
+        test_db.save_group_to_db(&GroupBuilder::new("Branch1").with_parent(root_id).build());
+    let branch2_id =
+        test_db.save_group_to_db(&GroupBuilder::new("Branch2").with_parent(root_id).build());
+
+    // Each branch has children
+    let b1_child1_id = test_db.save_group_to_db(
+        &GroupBuilder::new("B1Child1")
+            .with_parent(branch1_id)
+            .build(),
+    );
+    let b1_child2_id = test_db.save_group_to_db(
+        &GroupBuilder::new("B1Child2")
+            .with_parent(branch1_id)
+            .build(),
+    );
+    let b2_child1_id = test_db.save_group_to_db(
+        &GroupBuilder::new("B2Child1")
+            .with_parent(branch2_id)
+            .build(),
+    );
+
+    let tree = test_db.db.get_group_tree(root_id).unwrap();
+    let ids: Vec<i64> = tree.iter().map(|g| g.id).collect();
+
+    // Root comes first, then children ordered by position
+    assert_eq!(ids[0], root_id, "Root must be first");
+
+    // Both branches present before their children
+    let branch1_pos = ids.iter().position(|&id| id == branch1_id).unwrap();
+    let branch2_pos = ids.iter().position(|&id| id == branch2_id).unwrap();
+    let b1c1_pos = ids.iter().position(|&id| id == b1_child1_id).unwrap();
+    let b1c2_pos = ids.iter().position(|&id| id == b1_child2_id).unwrap();
+    let b2c1_pos = ids.iter().position(|&id| id == b2_child1_id).unwrap();
+
+    assert!(
+        branch1_pos < b1c1_pos,
+        "Branch1 must appear before its children"
+    );
+    assert!(
+        branch1_pos < b1c2_pos,
+        "Branch1 must appear before its children"
+    );
+    assert!(
+        branch2_pos < b2c1_pos,
+        "Branch2 must appear before its children"
+    );
+    assert_eq!(tree.len(), 6);
+}
+
+#[test]
+fn tree_of_leaf_node_returns_only_itself() {
+    let test_db = TestDb::setup_test_db();
+    let root_id = test_db.create_test_group("Root");
+    let leaf_id = test_db.save_group_to_db(&GroupBuilder::new("Leaf").with_parent(root_id).build());
+
+    let tree = test_db.db.get_group_tree(leaf_id).unwrap();
+    assert_eq!(tree.len(), 1);
+    assert_eq!(tree[0].id, leaf_id);
+}
+
+#[test]
+fn tree_does_not_include_unrelated_groups() {
+    let test_db = TestDb::setup_test_db();
+    let root_id = test_db.create_test_group("Root");
+    let child_id =
+        test_db.save_group_to_db(&GroupBuilder::new("Child").with_parent(root_id).build());
+    let unrelated_id = test_db.create_test_group("Unrelated");
+
+    let tree = test_db.db.get_group_tree(root_id).unwrap();
+    let ids: Vec<i64> = tree.iter().map(|g| g.id).collect();
+
+    assert!(ids.contains(&child_id));
+    assert!(
+        !ids.contains(&unrelated_id),
+        "Unrelated group should not appear in tree"
+    );
+}
+
+#[test]
+fn tree_nonexistent_root_returns_empty() {
+    let test_db = TestDb::setup_test_db();
+    let tree = test_db.db.get_group_tree(99).unwrap();
+    assert!(tree.is_empty());
+}
+
+#[test]
+fn ancestor_chain_returns_direct_parent_first() {
+    let test_db = TestDb::setup_test_db();
+    let root_id = test_db.create_test_group("Root");
+    let child_id =
+        test_db.save_group_to_db(&GroupBuilder::new("Child").with_parent(root_id).build());
+    let grandchild_id = test_db.save_group_to_db(
+        &GroupBuilder::new("Grandchild")
+            .with_parent(child_id)
+            .build(),
+    );
+
+    let chain = test_db.db.get_group_ancestor_chain(grandchild_id).unwrap();
+    assert_eq!(
+        chain[0].id, grandchild_id,
+        "First entry should be the group itself"
+    );
+    assert_eq!(chain[1].id, child_id, "Second should be direct parent");
+    assert_eq!(chain[2].id, root_id, "Third should be root");
+}
+
+#[test]
+fn ancestor_chain_of_root_returns_only_itself() {
+    let test_db = TestDb::setup_test_db();
+    let root_id = test_db.create_test_group("Root");
+
+    let chain = test_db.db.get_group_ancestor_chain(root_id).unwrap();
+    assert_eq!(chain.len(), 1);
+    assert_eq!(chain[0].id, root_id);
+}
+
+#[test]
+fn ancestor_chain_does_not_include_siblings() {
+    let test_db = TestDb::setup_test_db();
+    let root_id = test_db.create_test_group("Root");
+    let child_id =
+        test_db.save_group_to_db(&GroupBuilder::new("Child").with_parent(root_id).build());
+    let sibling_id =
+        test_db.save_group_to_db(&GroupBuilder::new("Sibling").with_parent(root_id).build());
+
+    let chain = test_db.db.get_group_ancestor_chain(child_id).unwrap();
+    let ids: Vec<i64> = chain.iter().map(|g| g.id).collect();
+
+    assert!(
+        !ids.contains(&sibling_id),
+        "Sibling should not appear in ancestor chain"
+    );
+}
+
+#[test]
+fn ancestor_chain_of_sibling_shares_same_ancestors_but_not_each_other() {
+    let test_db = TestDb::setup_test_db();
+    let root_id = test_db.create_test_group("Root");
+    let parent_id =
+        test_db.save_group_to_db(&GroupBuilder::new("Parent").with_parent(root_id).build());
+    let sib1_id =
+        test_db.save_group_to_db(&GroupBuilder::new("Sib1").with_parent(parent_id).build());
+    let sib2_id =
+        test_db.save_group_to_db(&GroupBuilder::new("Sib2").with_parent(parent_id).build());
+
+    let chain1: Vec<i64> = test_db
+        .db
+        .get_group_ancestor_chain(sib1_id)
+        .unwrap()
+        .iter()
+        .map(|g| g.id)
+        .collect();
+    let chain2: Vec<i64> = test_db
+        .db
+        .get_group_ancestor_chain(sib2_id)
+        .unwrap()
+        .iter()
+        .map(|g| g.id)
+        .collect();
+
+    // Exact order: self → parent → root
+    assert_eq!(chain1, vec![sib1_id, parent_id, root_id]);
+    assert_eq!(chain2, vec![sib2_id, parent_id, root_id]);
+}
+
+#[test]
+fn ancestor_chain_nonexistent_id_returns_empty() {
+    let test_db = TestDb::setup_test_db();
+    let chain = test_db.db.get_group_ancestor_chain(999_999).unwrap();
+    assert!(chain.is_empty());
+}
+
+#[test]
+fn ancestor_chain_length_matches_depth() {
+    let test_db = TestDb::setup_test_db();
+    let root_id = test_db.create_test_group("Root");
+    let l1 = test_db.save_group_to_db(&GroupBuilder::new("L1").with_parent(root_id).build());
+    let l2 = test_db.save_group_to_db(&GroupBuilder::new("L2").with_parent(l1).build());
+    let l3 = test_db.save_group_to_db(&GroupBuilder::new("L3").with_parent(l2).build());
+
+    let chain = test_db.db.get_group_ancestor_chain(l3).unwrap();
+    assert_eq!(chain.len(), 4, "Should include l3 + l2 + l1 + root");
+}
+
+#[test]
 fn test_get_group_path() {
     let test_db = TestDb::setup_test_db();
     let root_id = test_db.create_test_group("Project");

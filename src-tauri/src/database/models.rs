@@ -158,8 +158,6 @@ impl StepCondition {
     }
 }
 
-
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ExecutionHistory {
@@ -237,7 +235,7 @@ pub enum ExecutionStatus {
     TimeOut,
     Cancelled,
     Skipped,
-    Completed
+    Completed,
 }
 
 impl ExecutionStatus {
@@ -250,7 +248,7 @@ impl ExecutionStatus {
             ExecutionStatus::TimeOut => "timeout",
             ExecutionStatus::Cancelled => "cancelled",
             ExecutionStatus::Skipped => "skipped",
-            ExecutionStatus::Completed => "completed"
+            ExecutionStatus::Completed => "completed",
         }
     }
     pub fn from_str(s: &str) -> Result<Self, String> {
