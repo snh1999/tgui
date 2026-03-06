@@ -189,16 +189,16 @@ impl ManagedProcess {
             // Finalize - emit stopped event regardless of how we got here
             let (new_status, exit_code) = match exit_status {
                 Ok(status) => {
-                    let code = status.code().unwrap_or(-1);
-                    let new_status = if code == 0 {
+                    let code: Option<i32> = status.code();
+                    let new_status = if code == Some(0) {
                         ProcessStatus::Stopped {
-                            exit_code: code,
+                            exit_code: 0,
                             completed_at: get_utc_timestamp_string(),
                         }
                     } else {
                         ProcessStatus::Error {
-                            exit_code: Some(code),
-                            message: format!("Process exited with code {}", code),
+                            exit_code: code,
+                            message: format!("Process exited with code {:?}", code),
                         }
                     };
                     (new_status, code)
@@ -210,7 +210,7 @@ impl ManagedProcess {
                             exit_code: None,
                             message: e.to_string(),
                         },
-                        -1,
+                        None,
                     )
                 }
             };
@@ -225,7 +225,7 @@ impl ManagedProcess {
 
             let exec_status = if was_killed {
                 ExecutionStatus::Cancelled
-            } else if exit_code == 0 {
+            } else if exit_code == Some(0) {
                 ExecutionStatus::Success
             } else {
                 ExecutionStatus::Failed
