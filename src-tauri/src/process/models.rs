@@ -90,7 +90,7 @@ pub struct LogLineEvent {
 pub struct ProcessStoppedEvent {
     pub execution_id: i64,
     pub pid: u32,
-    pub exit_code: i32,
+    pub exit_code: Option<i32>,
     pub status: ExecutionStatus,
     pub timestamp: String,
 }

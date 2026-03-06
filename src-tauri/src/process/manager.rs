@@ -279,7 +279,7 @@ impl ProcessManager {
             .or_else(|| ancestors.iter().find_map(|g| g.shell.clone()))
             .or_else(|| self.db.get_setting("default_shell").ok());
 
-        let mut env_map: std::collections::HashMap<String, String> = HashMap::new();
+        let mut env_map: HashMap<String, String> = HashMap::new();
         let mut update_env_map = |env_vars: &Option<HashMap<String, String>>| {
             if let Some(ref vars) = env_vars {
                 env_map.extend(vars.iter().map(|(k, v)| (k.clone(), v.clone())));
@@ -368,7 +368,7 @@ impl ProcessManager {
                     if let Err(e) = self.db.update_execution_history_status(
                         evt.execution_id,
                         evt.status,
-                        Some(evt.exit_code),
+                        evt.exit_code,
                     ) {
                         error!(execution_id = evt.execution_id, error = %e, "Failed to update execution status");
                     }

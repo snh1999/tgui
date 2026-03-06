@@ -4,9 +4,24 @@ pub const ALLOWED_SHELLS: &[&str] = &["cmd", "powershell", "pwsh"];
 #[cfg(not(target_os = "windows"))]
 pub const ALLOWED_SHELLS: &[&str] = &["sh", "bash", "zsh", "fish", "dash", "ksh", "nu"];
 
+#[cfg(not(target_os = "windows"))]
+const ALLOWED_SHELL_PATHS: &[&str] = &[
+    "/bin/sh", "/bin/bash", "/bin/zsh", "/bin/fish", "/bin/dash", "/bin/ksh",
+    "/usr/bin/sh", "/usr/bin/bash", "/usr/bin/zsh", "/usr/bin/fish",
+    "/usr/bin/dash", "/usr/bin/ksh", "/usr/bin/nu",
+    "/usr/local/bin/bash", "/usr/local/bin/zsh", "/usr/local/bin/fish",
+    "/usr/local/bin/nu", "/usr/local/bin/pwsh",
+];
+
+#[cfg(target_os = "windows")]
+const ALLOWED_SHELL_PATHS: &[&str] = &[
+    "C:\\Windows\\System32\\cmd.exe",
+    "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+];
+
 /// Returns `true` if the shell name is in `ALLOWED_SHELLS` for this platform.
 pub fn is_valid_shell(shell: &str) -> bool {
-    ALLOWED_SHELLS.contains(&shell)
+    ALLOWED_SHELLS.contains(&shell) || ALLOWED_SHELL_PATHS.contains(&shell)
 }
 
 pub fn get_allowed_shells() -> Vec<&'static str> {

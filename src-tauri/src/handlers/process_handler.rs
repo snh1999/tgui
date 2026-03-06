@@ -103,3 +103,8 @@ pub async fn get_tray_status(
         total_commands,
     })
 }
+
+#[tauri::command]
+pub fn get_valid_shells() -> Vec<&'static str> {
+    crate::process::shell::get_allowed_shells()
+}

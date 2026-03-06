@@ -105,6 +105,7 @@ pub fn run() {
             process_handler::clear_log_buffer,
             process_handler::stop_all_processes,
             process_handler::get_tray_status,
+            process_handler::get_valid_shells,
             logger::logs_dir,
             logger::list_log_files,
             logger::delete_logs_older_than,
