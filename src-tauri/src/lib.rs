@@ -5,7 +5,9 @@ mod process;
 mod utils;
 
 use crate::database::Database;
-use crate::handlers::{categories, commands, execution_history, groups, process_handler, settings, workflows};
+use crate::handlers::{
+    categories, commands, execution_history, groups, process_handler, settings, workflows,
+};
 use crate::process::manager::ProcessManager;
 use handlers::logger;
 use tauri::Manager;
