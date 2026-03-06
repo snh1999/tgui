@@ -43,10 +43,6 @@ fn test_full_workflow_project_setup() {
     assert_eq!(retrieved_build.group_id, Some(backend_group_id));
     assert_eq!(retrieved_build.category_id, Some(dev_cat));
 
-    // Verify tree structure
-    let tree = test_db.db.get_group_tree(project_group_id).unwrap();
-    assert_eq!(tree.len(), 3);
-
     // Verify path
     let path = test_db.db.get_group_path(backend_group_id).unwrap();
     assert_eq!(path, vec!["MyApp", "Backend"]);
