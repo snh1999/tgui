@@ -1,18 +1,18 @@
-import { invoke } from "@tauri-apps/api/core";
+import {invoke} from "@tauri-apps/api/core";
 import type {
-  ICategory,
-  ICommand,
-  ICommandGroupFilter,
-  IGroup,
-  IMovePosition,
-  IWorkflow,
-  IWorkflowStep,
-  IWorkflowStepFilter,
-  TUpsertCategoryPayload,
-  TUpsertCommandPayload,
-  TUpsertGroupPayload,
-  TUpsertWorkflowPayload,
-  TUpsertWorkflowStepsPayload,
+    ICategory,
+    ICommand,
+    ICommandGroupFilter,
+    IGroup,
+    IMovePosition,
+    IWorkflow,
+    IWorkflowStep,
+    IWorkflowStepFilter,
+    TUpsertCategoryPayload,
+    TUpsertCommandPayload,
+    TUpsertGroupPayload,
+    TUpsertWorkflowPayload,
+    TUpsertWorkflowStepsPayload,
 } from "@/lib/api/api.types.ts";
 
 export const categoriesApi = {
@@ -95,8 +95,6 @@ export const groupsApi = {
   move: (movePosition: IMovePosition) =>
     invoke<void>("move_group_between", { ...movePosition }),
 
-  getGroupTree: (rootId: number) =>
-    invoke<IGroup[]>("get_group_tree", { rootId }),
   getGroupPath: (rootId: number) =>
     invoke<string[]>("get_group_path", { rootId }),
 };
