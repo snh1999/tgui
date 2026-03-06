@@ -29,12 +29,12 @@ impl ProcessHandle {
 
         #[cfg(unix)]
         {
-            self.unix_kill(false, false)
+            self.unix_kill(false, true)
         }
 
         #[cfg(windows)]
         {
-            self.windows_kill(false, false).await
+            self.windows_kill(false, true).await
         }
     }
 
@@ -55,11 +55,11 @@ impl ProcessHandle {
                 error!(pid = self.pid, error = %e, "Force kill failed, trying platform-specific");
                 #[cfg(unix)]
                 {
-                    self.unix_kill(true, false)
+                    self.unix_kill(true, true)
                 }
                 #[cfg(windows)]
                 {
-                    self.windows_kill(true, false).await
+                    self.windows_kill(true, true).await
                 }
             }
         }
