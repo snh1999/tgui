@@ -1,3 +1,7 @@
+#[cfg(unix)]
+use nix::unistd::{getpgid, Pid};
+#[cfg(unix)]
+use std::path::PathBuf;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time::timeout;
@@ -78,33 +82,14 @@ async fn log_lines_received_as_log_batch_events_on_channel() {
     let (tx, mut rx) = make_channel();
 
     #[cfg(unix)]
-    let ctx = {
-        use crate::process::models::SpawnContext;
-        use std::path::PathBuf;
-        SpawnContext {
-            command_id: 1,
-            name: "log_batch_test".into(),
-            executable: "sh".into(),
-            arguments: vec!["-c".into(), "echo 'event line'".into()],
-            working_directory: PathBuf::from("/tmp"),
-            env_vars: vec![],
-            shell: None,
-        }
-    };
+    let ctx = spawn_context(1, "sh", vec!["-c".into(), "echo 'event line'".into()]);
 
     #[cfg(windows)]
-    let ctx = {
-        use crate::process::models::SpawnContext;
-        SpawnContext {
-            command_id: 1,
-            name: "log_batch_test".into(),
-            executable: "cmd".into(),
-            arguments: vec!["/C".into(), "echo event line".into()],
-            working_directory: std::env::temp_dir(),
-            env_vars: vec![],
-            shell: None,
-        }
-    };
+    let ctx = crate::process::tests::spawn_context(
+        1,
+        "log_batch_test",
+        vec!["/C".into(), "echo event line".into()],
+    );
 
     let _process = ManagedProcess::spawn(1, ctx, tx, false)
         .await
@@ -155,41 +140,26 @@ async fn log_lines_received_as_log_batch_events_on_channel() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn stderr_lines_are_buffered_with_is_stderr_true() {
     let (tx, mut rx) = make_channel();
 
     // Write to stderr via shell redirection
-    #[cfg(unix)]
-    let ctx = {
-        use crate::process::models::SpawnContext;
-        use std::path::PathBuf;
-        SpawnContext {
-            command_id: 1,
-            name: "stderr_test".into(),
-            executable: "sh".into(),
-            arguments: vec!["-c".into(), "echo stderr_content >&2".into()],
-            working_directory: PathBuf::from("/tmp"),
-            env_vars: vec![],
-            shell: None,
-        }
-    };
+    let ctx = spawn_context(1, "sh", vec!["-c".into(), "echo stderr_content >&2".into()]);
 
-    #[cfg(unix)]
-    {
-        let process = ManagedProcess::spawn(1, ctx, tx, false)
-            .await
-            .expect("spawn failed");
+    let process = ManagedProcess::spawn(1, ctx, tx, false)
+        .await
+        .expect("spawn failed");
 
-        wait_for_stopped(&mut rx).await;
-        tokio::time::sleep(Duration::from_millis(100)).await;
+    wait_for_stopped(&mut rx).await;
+    tokio::time::sleep(Duration::from_millis(100)).await;
 
-        let logs = process.get_logs(0, 100).await;
-        assert!(
-            logs.iter()
-                .any(|l| l.is_stderr && l.content.contains("stderr_content")),
-            "Expected stderr line in buffer"
-        );
-    }
+    let logs = process.get_logs(0, 100).await;
+    assert!(
+        logs.iter()
+            .any(|l| l.is_stderr && l.content.contains("stderr_content")),
+        "Expected stderr line in buffer"
+    );
 }
 
 #[tokio::test]
@@ -201,6 +171,7 @@ async fn spawn_returns_ok_for_valid_executable() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn spawn_sets_correct_initial_values() {
     let (tx, _rx) = make_channel();
     let mut process = ManagedProcess::spawn(42, spawn_context(99, "sleep", vec!["60"]), tx, false)
@@ -254,7 +225,7 @@ async fn started_event_has_correct_command_id_and_name() {
         name: "my_cmd".into(),
         ..spawn_context(1, "echo", vec!["hi"])
     };
-    let _process = ManagedProcess::spawn(1, ctx, tx, false)
+    let _ = ManagedProcess::spawn(1, ctx, tx, false)
         .await
         .expect("spawn failed");
 
@@ -376,6 +347,7 @@ async fn natural_exit_emits_status_changed_from_running_to_stopped_or_error() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn graceful_kill_emits_status_changed_to_stopping_before_stopped() {
     let (tx, mut rx) = make_channel();
     let mut process = ManagedProcess::spawn(1, spawn_context(1, "sleep", vec!["60"]), tx, false)
@@ -396,6 +368,7 @@ async fn graceful_kill_emits_status_changed_to_stopping_before_stopped() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn graceful_kill_stopping_event_has_running_as_old_status() {
     let (tx, mut rx) = make_channel();
     let mut process = ManagedProcess::spawn(1, spawn_context(1, "sleep", vec!["60"]), tx, false)
@@ -427,6 +400,7 @@ async fn graceful_kill_stopping_event_has_running_as_old_status() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn graceful_kill_emits_stopped_with_cancelled() {
     let (tx, mut rx) = make_channel();
     let mut process = ManagedProcess::spawn(1, spawn_context(1, "sleep", vec!["60"]), tx, false)
@@ -443,6 +417,7 @@ async fn graceful_kill_emits_stopped_with_cancelled() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn force_kill_emits_stopped_with_cancelled() {
     let (tx, mut rx) = make_channel();
     let mut process = ManagedProcess::spawn(1, spawn_context(1, "sleep", vec!["60"]), tx, false)
@@ -461,6 +436,7 @@ async fn force_kill_emits_stopped_with_cancelled() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn force_kill_does_not_emit_stopping_event() {
     // Force kill goes straight to dead — no graceful transition period
     let (tx, mut rx) = make_channel();
@@ -480,6 +456,7 @@ async fn force_kill_does_not_emit_stopping_event() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn graceful_kill_twice_returns_already_exited_on_second() {
     let (tx, mut rx) = make_channel();
     let mut process = ManagedProcess::spawn(1, spawn_context(1, "sleep", vec!["60"]), tx, false)
@@ -494,6 +471,7 @@ async fn graceful_kill_twice_returns_already_exited_on_second() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn force_kill_twice_returns_already_exited_on_second() {
     let (tx, mut rx) = make_channel();
     let mut process = ManagedProcess::spawn(1, spawn_context(1, "sleep", vec!["60"]), tx, false)
@@ -508,6 +486,7 @@ async fn force_kill_twice_returns_already_exited_on_second() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn graceful_kill_after_force_kill_returns_already_exited() {
     let (tx, mut rx) = make_channel();
     let mut process = ManagedProcess::spawn(1, spawn_context(1, "sleep", vec!["60"]), tx, false)
@@ -556,6 +535,7 @@ async fn is_running_false_after_natural_exit() {
     assert!(!process.is_running().await);
 }
 #[tokio::test]
+#[cfg(unix)]
 async fn is_running_false_after_force_kill() {
     let (tx, mut rx) = make_channel();
     let mut process = ManagedProcess::spawn(1, spawn_context(1, "sleep", vec!["60"]), tx, false)
@@ -570,6 +550,7 @@ async fn is_running_false_after_force_kill() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn is_running_false_immediately_after_graceful_kill_sent() {
     // Once kill_tx is consumed, status transitions to Stopping.
     let (tx, _rx) = make_channel();
@@ -608,6 +589,7 @@ async fn is_running_false_immediately_after_graceful_kill_sent() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn get_status_running_immediately_after_spawn() {
     let (tx, _rx) = make_channel();
     let mut process = ManagedProcess::spawn(1, spawn_context(1, "sleep", vec!["60"]), tx, false)
@@ -622,6 +604,7 @@ async fn get_status_running_immediately_after_spawn() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn get_status_running_has_correct_pid() {
     let (tx, _rx) = make_channel();
     let mut process = ManagedProcess::spawn(1, spawn_context(1, "sleep", vec!["60"]), tx, false)
@@ -699,19 +682,9 @@ async fn stdout_is_captured_in_log_buffer() {
 #[tokio::test]
 #[cfg(unix)]
 async fn stderr_is_captured_with_is_stderr_true() {
-    use crate::process::models::SpawnContext;
-    use std::path::PathBuf;
-
     let (tx, mut rx) = make_channel();
-    let ctx = SpawnContext {
-        command_id: 1,
-        name: "stderr_test".into(),
-        executable: "sh".into(),
-        arguments: vec!["-c".into(), "echo captured_stderr >&2".into()],
-        working_directory: PathBuf::from("/tmp"),
-        env_vars: vec![],
-        shell: None,
-    };
+    let ctx = spawn_context(1, "sh",  vec!["-c".into(), "echo captured_stderr >&2".into()]);
+
     let process = ManagedProcess::spawn(1, ctx, tx, false)
         .await
         .expect("spawn failed");
@@ -729,25 +702,16 @@ async fn stderr_is_captured_with_is_stderr_true() {
 }
 
 #[tokio::test]
+#[cfg(unix)]
 async fn get_logs_with_offset_and_limit() {
-    use crate::process::models::SpawnContext;
-    use std::path::PathBuf;
 
-    #[cfg(unix)]
-    {
         let (tx, mut rx) = make_channel();
-        let ctx = SpawnContext {
-            command_id: 1,
-            name: "paginate".into(),
-            executable: "sh".into(),
-            arguments: vec![
-                "-c".into(),
-                "echo l1; echo l2; echo l3; echo l4; echo l5".into(),
-            ],
-            working_directory: PathBuf::from("/tmp"),
-            env_vars: vec![],
-            shell: None,
-        };
+        let ctx = spawn_context(1, "sh",vec![
+            "-c".into(),
+            "echo l1; echo l2; echo l3; echo l4; echo l5".into(),
+        ] );
+
+
         let process = ManagedProcess::spawn(1, ctx, tx, false)
             .await
             .expect("spawn failed");
@@ -761,7 +725,6 @@ async fn get_logs_with_offset_and_limit() {
         assert_eq!(page.len(), 2);
         assert_eq!(page[0].content, all[1].content);
         assert_eq!(page[1].content, all[2].content);
-    }
 }
 
 #[tokio::test]
@@ -781,21 +744,11 @@ async fn clear_logs_empties_buffer() {
 #[tokio::test]
 #[cfg(unix)]
 async fn kill_process_tree_true_puts_process_in_new_process_group() {
-    use crate::process::models::SpawnContext;
-    use nix::unistd::{getpgid, Pid};
-    use std::path::PathBuf;
 
     let (tx, _rx) = make_channel();
     // spawn a child that runs long enough for us to inspect
-    let ctx = SpawnContext {
-        command_id: 1,
-        name: "pgid_test".into(),
-        executable: "sleep".into(),
-        arguments: vec!["60".into()],
-        working_directory: PathBuf::from("/tmp"),
-        env_vars: vec![],
-        shell: None,
-    };
+    let ctx = spawn_context(1, "sleep",vec!["60".into()]);
+
     let mut process = ManagedProcess::spawn(1, ctx, tx, true)
         .await
         .expect("spawn failed");
@@ -819,20 +772,10 @@ async fn kill_process_tree_true_puts_process_in_new_process_group() {
 #[tokio::test]
 #[cfg(unix)]
 async fn kill_process_tree_false_child_shares_parent_process_group() {
-    use crate::process::models::SpawnContext;
-    use nix::unistd::{getpgid, Pid};
-    use std::path::PathBuf;
 
     let (tx, _rx) = make_channel();
-    let ctx = SpawnContext {
-        command_id: 1,
-        name: "pgid_test_false".into(),
-        executable: "sleep".into(),
-        arguments: vec!["60".into()],
-        working_directory: PathBuf::from("/tmp"),
-        env_vars: vec![],
-        shell: None,
-    };
+    let ctx = spawn_context(1, "sleep",vec!["60".into()]);
+
     let mut process = ManagedProcess::spawn(1, ctx, tx, false)
         .await
         .expect("spawn failed");
@@ -856,9 +799,6 @@ async fn kill_process_tree_false_child_shares_parent_process_group() {
 #[tokio::test]
 #[cfg(unix)]
 async fn env_vars_are_visible_inside_spawned_process() {
-    use crate::process::models::SpawnContext;
-    use std::path::PathBuf;
-
     let (tx, mut rx) = make_channel();
     let ctx = SpawnContext {
         command_id: 1,

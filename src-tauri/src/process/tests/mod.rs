@@ -26,16 +26,12 @@ pub fn spawn_context(command_id: i64, executable: &str, arguments: Vec<&str>) ->
 }
 
 #[cfg(windows)]
-pub fn spawn_context(executable: &str, arguments: Vec<&str>) -> SpawnContext {
+pub fn spawn_context(command_id: i64, executable: &str, arguments: Vec<&str>) -> SpawnContext {
     SpawnContext {
-        command_id: 1,
+        command_id,
         name: executable.to_string(),
         executable: "cmd".to_string(),
-        arguments: ["/C", executable]
-            .into_iter()
-            .chain(arguments)
-            .map(String::from)
-            .collect(),
+        arguments: arguments.into_iter().map(String::from).collect(),
         working_directory: std::env::temp_dir(),
         env_vars: vec![],
         shell: None,
