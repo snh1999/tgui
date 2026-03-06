@@ -1,6 +1,4 @@
-use super::{
-    Database, DatabaseError, ExecutionHistory, ExecutionStatus, Result, TriggeredBy,
-};
+use super::{Database, DatabaseError, ExecutionHistory, ExecutionStatus, Result, TriggeredBy};
 use crate::constants::{EXECUTION_HISTORY_LIMIT, EXECUTION_HISTORY_TABLE};
 use rusqlite::{named_params, params};
 use tracing::{debug, instrument, warn};
@@ -37,11 +35,13 @@ impl Database {
 
         if let Some(workflow_step_id) = history.workflow_step_id {
             let workflow_step = self.get_workflow_step(workflow_step_id)?;
-            if Some(workflow_step.command_id) != history.command_id || Some(workflow_step.workflow_id) != history.workflow_id {
+            if Some(workflow_step.command_id) != history.command_id
+                || Some(workflow_step.workflow_id) != history.workflow_id
+            {
                 return Err(DatabaseError::InvalidData {
                     field: "workflow_step_id",
-                    reason: "Invalid workflow_step reference".to_string()
-                })
+                    reason: "Invalid workflow_step reference".to_string(),
+                });
             }
         }
 
@@ -50,11 +50,15 @@ impl Database {
             history.workflow_id.is_some(),
             history.workflow_step_id.is_some(),
         );
-        let is_valid = (cmd && flow && flow_step) || (cmd && !flow && !flow_step) || (!cmd && flow && !flow_step);
+        let is_valid = (cmd && flow && flow_step)
+            || (cmd && !flow && !flow_step)
+            || (!cmd && flow && !flow_step);
 
         if !is_valid {
             return Err(DatabaseError::InvalidData {
-                reason: "Invalid combination: must be (command only), (workflow only), or (all three)".into(),
+                reason:
+                    "Invalid combination: must be (command only), (workflow only), or (all three)"
+                        .into(),
                 field: "command_id/workflow_id/workflow_step_id",
             });
         }
@@ -71,7 +75,6 @@ impl Database {
             Self::row_to_execution_history,
         )
     }
-
 
     #[instrument(skip(self))]
     pub fn get_command_execution_history(
@@ -165,7 +168,12 @@ impl Database {
             });
         }
 
-        debug!(execution_id = id, status = status_str, exit_code, "Finalising execution");
+        debug!(
+            execution_id = id,
+            status = status_str,
+            exit_code,
+            "Finalising execution"
+        );
         self.execute_db(
             "execution_history",
             id,
@@ -227,18 +235,19 @@ impl Database {
     }
 
     #[instrument(skip(self))]
-    pub fn get_command_execution_stats(&self, command_id: i64, status: Option<ExecutionStatus>) -> Result<i64> {
+    pub fn get_command_execution_stats(
+        &self,
+        command_id: i64,
+        status: Option<ExecutionStatus>,
+    ) -> Result<i64> {
         let query = match status {
             Some(status) => format!("SELECT COUNT(*) AS total FROM execution_history WHERE command_id = ?1 AND status = '{}'", status.as_str()),
             None => "SELECT COUNT(*) AS total FROM execution_history WHERE command_id = ?1".to_string(),
         };
 
-        self.query_row(
-            EXECUTION_HISTORY_TABLE,
-            command_id,
-            &query,
-            |row| row.get(0)
-        )
+        self.query_row(EXECUTION_HISTORY_TABLE, command_id, &query, |row| {
+            row.get(0)
+        })
     }
 
     fn row_to_execution_history(row: &rusqlite::Row) -> rusqlite::Result<ExecutionHistory> {

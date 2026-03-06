@@ -160,13 +160,29 @@ impl Database {
     pub fn get_group_tree(&self, root_id: i64) -> Result<Vec<Group>> {
         self.query_database(
             "WITH RECURSIVE tree AS (
+                SELECT *, 0 as depth FROM groups WHERE id = ?1
+                UNION ALL
+                SELECT g.*, t.depth + 1 FROM groups g
+                JOIN tree t ON g.parent_group_id = t.id
+            )
+            SELECT * FROM tree ORDER BY depth, position",
+            params![root_id],
+            Self::row_to_group,
+        )
+    }
+
+    /// Walks the parent chain from group_id upward.
+    /// Returns groups ordered closest-first (direct parent first, root last).
+    pub fn get_group_ancestor_chain(&self, group_id: i64) -> Result<Vec<Group>> {
+        self.query_database(
+            "WITH RECURSIVE chain AS (
             SELECT * FROM groups WHERE id = ?1
             UNION ALL
             SELECT g.* FROM groups g
-            JOIN tree t ON g.parent_group_id = t.id
+            JOIN chain c ON g.id = c.parent_group_id
         )
-        SELECT * FROM tree ORDER BY position",
-            params![root_id],
+        SELECT * FROM chain",
+            params![group_id],
             Self::row_to_group,
         )
     }

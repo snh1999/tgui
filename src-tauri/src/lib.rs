@@ -1,11 +1,12 @@
 mod constants;
 mod database;
 mod handlers;
-mod utils;
 mod process;
+mod utils;
 
 use crate::database::Database;
-use crate::handlers::{categories, commands, groups, process_handler, settings, workflows};
+use crate::handlers::{categories, commands, execution_history, groups, process_handler, settings, workflows};
+use crate::process::manager::ProcessManager;
 use handlers::logger;
 use tauri::Manager;
 use tracing::{error, info};
@@ -38,11 +39,14 @@ pub fn run() {
                 error!(error = %e, "Database initialization failed");
                 e
             })?;
+            let pm = ProcessManager::new(db.clone(), Some(app.handle().clone()));
+            pm.detect_and_mark_orphans();
 
             info!(db_path = %db_path.display(), "Database initialized successfully");
 
             app.manage(guard);
             app.manage(db);
+            app.manage(pm);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -59,7 +63,6 @@ pub fn run() {
             groups::move_group_between,
             groups::delete_group,
             groups::get_group_command_count,
-            groups::get_group_tree,
             groups::get_group_path,
             groups::toggle_group_favorite,
             commands::create_command,
@@ -87,6 +90,13 @@ pub fn run() {
             workflows::move_workflow_step_between,
             workflows::toggle_workflow_step_enabled,
             workflows::get_workflow_step_count,
+            execution_history::get_execution_history,
+            execution_history::get_command_execution_history,
+            execution_history::get_workflow_execution_history,
+            execution_history::get_running_commands,
+            execution_history::cleanup_command_history,
+            execution_history::cleanup_history_older_than,
+            execution_history::get_command_execution_stats,
             process_handler::spawn_command,
             process_handler::kill_process,
             process_handler::get_running_processes,
@@ -95,6 +105,7 @@ pub fn run() {
             process_handler::clear_log_buffer,
             process_handler::stop_all_processes,
             process_handler::get_tray_status,
+            process_handler::get_valid_shells,
             logger::logs_dir,
             logger::list_log_files,
             logger::delete_logs_older_than,

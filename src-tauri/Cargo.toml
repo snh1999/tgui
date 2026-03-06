@@ -21,7 +21,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 rusqlite = { version = "0.38.0", features = ["bundled"] }
-serde = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"
 tempfile = "3.24.0"
 tracing = "0.1"
@@ -29,5 +29,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "time"
 tracing-appender = "0.2"
 time = { version = "0.3", features = ["formatting", "local-offset"] }
 tokio = { version = "1", features = ["full"] }
+thiserror = "1.0.69"
+libc = "0.2.180"
+dashmap = "7.0.0-rc2"
+dirs = "6.0.0"
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.31", features = ["signal", "process"] }

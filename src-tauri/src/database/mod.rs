@@ -11,17 +11,17 @@ mod helpers;
 mod settings;
 
 mod errors;
+mod execution_history;
 pub mod models;
 mod workflows;
-mod execution_history;
-
 
 pub use errors::{DatabaseError, Result};
 pub use models::*;
 
 #[cfg(test)]
-mod tests;
+pub mod tests;
 
+#[derive(Clone)]
 pub struct Database {
     conn: Arc<Mutex<Connection>>,
 }

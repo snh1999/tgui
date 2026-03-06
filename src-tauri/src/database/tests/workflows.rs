@@ -63,7 +63,11 @@ fn test_create_workflow_empty_name() {
 fn test_create_workflow_all_execution_modes() {
     let test_db = TestDb::setup_test_db();
 
-    for mode in [ExecutionMode::Sequential, ExecutionMode::Parallel, ExecutionMode::Conditional] {
+    for mode in [
+        ExecutionMode::Sequential,
+        ExecutionMode::Parallel,
+        ExecutionMode::Conditional,
+    ] {
         let wf = WorkflowBuilder::new(&format!("Mode {:?}", mode))
             .with_mode(mode.clone())
             .build();

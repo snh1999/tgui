@@ -50,14 +50,6 @@ pub fn get_group_command_count(db: State<'_, Database>, id: i64) -> Result<i64, 
 }
 
 #[tauri::command]
-pub fn get_group_tree(
-    db: State<'_, Database>,
-    root_id: i64,
-) -> Result<Vec<Group>, SerializableError> {
-    db.get_group_tree(root_id).map_err(|err| err.into())
-}
-
-#[tauri::command]
 pub fn get_group_path(
     db: State<'_, Database>,
     root_id: i64,

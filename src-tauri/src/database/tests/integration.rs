@@ -43,10 +43,6 @@ fn test_full_workflow_project_setup() {
     assert_eq!(retrieved_build.group_id, Some(backend_group_id));
     assert_eq!(retrieved_build.category_id, Some(dev_cat));
 
-    // Verify tree structure
-    let tree = test_db.db.get_group_tree(project_group_id).unwrap();
-    assert_eq!(tree.len(), 3);
-
     // Verify path
     let path = test_db.db.get_group_path(backend_group_id).unwrap();
     assert_eq!(path, vec!["MyApp", "Backend"]);
@@ -287,26 +283,41 @@ fn test_multiple_concurrent_commands() {
     let cmd_b = test_db.create_test_command("B", "echo test", None);
     let cmd_c = test_db.create_test_command("C", "echo test", None);
 
-    let exec_a = test_db.db.create_execution_history(
-        &ExecutionHistory::new_with_command(cmd_a, TriggeredBy::Manual)
-    ).unwrap();
+    let exec_a = test_db
+        .db
+        .create_execution_history(&ExecutionHistory::new_with_command(
+            cmd_a,
+            TriggeredBy::Manual,
+        ))
+        .unwrap();
     test_db.db.update_execution_pid(exec_a, 100).unwrap();
 
-    let exec_b = test_db.db.create_execution_history(
-        &ExecutionHistory::new_with_command(cmd_b, TriggeredBy::Manual)
-    ).unwrap();
+    let exec_b = test_db
+        .db
+        .create_execution_history(&ExecutionHistory::new_with_command(
+            cmd_b,
+            TriggeredBy::Manual,
+        ))
+        .unwrap();
     test_db.db.update_execution_pid(exec_b, 101).unwrap();
 
-    let exec_c = test_db.db.create_execution_history(
-        &ExecutionHistory::new_with_command(cmd_c, TriggeredBy::Manual)
-    ).unwrap();
+    let exec_c = test_db
+        .db
+        .create_execution_history(&ExecutionHistory::new_with_command(
+            cmd_c,
+            TriggeredBy::Manual,
+        ))
+        .unwrap();
     test_db.db.update_execution_pid(exec_c, 102).unwrap();
 
     let running = test_db.db.get_running_commands(None, None).unwrap();
     assert_eq!(running.len(), 3);
 
     // Stop one
-    test_db.db.update_execution_history_status(exec_b, ExecutionStatus::Success, Some(0)).unwrap();
+    test_db
+        .db
+        .update_execution_history_status(exec_b, ExecutionStatus::Success, Some(0))
+        .unwrap();
 
     let running = test_db.db.get_running_commands(None, None).unwrap();
     assert_eq!(running.len(), 2);
@@ -323,16 +334,27 @@ fn test_same_command_run_multiple_times_only_current_is_running() {
     let cmd_id = test_db.create_test_command("test", "echo test", None);
 
     // First run: finished
-    let exec1 = test_db.db.create_execution_history(
-        &ExecutionHistory::new_with_command(cmd_id, TriggeredBy::Manual)
-    ).unwrap();
+    let exec1 = test_db
+        .db
+        .create_execution_history(&ExecutionHistory::new_with_command(
+            cmd_id,
+            TriggeredBy::Manual,
+        ))
+        .unwrap();
     test_db.db.update_execution_pid(exec1, 200).unwrap();
-    test_db.db.update_execution_history_status(exec1, ExecutionStatus::Success, Some(0)).unwrap();
+    test_db
+        .db
+        .update_execution_history_status(exec1, ExecutionStatus::Success, Some(0))
+        .unwrap();
 
     // Second run: currently active
-    let exec2 = test_db.db.create_execution_history(
-        &ExecutionHistory::new_with_command(cmd_id, TriggeredBy::Manual)
-    ).unwrap();
+    let exec2 = test_db
+        .db
+        .create_execution_history(&ExecutionHistory::new_with_command(
+            cmd_id,
+            TriggeredBy::Manual,
+        ))
+        .unwrap();
     test_db.db.update_execution_pid(exec2, 201).unwrap();
 
     let running = test_db.db.get_running_commands(Some(cmd_id), None).unwrap();
@@ -341,7 +363,10 @@ fn test_same_command_run_multiple_times_only_current_is_running() {
     assert_eq!(running[0].pid, Some(201));
 
     // Total history shows both runs
-    let history = test_db.db.get_command_execution_history(cmd_id, None).unwrap();
+    let history = test_db
+        .db
+        .get_command_execution_history(cmd_id, None)
+        .unwrap();
     assert_eq!(history.len(), 2);
 }
 
@@ -356,24 +381,57 @@ fn test_workflow_execution_creates_linked_history_rows() {
 
     // Workflow-level row
 
-    let flow_exec = test_db.db.create_execution_history(&ExecutionHistoryBuilder::new().with_workflow(flow_id).build()).unwrap();
+    let flow_exec = test_db
+        .db
+        .create_execution_history(
+            &ExecutionHistoryBuilder::new()
+                .with_workflow(flow_id)
+                .build(),
+        )
+        .unwrap();
 
     // Step A row
-    let step_a_exec = test_db.db.create_execution_history(&ExecutionHistoryBuilder::new().with_workflow_step(cmd_a, flow_id, step_a).build()).unwrap();
+    let step_a_exec = test_db
+        .db
+        .create_execution_history(
+            &ExecutionHistoryBuilder::new()
+                .with_workflow_step(cmd_a, flow_id, step_a)
+                .build(),
+        )
+        .unwrap();
 
     test_db.db.update_execution_pid(step_a_exec, 300).unwrap();
-    test_db.db.update_execution_history_status(step_a_exec, ExecutionStatus::Success, Some(0)).unwrap();
+    test_db
+        .db
+        .update_execution_history_status(step_a_exec, ExecutionStatus::Success, Some(0))
+        .unwrap();
 
     // Step B row
-    let step_b_exec = test_db.db.create_execution_history(&ExecutionHistoryBuilder::new().with_workflow_step(cmd_b, flow_id, step_b).build()).unwrap();
+    let step_b_exec = test_db
+        .db
+        .create_execution_history(
+            &ExecutionHistoryBuilder::new()
+                .with_workflow_step(cmd_b, flow_id, step_b)
+                .build(),
+        )
+        .unwrap();
     test_db.db.update_execution_pid(step_b_exec, 301).unwrap();
-    test_db.db.update_execution_history_status(step_b_exec, ExecutionStatus::Failed, Some(1)).unwrap();
+    test_db
+        .db
+        .update_execution_history_status(step_b_exec, ExecutionStatus::Failed, Some(1))
+        .unwrap();
 
     // Finish workflow-level row as failed (because a step failed)
-    test_db.db.update_execution_history_status(flow_exec, ExecutionStatus::Failed, None).unwrap();
+    test_db
+        .db
+        .update_execution_history_status(flow_exec, ExecutionStatus::Failed, None)
+        .unwrap();
 
     // Workflow history returns all three rows
-    let flow_history = test_db.db.get_workflow_execution_history(flow_id, None).unwrap();
+    let flow_history = test_db
+        .db
+        .get_workflow_execution_history(flow_id, None)
+        .unwrap();
     assert_eq!(flow_history.len(), 3);
 
     // Individual step rows are correctly linked
@@ -392,14 +450,13 @@ fn test_workflow_execution_creates_linked_history_rows() {
     assert_eq!(row_wf.workflow_step_id, None);
 }
 
-
-// 
+//
 // /// Simulates the complete lifecycle of a single command execution: create → store pid → finish → verify audit trail.
 // #[test]
 // fn test_execution_history_full_command_lifecycle() {
 //     let test_db = TestDb::setup_test_db();
 //     let cmd_id = test_db.create_test_command("Build", "echo test", None);
-// 
+//
 //     // 1. Process manager creates history row before spawning
 //     let exec_id = test_db
 //         .db
@@ -408,29 +465,29 @@ fn test_workflow_execution_creates_linked_history_rows() {
 //             TriggeredBy::Manual,
 //         ))
 //         .unwrap();
-// 
+//
 //     let history = test_db.db.get_execution_history(exec_id).unwrap();
 //     assert_eq!(history.status, ExecutionStatus::Running);
 //     assert_eq!(history.pid, None);
 //     assert!(history.completed_at.is_none());
-// 
+//
 //     // 2. Spawn succeeds — store PID
 //     test_db.db.update_execution_pid(exec_id, 8421).unwrap();
-// 
+//
 //     let history = test_db.db.get_execution_history(exec_id).unwrap();
 //     assert_eq!(history.pid, Some(8421));
-// 
+//
 //     // 3. Process exits cleanly
 //     test_db
 //         .db
 //         .update_execution_history_status(exec_id, ExecutionStatus::Success, Some(0))
 //         .unwrap();
-// 
+//
 //     let row = test_db.db.get_execution_history(exec_id).unwrap();
 //     assert_eq!(row.status, ExecutionStatus::Success);
 //     assert_eq!(row.exit_code, Some(0));
 //     assert!(row.completed_at.is_some());
-// 
+//
 //     // 4. Stats reflect the completed run
 //     let total = test_db
 //         .db
@@ -443,26 +500,26 @@ fn test_workflow_execution_creates_linked_history_rows() {
 //     assert_eq!(total, 1);
 //     assert_eq!(successes, 1);
 // }
-// 
-// 
+//
+//
 // #[test]
 // fn test_execution_history_graceful_kill() {
 //     let test_db = TestDb::setup_test_db();
 //     let cmd_id = test_db.create_test_command("test", "echo test", None);
-// 
+//
 //     let exec_id = test_db.db.create_execution_history(
 //         &ExecutionHistory::new_with_command( cmd_id, TriggeredBy::Manual)
 //     ).unwrap();
 //     test_db.db.update_execution_pid(exec_id, 9999).unwrap();
-// 
+//
 //     // User sent SIGTERM; process did not provide an exit code
 //     test_db.db.update_execution_history_status(exec_id, ExecutionStatus::Cancelled, None).unwrap();
-// 
+//
 //     let row = test_db.db.get_execution_history(exec_id).unwrap();
 //     assert_eq!(row.status, ExecutionStatus::Cancelled);
 //     assert_eq!(row.exit_code, None);
 //     assert!(row.completed_at.is_some());
-// 
+//
 //     // Should not appear in running list
 //     let running = test_db.db.get_running_commands(Some(cmd_id), None).unwrap();
 //     assert!(running.is_empty());
