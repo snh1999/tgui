@@ -566,7 +566,7 @@ async fn get_logs_offset_and_limit_paginate_correctly() {
     assert_eq!(page[1].content, all[2].content);
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn process_removed_from_map_after_cleanup_delay() {
     let (pm, _, cmd_id) = make_manager_with_db();
     let id = pm
@@ -594,7 +594,9 @@ async fn process_removed_from_map_after_cleanup_delay() {
         "Logs should be accessible within cleanup window"
     );
 
-    sleep(Duration::from_secs(6)).await;
+    tokio::time::advance(Duration::from_secs(6)).await;
+    tokio::time::sleep(Duration::from_millis(1)).await;
+
     assert!(
         pm.get_process_info(id).await.is_none(),
         "Process should be removed from map after cleanup delay"
@@ -829,7 +831,6 @@ async fn detect_orphans_null_pid_row_marked_failed_not_in_result() {
 #[tokio::test]
 #[cfg(unix)]
 async fn detect_orphans_dead_pid_row_marked_failed_in_result_with_still_running_false() {
-
     let db = create_test_db();
     let cmd_id = create_test_command(&db);
 
@@ -890,7 +891,10 @@ async fn detect_orphans_alive_pid_in_result_with_still_running_true() {
     let id = {
         let pm_temp = ProcessManager::new(db.clone(), None);
         let id = pm_temp
-            .spawn_command(spawn_context(cmd_id, "sleep", vec!["60"]), TriggeredBy::Manual)
+            .spawn_command(
+                spawn_context(cmd_id, "sleep", vec!["60"]),
+                TriggeredBy::Manual,
+            )
             .await
             .expect("spawn failed");
         sleep(Duration::from_millis(100)).await;
@@ -913,11 +917,18 @@ async fn detect_orphans_alive_pid_in_result_with_still_running_true() {
         .find(|o| o.execution_id == id)
         .expect("alive orphan not in result");
 
-    assert!(orphan.still_running, "alive process should have still_running=true");
+    assert!(
+        orphan.still_running,
+        "alive process should have still_running=true"
+    );
 
     // DB row should be Canceled — implementation kills and marks alive orphans
     let h = db.get_execution_history(id).unwrap();
-    assert_eq!(h.status, ExecutionStatus::Cancelled, "alive orphan should be marked Cancelled");
+    assert_eq!(
+        h.status,
+        ExecutionStatus::Cancelled,
+        "alive orphan should be marked Cancelled"
+    );
 
     // OS process should be dead — implementation SIGKILLs alive orphans
     let still_alive = nix_kill(Pid::from_raw(pid as i32), Signal::SIGCONT).is_ok();

@@ -683,7 +683,11 @@ async fn stdout_is_captured_in_log_buffer() {
 #[cfg(unix)]
 async fn stderr_is_captured_with_is_stderr_true() {
     let (tx, mut rx) = make_channel();
-    let ctx = spawn_context(1, "sh",  vec!["-c".into(), "echo captured_stderr >&2".into()]);
+    let ctx = spawn_context(
+        1,
+        "sh",
+        vec!["-c".into(), "echo captured_stderr >&2".into()],
+    );
 
     let process = ManagedProcess::spawn(1, ctx, tx, false)
         .await
@@ -704,27 +708,29 @@ async fn stderr_is_captured_with_is_stderr_true() {
 #[tokio::test]
 #[cfg(unix)]
 async fn get_logs_with_offset_and_limit() {
-
-        let (tx, mut rx) = make_channel();
-        let ctx = spawn_context(1, "sh",vec![
+    let (tx, mut rx) = make_channel();
+    let ctx = spawn_context(
+        1,
+        "sh",
+        vec![
             "-c".into(),
             "echo l1; echo l2; echo l3; echo l4; echo l5".into(),
-        ] );
+        ],
+    );
 
+    let process = ManagedProcess::spawn(1, ctx, tx, false)
+        .await
+        .expect("spawn failed");
 
-        let process = ManagedProcess::spawn(1, ctx, tx, false)
-            .await
-            .expect("spawn failed");
+    collect_until_stopped(&mut rx).await;
+    tokio::time::sleep(Duration::from_millis(100)).await;
 
-        collect_until_stopped(&mut rx).await;
-        tokio::time::sleep(Duration::from_millis(100)).await;
+    let all = process.get_logs(0, 100).await;
+    let page = process.get_logs(1, 2).await;
 
-        let all = process.get_logs(0, 100).await;
-        let page = process.get_logs(1, 2).await;
-
-        assert_eq!(page.len(), 2);
-        assert_eq!(page[0].content, all[1].content);
-        assert_eq!(page[1].content, all[2].content);
+    assert_eq!(page.len(), 2);
+    assert_eq!(page[0].content, all[1].content);
+    assert_eq!(page[1].content, all[2].content);
 }
 
 #[tokio::test]
@@ -744,10 +750,9 @@ async fn clear_logs_empties_buffer() {
 #[tokio::test]
 #[cfg(unix)]
 async fn kill_process_tree_true_puts_process_in_new_process_group() {
-
     let (tx, _rx) = make_channel();
     // spawn a child that runs long enough for us to inspect
-    let ctx = spawn_context(1, "sleep",vec!["60".into()]);
+    let ctx = spawn_context(1, "sleep", vec!["60".into()]);
 
     let mut process = ManagedProcess::spawn(1, ctx, tx, true)
         .await
@@ -772,9 +777,8 @@ async fn kill_process_tree_true_puts_process_in_new_process_group() {
 #[tokio::test]
 #[cfg(unix)]
 async fn kill_process_tree_false_child_shares_parent_process_group() {
-
     let (tx, _rx) = make_channel();
-    let ctx = spawn_context(1, "sleep",vec!["60".into()]);
+    let ctx = spawn_context(1, "sleep", vec!["60".into()]);
 
     let mut process = ManagedProcess::spawn(1, ctx, tx, false)
         .await
