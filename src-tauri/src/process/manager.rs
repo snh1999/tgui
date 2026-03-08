@@ -21,7 +21,7 @@ pub struct ProcessManager {
 }
 
 impl ProcessManager {
-    pub fn new(db: Database, app_handle: Option<AppHandle>) -> Arc<Self> {
+    pub async fn new(db: Database, app_handle: Option<AppHandle>) -> Arc<Self> {
         let (event_sender, event_receiver) = mpsc::channel(1000);
 
         let pm = Arc::new(Self {
@@ -32,7 +32,8 @@ impl ProcessManager {
         });
 
         let pm_clone = pm.clone();
-        tokio::spawn(async move {
+        let handle = tokio::runtime::Handle::current();
+        handle.spawn(async move {
             pm_clone.process_events(event_receiver).await;
         });
 
