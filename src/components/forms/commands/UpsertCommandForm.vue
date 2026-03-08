@@ -1,8 +1,9 @@
 <script setup lang="ts">
-  import { toTypedSchema } from "@vee-validate/zod";
-  import { useForm } from "vee-validate";
   import { COMMAND_FORM_ID } from "@/app.constants.ts";
-  import { commandFormSchema } from "@/components/forms/commands/commands.helpers.ts";
+  import {
+    IUpsertCommandForm,
+    useCommandForm,
+  } from "@/components/forms/commands/commands.helpers.ts";
   import { FieldGroup } from "@/components/ui/field";
   import { Input } from "@/components/ui/input";
   import {
@@ -13,66 +14,16 @@
   } from "@/components/ui/input-group";
   import ArrayInput from "@/components/ui/tgui/ArrayInput.vue";
   import FormField from "@/components/ui/tgui/FormField.vue";
-  import MapInput from "@/components/ui/tgui/MapInput.vue";
-  import {
-    useCreateCommand,
-    useUpdateCommand,
-  } from "@/lib/api/composables/commands.ts";
-  import { envVarsToArray, transformEnvVars } from "@/lib/helpers.ts";
   import Loading from "@/components/ui/tgui/Loading.vue";
-  import { ICommand } from "@/lib/api/api.types.ts";
-  import { computed } from "vue";
+  import MapInput from "@/components/ui/tgui/MapInput.vue";
 
-  const props = defineProps<{
-    onSuccess?: () => void;
-    command?: ICommand;
-  }>();
-
-  const { handleSubmit, resetForm } = useForm({
-    validationSchema: toTypedSchema(commandFormSchema),
-    initialValues: props.command
-      ? envVarsToArray(props.command)
-      : {
-          name: "",
-          command: "",
-          description: "",
-          id: 0,
-          workingDirectory: "",
-          position: 0,
-          envVars: [],
-          isFavorite: false,
-          shell: "",
-          arguments: [""],
-        },
-  });
-
-  const { mutate: createCommand, isPending: isCreatePending } =
-    useCreateCommand();
-  const { mutate: updateCommand, isPending: isUpdatePending } =
-    useUpdateCommand();
-
-  const isPending = computed(() =>
-    props.command ? isUpdatePending.value : isCreatePending.value
+  const props = defineProps<IUpsertCommandForm>();
+  const emit = defineEmits<{ success: [] }>();
+  const { resetForm, isPending, onSubmit, isDirty, isValid } = useCommandForm(
+    props,
+    () => emit("success")
   );
-
-  const onSubmit = handleSubmit((rawData) => {
-    const data = transformEnvVars(rawData);
-    if (props.command) {
-      updateCommand(
-        { id: props.command.id, payload: data },
-        { onSuccess: () => props.onSuccess?.() }
-      );
-    } else {
-      createCommand(data, {
-        onSuccess: () => {
-          resetForm();
-          props.onSuccess?.();
-        },
-      });
-    }
-  });
-
-  defineExpose({ resetForm, isPending });
+  defineExpose({ resetForm, isPending, isValid, isDirty });
 </script>
 
 <template>
@@ -121,12 +72,12 @@
         </FormField>
 
         <ArrayInput
-          name="arguments"
+          fieldName="arguments"
           label="Arguments"
           placeholder="Add Argument"
         />
         <MapInput
-          name="envVars"
+          fieldName="envVars"
           label="Environment Variables"
           keyPlaceholder="Enter Key"
           valuePlaceholder="Enter value"

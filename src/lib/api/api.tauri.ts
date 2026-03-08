@@ -1,18 +1,18 @@
-import {invoke} from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import type {
-    ICategory,
-    ICommand,
-    ICommandGroupFilter,
-    IGroup,
-    IMovePosition,
-    IWorkflow,
-    IWorkflowStep,
-    IWorkflowStepFilter,
-    TUpsertCategoryPayload,
-    TUpsertCommandPayload,
-    TUpsertGroupPayload,
-    TUpsertWorkflowPayload,
-    TUpsertWorkflowStepsPayload,
+  ICategory,
+  ICommand,
+  ICommandGroupFilter,
+  IGroup,
+  IMovePosition,
+  IWorkflow,
+  IWorkflowStep,
+  IWorkflowStepFilter,
+  TUpsertCategoryPayload,
+  TUpsertCommandPayload,
+  TUpsertGroupPayload,
+  TUpsertWorkflowPayload,
+  TUpsertWorkflowStepsPayload,
 } from "@/lib/api/api.types.ts";
 
 export const categoriesApi = {

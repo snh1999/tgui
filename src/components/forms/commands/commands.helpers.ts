@@ -1,42 +1,78 @@
+import { toTypedSchema } from "@vee-validate/zod";
+import { useForm } from "vee-validate";
+import { computed } from "vue";
 import { z } from "zod";
+import {
+  argumentSchema,
+  groupCommandFormSchema,
+} from "@/components/forms/common/common.schema.ts";
+import type { ICommand } from "@/lib/api/api.types.ts";
+import {
+  useCreateCommand,
+  useUpdateCommand,
+} from "@/lib/api/composables/commands.ts";
+import { envVarsToArray, transformEnvVars } from "@/lib/helpers.ts";
 
-const argumentSchema = z.string().refine(
-  (val) => {
-    if (val === "") {
-      return true;
-    }
-
-    const hasUnbalancedQuotes = (val.match(/"/g) || []).length % 2 !== 0;
-    return !hasUnbalancedQuotes;
-  },
-  {
-    message: "Unbalanced quotes in argument",
-  }
-);
-
-const envVarEntrySchema = z.object({
-  key: z
-    .string()
-    .min(1, "Key cannot be empty")
-    .regex(/^[a-zA-Z_][a-zA-Z0-9_]*$/, "Invalid env var name"),
-  value: z.string(), // Allow empty values for unset
-});
-
-export const commandFormSchema = z.object({
-  name: z
-    .string()
-    .min(3, "Command name must be at least 3 characters.")
-    .max(32, "Command name must be less than 32 characters."),
+export const commandFormSchema = groupCommandFormSchema.extend({
   command: z.string().min(1, "Command text can not be empty."),
-  arguments: z.array(argumentSchema).default([""]),
-  description: z.string().optional(),
+  arguments: z.array(argumentSchema).default([""]).nullable(),
   groupId: z.number().nullable().optional(),
-  position: z.number().default(0),
-  id: z.number().default(0),
-  workingDirectory: z.string().optional(),
-  // using array because form input processing is easier that way
-  envVars: z.array(envVarEntrySchema).default([]),
-  shell: z.string().optional(),
-  categoryId: z.number().nullable().optional(),
-  isFavorite: z.boolean().default(false),
 });
+
+export interface IUpsertCommandForm {
+  command?: ICommand;
+}
+
+export function useCommandForm(
+  props: IUpsertCommandForm,
+  onSuccess: () => void
+) {
+  const { handleSubmit, resetForm, meta } = useForm({
+    validationSchema: toTypedSchema(commandFormSchema),
+    initialValues: props.command
+      ? envVarsToArray(props.command)
+      : {
+          name: "",
+          command: "",
+          description: "",
+          id: 0,
+          workingDirectory: "",
+          position: 0,
+          envVars: [],
+          isFavorite: false,
+          shell: "",
+          arguments: [""],
+        },
+  });
+
+  const isDirty = computed(() => meta.value.dirty);
+  const isValid = computed(() => meta.value.valid);
+
+  const { mutate: createCommand, isPending: isCreatePending } =
+    useCreateCommand();
+  const { mutate: updateCommand, isPending: isUpdatePending } =
+    useUpdateCommand();
+
+  const isPending = computed(() =>
+    props.command ? isUpdatePending.value : isCreatePending.value
+  );
+
+  const onSubmit = handleSubmit((rawData) => {
+    const data = transformEnvVars(rawData);
+    if (props.command) {
+      updateCommand(
+        { id: props.command.id, payload: data },
+        { onSuccess: () => onSuccess() }
+      );
+    } else {
+      createCommand(data, {
+        onSuccess: () => {
+          resetForm();
+          onSuccess();
+        },
+      });
+    }
+  });
+
+  return { resetForm, isPending, onSubmit, isDirty, isValid };
+}

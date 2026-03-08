@@ -1,7 +1,9 @@
 <script setup lang="ts">
   import { ChevronRight, ListPlus, Plus, Settings } from "lucide-vue-next";
+  import { useRoute } from "vue-router";
   import { DashboardIcon } from "@/assets/Icons.ts";
-
+  import logo from "@/assets/logo.svg";
+  import { Collapsible } from "@/components/ui/collapsible";
   import {
     Sidebar,
     SidebarContent,
@@ -16,9 +18,6 @@
     SidebarTrigger,
     useSidebar,
   } from "@/components/ui/sidebar";
-  import logo from "@/assets/logo.svg";
-  import { Collapsible } from "@/components/ui/collapsible";
-  import { useRoute } from "vue-router";
 
   const sidebarState = useSidebar();
   const route = useRoute();
@@ -79,7 +78,7 @@
         <Collapsible default-open class="group/collapsible">
           <SidebarGroupLabel as-child>
             <CollapsibleTrigger
-              class="group/label w-full text-left text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&[data-state=open]>svg]:rotate-90"
+              class="group/label w-full text-left text-sm text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground [&[data-state=open]>svg]:rotate-90"
             >
               Group
               <ChevronRight

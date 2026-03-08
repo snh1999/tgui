@@ -15,26 +15,25 @@ interface ICommonFields {
   id: number;
   createdAt?: string;
   updatedAt?: string;
-  position: number;
 }
 
 interface ICommonPositionFields extends ICommonFields {
   name: string;
-  description?: string;
+  description?: string | null;
   isFavorite?: boolean;
   position: number;
 }
 
 interface IGroupCommandCommon extends ICommonPositionFields {
-  envVars?: Map<string, string>;
+  envVars?: Map<string, string> | null;
   categoryId?: number | null;
-  workingDirectory?: string;
-  shell?: string;
+  workingDirectory?: string | null;
+  shell?: string | null;
 }
 
 export interface ICommand extends IGroupCommandCommon {
   command: string;
-  arguments?: string[];
+  arguments?: string[] | null;
   groupId?: number | null;
 }
 
@@ -51,7 +50,7 @@ export interface IMovePosition {
 }
 
 export interface IGroup extends IGroupCommandCommon {
-  parentGroupId?: number;
+  parentGroupId?: number | null;
   icon?: string;
 }
 
