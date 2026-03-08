@@ -30,7 +30,10 @@ export function useCommandForm(
   const { handleSubmit, resetForm, meta } = useForm({
     validationSchema: toTypedSchema(commandFormSchema),
     initialValues: props.command
-      ? envVarsToArray(props.command)
+      ? {
+          ...envVarsToArray(props.command),
+          arguments: props.command.arguments ?? [],
+        }
       : {
           name: "",
           command: "",

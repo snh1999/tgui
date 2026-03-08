@@ -43,7 +43,7 @@ pub fn run() {
             })?;
 
             let pm = tauri::async_runtime::block_on(async {
-                ProcessManager::new(db.clone(), Some(app.handle().clone())).await
+                ProcessManager::new(db.clone(), Some(app.handle().clone()))
             });
 
             pm.detect_and_mark_orphans();

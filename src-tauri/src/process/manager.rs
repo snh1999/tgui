@@ -21,7 +21,7 @@ pub struct ProcessManager {
 }
 
 impl ProcessManager {
-    pub async fn new(db: Database, app_handle: Option<AppHandle>) -> Arc<Self> {
+    pub fn new(db: Database, app_handle: Option<AppHandle>) -> Arc<Self> {
         let (event_sender, event_receiver) = mpsc::channel(1000);
 
         let pm = Arc::new(Self {
