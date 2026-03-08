@@ -19,7 +19,6 @@ export function envVarsToArray<
     envVars?: Map<string, string> | Record<string, string> | null;
   },
 >(values: T) {
-  console.log(values.envVars);
   const toEntries = () => {
     if (!values.envVars) {
       return null;
