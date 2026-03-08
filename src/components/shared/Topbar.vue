@@ -32,6 +32,6 @@
       Settings
     </Button>
 
-    <CreateCommandsDialog v-model="createDialogOpen" view-trigger />
+    <CreateCommandsDialog v-model:open="createDialogOpen" view-trigger />
   </header>
 </template>

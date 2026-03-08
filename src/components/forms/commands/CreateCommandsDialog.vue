@@ -16,6 +16,7 @@
 </script>
 
 <template>
+  <!--  NOTE: this is using attribute fallthrough to pass open model from parent. -->
   <FormDialog title="Create New Command">
     <template #trigger>
       <AddIcon />

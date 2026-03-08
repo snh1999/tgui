@@ -28,6 +28,7 @@
 </script>
 
 <template>
+  <!--  NOTE: this is using attribute fallthrough to pass open model from parent. -->
   <FormDialog title="Update command">
     <template v-if="viewTrigger" #trigger>
       <EditIcon /> Edit
