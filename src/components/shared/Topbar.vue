@@ -1,16 +1,17 @@
 <script setup lang="ts">
+  import { ref } from "vue";
   import { SearchIcon, SettingsIcon } from "@/assets/Icons.ts";
+  import CreateCommandsDialog from "@/components/forms/commands/CreateCommandsDialog.vue";
+  import { Button } from "@/components/ui/button";
   import {
     InputGroup,
     InputGroupAddon,
     InputGroupInput,
   } from "@/components/ui/input-group";
-  import { ref } from "vue";
-  import { Button } from "@/components/ui/button";
   import { SidebarTrigger } from "@/components/ui/sidebar";
-  import CreateCommandsDialog from "@/components/forms/commands/CreateCommandsDialog.vue";
 
   const resultCount = ref("");
+  const createDialogOpen = ref(false);
 </script>
 
 <template>
@@ -31,6 +32,6 @@
       Settings
     </Button>
 
-    <CreateCommandsDialog />
+    <CreateCommandsDialog v-model="createDialogOpen" view-trigger />
   </header>
 </template>

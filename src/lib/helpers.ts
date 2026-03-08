@@ -16,16 +16,31 @@ export function transformEnvVars<
 
 export function envVarsToArray<
   T extends {
-    envVars?: Map<string, string>;
+    envVars?: Map<string, string> | Record<string, string> | null;
   },
 >(values: T) {
+  console.log(values.envVars);
+  const toEntries = () => {
+    if (!values.envVars) {
+      return null;
+    }
+    if (values.envVars instanceof Map) {
+      return Array.from(values.envVars.entries());
+    }
+    return Object.entries(values.envVars);
+  };
+
   return {
     ...values,
-    envVars: values.envVars
-      ? Array.from(values.envVars.entries()).map(([key, value]) => ({
-          key,
-          value,
-        }))
-      : undefined,
+    envVars: toEntries()?.map(([key, value]) => ({ key, value })),
   };
+  // return {
+  //   ...values,
+  //   envVars: values.envVars
+  //     ? Array.from(values.envVars.entries()).map(([key, value]) => ({
+  //         key,
+  //         value,
+  //       }))
+  //     : undefined,
+  // };
 }

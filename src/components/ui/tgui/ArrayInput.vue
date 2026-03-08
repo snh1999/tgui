@@ -1,18 +1,18 @@
 <script setup lang="ts">
   import { Field as VeeField, FieldArray as VeeFieldArray } from "vee-validate";
-  import { Input } from "@/components/ui/input";
-  import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-  import { Button } from "@/components/ui/button";
   import { AddIcon, DeleteIcon } from "@/assets/Icons.ts"; // adjust path
+  import { Button } from "@/components/ui/button";
+  import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+  import { Input } from "@/components/ui/input";
 
   defineProps<{
-    name: string;
+    fieldName: string;
     label?: string;
   }>();
 </script>
 
 <template>
-  <VeeFieldArray v-slot="{ fields, push, remove }" :name="name">
+  <VeeFieldArray v-slot="{ fields, push, remove }" :name="fieldName">
     <div class="space-y-2">
       <div class="flex justify-between items-center">
         <FieldLabel v-if="label">{{ label }}</FieldLabel>
@@ -31,11 +31,12 @@
           v-for="(field, index) in fields"
           :key="field.key"
           v-slot="{ field: inputField, errors }"
-          :name="`${name}[${index}]`"
+          :name="`${fieldName}[${index}]`"
         >
           <Field orientation="horizontal" :data-invalid="!!errors.length">
             <Input
               v-bind="inputField"
+              :model-value="inputField.value"
               placeholder="Argument or &quot;quoted argument&quot;"
               :aria-invalid="!!errors.length"
               class="flex-1"

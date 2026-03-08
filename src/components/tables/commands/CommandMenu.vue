@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { ref } from "vue";
   import {
     DeleteIcon,
     EditIcon,
@@ -7,6 +8,7 @@
     PlayIcon,
     RestartIcon,
   } from "@/assets/Icons.ts";
+  import UpdateCommandsDialog from "@/components/forms/commands/UpdateCommandsDialog.vue";
   import { Button } from "@/components/ui/button";
   import {
     DropdownMenu,
@@ -14,10 +16,8 @@
     DropdownMenuItem,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu";
-  import { useDeleteCommand } from "@/lib/api/composables/commands.ts";
-  import { ref } from "vue";
   import ConfirmDialog from "@/components/ui/tgui/ConfirmDialog.vue";
-  import UpdateCommandsDialog from "@/components/forms/commands/UpdateCommandsDialog.vue";
+  import { useDeleteCommand } from "@/lib/api/composables/commands.ts";
 
   const { id } = defineProps<{
     id: number;
@@ -30,10 +30,11 @@
   const deleteDialogOpen = ref(false);
   const updateDialogOpen = ref(false);
 
-  function onDeleteclick() {
+  function onDeleteClick() {
     deleteCommand(id);
     deleteDialogOpen.value = false;
   }
+  // TODO update button should be allowed after
 </script>
 
 <template>
@@ -76,7 +77,7 @@
     <ConfirmDialog
       v-model:open="deleteDialogOpen"
       description="Are you sure you want to delete the command"
-      :action="onDeleteclick"
+      :action="onDeleteClick"
     />
   </div>
 </template>
