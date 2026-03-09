@@ -28,7 +28,6 @@
 </script>
 
 <template>
-  <!--  NOTE: this is using attribute fallthrough to pass open model from parent. -->
   <FormDialog title="Update command">
     <template v-if="viewTrigger" #trigger>
       <EditIcon /> Edit
@@ -51,7 +50,7 @@
         type="button"
         variant="outline"
         @click="updateCommandFormRef?.resetForm()"
-        :isPending="updateCommandFormRef?.isPending"
+        :is-pending="updateCommandFormRef?.isPending"
         :disabled="!updateCommandFormRef?.isDirty"
       >
         Reset
@@ -62,8 +61,11 @@
       <Button
         type="submit"
         :form="COMMAND_FORM_ID"
-        :isPending="updateCommandFormRef?.isPending"
-        :disabled="!updateCommandFormRef?.isValid ||!updateCommandFormRef?.isDirty"
+        :is-pending="updateCommandFormRef?.isPending"
+        :disabled="
+                    !updateCommandFormRef?.isValid ||
+                    !updateCommandFormRef?.isDirty
+                "
       >
         Update
       </Button>

@@ -1,0 +1,68 @@
+<script setup lang="ts">
+  import { useGetCategory } from "@/lib/api/composables/categories.ts";
+  import UpsertCommandForm from "@/components/forms/commands/UpsertCommandForm.vue";
+  import { EditIcon } from "@/assets/Icons";
+  import { ref } from "vue";
+  import FormDialog from "@/components/forms/common/FormDialog.vue";
+  import Loading from "@/components/ui/tgui/Loading.vue";
+  import ErrorDisplay from "@/components/ui/tgui/ErrorDisplay.vue";
+  import { CATEGORY_FORM_ID } from "@/app.constants.ts";
+  import { Button } from "@/components/ui/button";
+
+  const props = defineProps<{
+    id: number;
+    viewTrigger?: boolean;
+  }>();
+
+  const {
+    data: category,
+    isPending,
+    isError,
+    error,
+    refetch,
+  } = useGetCategory(props.id);
+
+  const updateCategoryRef = ref<InstanceType<typeof UpsertCommandForm> | null>(
+    null
+  );
+</script>
+
+<template>
+  <FormDialog title="Update category">
+    <template v-if="viewTrigger" #trigger>
+      <EditIcon /> Edit Category
+    </template>
+
+    <template #default="{closeDialog}">
+      <Loading v-if="isPending" />
+      <ErrorDisplay v-if="isError" :error="error" :retry="refetch" />
+      <UpsertCommandForm
+        v-if="category"
+        :key="category.id"
+        :category="category"
+        @success="closeDialog"
+        ref="updateCategoryRef"
+      />
+    </template>
+
+    <template #reset>
+      <Button
+        variant="outline"
+        @click="updateCategoryRef?.resetForm()"
+        :isPending="updateCategoryRef?.isPending"
+      >
+        Reset
+      </Button>
+    </template>
+
+    <template>
+      <Button
+        type="submit"
+        :form="CATEGORY_FORM_ID"
+        :isPending="updateCategoryRef?.isPending"
+      >
+        Update
+      </Button>
+    </template>
+  </FormDialog>
+</template>

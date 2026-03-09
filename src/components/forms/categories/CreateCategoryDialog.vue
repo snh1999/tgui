@@ -1,38 +1,38 @@
 <script setup lang="ts">
+  import UpsertCategoryForm from "@/components/forms/categories/UpsertCategoryForm.vue";
   import { ref } from "vue";
-  import { COMMAND_FORM_ID } from "@/app.constants.ts";
+  import FormDialog from "@/components/forms/common/FormDialog.vue";
   import { AddIcon } from "@/assets/Icons";
   import UpsertCommandForm from "@/components/forms/commands/UpsertCommandForm.vue";
-  import FormDialog from "@/components/forms/common/FormDialog.vue";
+  import { GROUP_FORM_ID } from "@/app.constants.ts";
   import { Button } from "@/components/ui/button";
 
   const props = defineProps<{
     viewTrigger?: boolean;
   }>();
 
-  const createCommandFormRef = ref<InstanceType<
-    typeof UpsertCommandForm
+  const createCategoryFormRef = ref<InstanceType<
+    typeof UpsertCategoryForm
   > | null>(null);
 </script>
 
 <template>
-  <FormDialog title="Create New Command">
+  <FormDialog title="Create Category">
     <template v-if="viewTrigger" #trigger>
       <AddIcon />
-      New Command
+      New Category
     </template>
 
     <template #default="{closeDialog}">
-      <UpsertCommandForm @success="closeDialog" ref="createCommandFormRef" />
+      <UpsertCommandForm @success="closeDialog" ref="createCategoryFormRef" />
     </template>
 
     <template #reset>
       <Button
-        type="button"
         variant="outline"
-        @click="createCommandFormRef?.resetForm()"
-        :is-pending="createCommandFormRef?.isPending"
-        :disabled="!createCommandFormRef?.isDirty"
+        @click="createCategoryFormRef?.resetForm()"
+        :is-pending="createCategoryFormRef?.isPending"
+        :disabled="!createCategoryFormRef?.isDirty"
       >
         Reset
       </Button>
@@ -41,9 +41,9 @@
     <template #submit>
       <Button
         type="submit"
-        :form="COMMAND_FORM_ID"
-        :is-pending="createCommandFormRef?.isPending"
-        :disabled="!createCommandFormRef?.isValid"
+        :form="GROUP_FORM_ID"
+        :is-pending="createCategoryFormRef?.isPending"
+        :disabled="!createCategoryFormRef?.isValid"
       >
         Create
       </Button>
