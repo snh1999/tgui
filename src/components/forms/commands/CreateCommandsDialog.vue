@@ -1,20 +1,14 @@
 <script setup lang="ts">
-  import { ref } from "vue";
-  import { COMMAND_FORM_ID } from "@/app.constants.ts";
-  import { AddIcon } from "@/assets/Icons";
-  import UpsertCommandForm from "@/components/forms/commands/UpsertCommandForm.vue";
-  import { Button } from "@/components/ui/button";
-  import { Field } from "@/components/ui/field";
-  import OpenDialog from "@/components/ui/tgui/OpenDialog.vue";
-  import { Spinner } from "@/components/ui/spinner";
+import {ref} from "vue";
+import {COMMAND_FORM_ID} from "@/app.constants.ts";
+import {AddIcon} from "@/assets/Icons";
+import UpsertCommandForm from "@/components/forms/commands/UpsertCommandForm.vue";
+import FormDialog from "@/components/forms/common/FormDialog.vue";
+import {Button} from "@/components/ui/button";
 
-  const newCommandOpen = ref(false);
-  const openNewCommand = () => {
-    newCommandOpen.value = true;
-  };
-  const closeNewCommand = () => {
-    newCommandOpen.value = false;
-  };
+const props = defineProps<{
+    viewTrigger?: boolean;
+  }>();
 
   const createCommandFormRef = ref<InstanceType<
     typeof UpsertCommandForm
@@ -22,44 +16,38 @@
 </script>
 
 <template>
-  <header class="header">
-    <Button @click="openNewCommand" class="btn-primary gap-2">
+  <!--  NOTE: this is using attribute fallthrough to pass open model from parent. -->
+  <FormDialog title="Create New Command">
+    <template v-if="viewTrigger" #trigger>
       <AddIcon />
       New Command
-    </Button>
+    </template>
 
-    <OpenDialog
-      class="min-w-[50%]"
-      v-model:open="newCommandOpen"
-      title="Create New Command"
-    >
-      <UpsertCommandForm
-        :onSuccess="closeNewCommand"
-        ref="createCommandFormRef"
-      />
+    <template #default="{closeDialog}">
+      <UpsertCommandForm @success="closeDialog" ref="createCommandFormRef" />
+    </template>
 
-      <template #footer>
-        <Field orientation="horizontal">
-          <Button
-            type="button"
-            variant="outline"
-            @click="createCommandFormRef?.resetForm()"
-            :isPending="createCommandFormRef?.isPending"
-          >
-            Reset
-            <Spinner v-if="createCommandFormRef?.isPending" />
-          </Button>
-        </Field>
+    <template #reset>
+      <Button
+        type="button"
+        variant="outline"
+        @click="createCommandFormRef?.resetForm()"
+        :isPending="createCommandFormRef?.isPending"
+        :disabled="!createCommandFormRef?.isDirty"
+      >
+        Reset
+      </Button>
+    </template>
 
-        <Button variant="outline" @click="closeNewCommand">Cancel</Button>
-        <Button
-          type="submit"
-          :form="COMMAND_FORM_ID"
-          :isPending="createCommandFormRef?.isPending"
-        >
-          Create
-        </Button>
-      </template>
-    </OpenDialog>
-  </header>
+    <template #submit>
+      <Button
+        type="submit"
+        :form="COMMAND_FORM_ID"
+        :isPending="createCommandFormRef?.isPending"
+        :disabled="!createCommandFormRef?.isValid"
+      >
+        Create
+      </Button>
+    </template>
+  </FormDialog>
 </template>

@@ -41,7 +41,11 @@ pub fn run() {
                 error!(error = %e, "Database initialization failed");
                 e
             })?;
-            let pm = ProcessManager::new(db.clone(), Some(app.handle().clone()));
+
+            let pm = tauri::async_runtime::block_on(async {
+                ProcessManager::new(db.clone(), Some(app.handle().clone()))
+            });
+
             pm.detect_and_mark_orphans();
 
             info!(db_path = %db_path.display(), "Database initialized successfully");

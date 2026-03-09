@@ -32,7 +32,8 @@ impl ProcessManager {
         });
 
         let pm_clone = pm.clone();
-        tokio::spawn(async move {
+        let handle = tokio::runtime::Handle::current();
+        handle.spawn(async move {
             pm_clone.process_events(event_receiver).await;
         });
 
