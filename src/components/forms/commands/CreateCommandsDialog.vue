@@ -1,12 +1,12 @@
 <script setup lang="ts">
-  import { ref } from "vue";
-  import { COMMAND_FORM_ID } from "@/app.constants.ts";
-  import { AddIcon } from "@/assets/Icons";
-  import UpsertCommandForm from "@/components/forms/commands/UpsertCommandForm.vue";
-  import { Button } from "@/components/ui/button";
-  import FormDialog from "@/components/forms/common/FormDialog.vue";
+import {ref} from "vue";
+import {COMMAND_FORM_ID} from "@/app.constants.ts";
+import {AddIcon} from "@/assets/Icons";
+import UpsertCommandForm from "@/components/forms/commands/UpsertCommandForm.vue";
+import FormDialog from "@/components/forms/common/FormDialog.vue";
+import {Button} from "@/components/ui/button";
 
-  const props = defineProps<{
+const props = defineProps<{
     viewTrigger?: boolean;
   }>();
 
@@ -18,7 +18,7 @@
 <template>
   <!--  NOTE: this is using attribute fallthrough to pass open model from parent. -->
   <FormDialog title="Create New Command">
-    <template #trigger>
+    <template v-if="viewTrigger" #trigger>
       <AddIcon />
       New Command
     </template>

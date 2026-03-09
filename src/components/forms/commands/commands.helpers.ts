@@ -1,21 +1,15 @@
-import { toTypedSchema } from "@vee-validate/zod";
-import { useForm } from "vee-validate";
-import { computed } from "vue";
-import { z } from "zod";
-import {
-  argumentSchema,
-  groupCommandFormSchema,
-} from "@/components/forms/common/common.schema.ts";
-import type { ICommand } from "@/lib/api/api.types.ts";
-import {
-  useCreateCommand,
-  useUpdateCommand,
-} from "@/lib/api/composables/commands.ts";
-import { envVarsToArray, transformEnvVars } from "@/lib/helpers.ts";
+import {toTypedSchema} from "@vee-validate/zod";
+import {useForm} from "vee-validate";
+import {computed} from "vue";
+import {z} from "zod";
+import {argumentSchema, groupCommandFormSchema,} from "@/components/forms/common/common.schema.ts";
+import type {ICommand} from "@/lib/api/api.types.ts";
+import {useCreateCommand, useUpdateCommand,} from "@/lib/api/composables/commands.ts";
+import {envVarsToArray, transformEnvVars} from "@/lib/helpers.ts";
 
 export const commandFormSchema = groupCommandFormSchema.extend({
   command: z.string().min(1, "Command text can not be empty."),
-  arguments: z.array(argumentSchema).default([""]).nullable(),
+  arguments: z.array(argumentSchema).nullable(),
   groupId: z.number().nullable().optional(),
 });
 

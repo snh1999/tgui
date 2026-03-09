@@ -5,12 +5,14 @@ export function transformEnvVars<
 >(values: T) {
   return {
     ...values,
-    envVars: new Map(
-      values.envVars
-        .map((e) => ({ key: e.key.trim(), value: e.value }))
-        .filter((e) => e.key.length > 0)
-        .map((e) => [e.key, e.value])
-    ),
+    envVars: values.envVars
+      ? new Map(
+          values.envVars
+            .map((e) => ({ key: e.key.trim(), value: e.value }))
+            .filter((e) => e.key.length > 0)
+            .map((e) => [e.key, e.value])
+        )
+      : null,
   };
 }
 
@@ -21,7 +23,7 @@ export function envVarsToArray<
 >(values: T) {
   const toEntries = () => {
     if (!values.envVars) {
-      return null;
+      return [];
     }
     if (values.envVars instanceof Map) {
       return Array.from(values.envVars.entries());
