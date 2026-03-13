@@ -7,7 +7,9 @@
   import { CATEGORY_FORM_ID } from "@/app.constants.ts";
   import { FieldGroup } from "@/components/ui/field";
   import { Input } from "@/components/ui/input";
-  import FormField from "@/components/ui/tgui/FormField.vue";
+  import FormField from "@/components/ui/tgui/inputs/FormField.vue";
+  import IconPicker from "@/components/ui/tgui/inputs/IconPicker.vue";
+  import ColorPickerInput from "@/components/ui/tgui/inputs/color-picker/ColorPickerInput.vue";
 
   const props = defineProps<IUpsertCategoryForm>();
   const emit = defineEmits<{ success: [] }>();
@@ -34,22 +36,16 @@
           <Input placeholder="Category Name" />
         </FormField>
 
-        <FormField
-          name="icon"
-          :form-id="CATEGORY_FORM_ID"
-          label="Icon"
-          :class="[isPending ? 'pointer-events-none' : '']"
-        >
-          <Input placeholder="Category Icon" />
+        <FormField name="icon" :form-id="CATEGORY_FORM_ID" label="Icon">
+          <template #default="{ bindings }">
+            <IconPicker v-bind="bindings" placeholder="Category Icon" />
+          </template>
         </FormField>
 
-        <FormField
-          name="color"
-          :form-id="CATEGORY_FORM_ID"
-          label="Color"
-          :class="[isPending ? 'pointer-events-none' : '']"
-        >
-          <Input placeholder="Icon Color" />
+        <FormField name="color" :form-id="CATEGORY_FORM_ID" label="Color">
+          <template #default="{ bindings }">
+            <ColorPickerInput v-bind="bindings" />
+          </template>
         </FormField>
       </FieldGroup>
     </form>

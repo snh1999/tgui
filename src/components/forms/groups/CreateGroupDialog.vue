@@ -28,7 +28,7 @@
 
     <template #reset>
       <Button
-        variant="outline"
+        variant="destructive"
         @click="createGroupFormRef?.resetForm()"
         :is-pending="createGroupFormRef?.isPending"
         :disabled="!createGroupFormRef?.isDirty"
@@ -40,6 +40,7 @@
     <template #submit>
       <Button
         type="submit"
+        variant="primary"
         :form="GROUP_FORM_ID"
         :is-pending="createGroupFormRef?.isPending"
         :disabled="!createGroupFormRef?.isValid"

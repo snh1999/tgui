@@ -19,7 +19,7 @@ export const categoryFormSchema = z.object({
 });
 
 export interface IUpsertCategoryForm {
-  category: ICategory;
+  category?: ICategory;
 }
 
 export function useCategoryForm(

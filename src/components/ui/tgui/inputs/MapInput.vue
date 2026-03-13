@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import {Field as VeeField, FieldArray as VeeFieldArray} from "vee-validate";
-import {AddIcon, DeleteIcon} from "@/assets/Icons.ts";
-import {Button} from "@/components/ui/button";
-import {Field, FieldError, FieldLabel} from "@/components/ui/field";
-import {Input} from "@/components/ui/input";
+  import { Field as VeeField, FieldArray as VeeFieldArray } from "vee-validate";
+  import { AddIcon, DeleteIcon } from "@/assets/Icons.ts";
+  import { Button } from "@/components/ui/button";
+  import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+  import { Input } from "@/components/ui/input";
 
-defineProps<{
+  defineProps<{
     fieldName: string;
     label?: string;
     keyPlaceholder?: string;
@@ -72,11 +72,9 @@ defineProps<{
         </div>
       </div>
 
-      <Button
-          type="button"
-          @click="push({ key: '', value: '' })"
-      >
-        <AddIcon /> {{addButtonText??  `Add ${label}`}}
+      <Button type="button" @click="push({ key: '', value: '' })">
+        <AddIcon />
+        {{ addButtonText??  `Add ${label}` }}
       </Button>
     </div>
   </VeeFieldArray>
