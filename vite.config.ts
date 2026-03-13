@@ -1,11 +1,11 @@
 /** biome-ignore-all lint/complexity/useSimplifiedLogicExpression: <not necessary for setup file> */
 
-import {fileURLToPath, URL} from "node:url"; // Use node: protocol
+import { fileURLToPath, URL } from "node:url"; // Use node: protocol
 import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue";
 import Icons from "unplugin-icons/vite";
 
-import {defineConfig} from "vite";
+import { defineConfig } from "vite";
 
 const host = process.env.TAURI_DEV_HOST;
 

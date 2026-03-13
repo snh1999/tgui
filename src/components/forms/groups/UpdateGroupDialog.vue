@@ -2,7 +2,6 @@
   import { ref } from "vue";
   import { GROUP_FORM_ID } from "@/app.constants.ts";
   import { EditIcon } from "@/assets/Icons";
-  import UpsertCommandForm from "@/components/forms/commands/UpsertCommandForm.vue";
   import { Button } from "@/components/ui/button";
   import ErrorDisplay from "@/components/ui/tgui/ErrorDisplay.vue";
   import Loading from "@/components/ui/tgui/Loading.vue";
@@ -35,7 +34,7 @@
     <template #default="{closeDialog}">
       <Loading v-if="isPending" />
       <ErrorDisplay v-if="isError" :error="error" :retry="refetch" />
-      <UpsertCommandForm
+      <UpsertGroupForm
         v-if="group"
         :key="group.id"
         :group="group"
