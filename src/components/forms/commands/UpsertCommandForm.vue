@@ -12,10 +12,11 @@
     InputGroupText,
     InputGroupTextarea,
   } from "@/components/ui/input-group";
-  import ArrayInput from "@/components/ui/tgui/ArrayInput.vue";
-  import FormField from "@/components/ui/tgui/FormField.vue";
+  import ArrayInput from "@/components/ui/tgui/inputs/ArrayInput.vue";
+  import FormField from "@/components/ui/tgui/inputs/FormField.vue";
   import Loading from "@/components/ui/tgui/Loading.vue";
-  import MapInput from "@/components/ui/tgui/MapInput.vue";
+  import MapInput from "@/components/ui/tgui/inputs/MapInput.vue";
+  import DirectoryPicker from "@/components/ui/tgui/inputs/DirectoryPicker.vue";
 
   const props = defineProps<IUpsertCommandForm>();
   const emit = defineEmits<{ success: [] }>();
@@ -49,38 +50,11 @@
           <Input placeholder="Command to execute" />
         </FormField>
 
-        <FormField
-          name="description"
-          :form-id="COMMAND_FORM_ID"
-          label="Description"
-        >
-          <template #default="{ bindings, field }">
-            <InputGroup>
-              <InputGroupTextarea
-                v-bind="bindings"
-                placeholder="I'm having an issue..."
-                :rows="6"
-                class="min-h-24 resize-none"
-              />
-              <InputGroupAddon align="block-end">
-                <InputGroupText class="tabular-nums">
-                  {{ field.value?.length || 0 }} characters
-                </InputGroupText>
-              </InputGroupAddon>
-            </InputGroup>
-          </template>
-        </FormField>
-
         <ArrayInput
           fieldName="arguments"
           label="Arguments"
           placeholder="Add Argument"
-        />
-        <MapInput
-          fieldName="envVars"
-          label="Environment Variables"
-          keyPlaceholder="Enter Key"
-          valuePlaceholder="Enter value"
+          addButtonText="Add Argument"
         />
 
         <!--      TODO add groupid, category id-->
@@ -91,13 +65,46 @@
           :form-id="COMMAND_FORM_ID"
           label="Working Directory"
         >
-          <Input
-            placeholder="Select the location where you want to execute the command"
-          />
+          <template #default="{ bindings }">
+            <DirectoryPicker
+              v-bind="bindings"
+              placeholder="Select the location where you want to execute the command"
+            />
+          </template>
         </FormField>
 
         <FormField name="shell" :form-id="COMMAND_FORM_ID" label="Shell">
           <Input placeholder="Choose default shell" />
+        </FormField>
+
+        <MapInput
+          fieldName="envVars"
+          label="Environment Variables"
+          keyPlaceholder="Enter Key"
+          valuePlaceholder="Enter value"
+          addButtonText="Add Variable"
+        />
+
+        <FormField
+          name="description"
+          :form-id="COMMAND_FORM_ID"
+          label="Description"
+        >
+          <template #default="{ bindings, field }">
+            <InputGroup>
+              <InputGroupTextarea
+                v-bind="bindings"
+                placeholder="I'm having an issue..."
+                :rows="3"
+                class="min-h-24 resize-none"
+              />
+              <InputGroupAddon align="block-end">
+                <InputGroupText class="tabular-nums">
+                  {{ field.value?.length || 0 }} characters
+                </InputGroupText>
+              </InputGroupAddon>
+            </InputGroup>
+          </template>
         </FormField>
       </FieldGroup>
     </form>

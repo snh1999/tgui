@@ -29,7 +29,7 @@
     <template #reset>
       <Button
         type="button"
-        variant="outline"
+        variant="destructive"
         @click="createCommandFormRef?.resetForm()"
         :is-pending="createCommandFormRef?.isPending"
         :disabled="!createCommandFormRef?.isDirty"
@@ -41,6 +41,7 @@
     <template #submit>
       <Button
         type="submit"
+        variant="primary"
         :form="COMMAND_FORM_ID"
         :is-pending="createCommandFormRef?.isPending"
         :disabled="!createCommandFormRef?.isValid"

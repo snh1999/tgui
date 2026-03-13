@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import {Field as VeeField, FieldArray as VeeFieldArray} from "vee-validate";
-import {AddIcon, DeleteIcon} from "@/assets/Icons.ts"; // adjust path
-import {Button} from "@/components/ui/button";
-import {Field, FieldError, FieldLabel} from "@/components/ui/field";
-import {Input} from "@/components/ui/input";
+  import { Field as VeeField, FieldArray as VeeFieldArray } from "vee-validate";
+  import { AddIcon, DeleteIcon } from "@/assets/Icons.ts"; // adjust path
+  import { Button } from "@/components/ui/button";
+  import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+  import { Input } from "@/components/ui/input";
 
-defineProps<{
+  defineProps<{
     fieldName: string;
     label?: string;
     addButtonText?: string;
@@ -35,10 +35,10 @@ defineProps<{
               class="flex-1"
             />
             <Button
-                type="button"
-                class="text-destructive hover:opacity-75 shrink-0 mt-0"
-                variant="link"
-                size="icon-sm"
+              type="button"
+              class="text-destructive hover:opacity-75 shrink-0 mt-0"
+              variant="link"
+              size="icon-sm"
               @click="remove(index)"
             >
               <DeleteIcon />
@@ -48,11 +48,9 @@ defineProps<{
         </VeeField>
       </div>
 
-      <Button
-          type="button"
-          @click="push('')"
-      >
-        <AddIcon />  {{addButtonText??  `Add ${label}`}}
+      <Button type="button" @click="push('')">
+        <AddIcon />
+        {{ addButtonText??  `Add ${label}` }}
       </Button>
     </div>
   </VeeFieldArray>

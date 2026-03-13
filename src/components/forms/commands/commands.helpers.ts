@@ -44,7 +44,7 @@ export function useCommandForm(
           envVars: [],
           isFavorite: false,
           shell: "",
-          arguments: [""],
+          arguments: [],
         },
   });
 

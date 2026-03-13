@@ -3,8 +3,7 @@
   import { ref } from "vue";
   import FormDialog from "@/components/forms/common/FormDialog.vue";
   import { AddIcon } from "@/assets/Icons";
-  import UpsertCommandForm from "@/components/forms/commands/UpsertCommandForm.vue";
-  import { GROUP_FORM_ID } from "@/app.constants.ts";
+  import { CATEGORY_FORM_ID } from "@/app.constants.ts";
   import { Button } from "@/components/ui/button";
 
   const props = defineProps<{
@@ -24,7 +23,7 @@
     </template>
 
     <template #default="{closeDialog}">
-      <UpsertCommandForm @success="closeDialog" ref="createCategoryFormRef" />
+      <UpsertCategoryForm @success="closeDialog" ref="createCategoryFormRef" />
     </template>
 
     <template #reset>
@@ -41,7 +40,7 @@
     <template #submit>
       <Button
         type="submit"
-        :form="GROUP_FORM_ID"
+        :form="CATEGORY_FORM_ID"
         :is-pending="createCategoryFormRef?.isPending"
         :disabled="!createCategoryFormRef?.isValid"
       >

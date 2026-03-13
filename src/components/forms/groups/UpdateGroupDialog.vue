@@ -54,7 +54,7 @@
       </Button>
     </template>
 
-    <template>
+    <template #submit>
       <Button
         type="submit"
         :form="GROUP_FORM_ID"
