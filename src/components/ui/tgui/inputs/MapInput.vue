@@ -1,15 +1,16 @@
 <script setup lang="ts">
-  import { Field as VeeField, FieldArray as VeeFieldArray } from "vee-validate";
-  import { AddIcon, DeleteIcon } from "@/assets/Icons.ts";
-  import { Button } from "@/components/ui/button";
-  import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-  import { Input } from "@/components/ui/input";
+import {Field as VeeField, FieldArray as VeeFieldArray} from "vee-validate";
+import {AddIcon, DeleteIcon} from "@/assets/Icons.ts";
+import {Button} from "@/components/ui/button";
+import {Field, FieldError, FieldLabel} from "@/components/ui/field";
+import {Input} from "@/components/ui/input";
 
-  defineProps<{
+defineProps<{
     fieldName: string;
     label?: string;
     keyPlaceholder?: string;
     valuePlaceholder?: string;
+    addButtonText?: string;
   }>();
 </script>
 
@@ -18,14 +19,6 @@
     <div class="space-y-2">
       <div class="flex justify-between items-center">
         <FieldLabel v-if="label">{{ label }}</FieldLabel>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon-sm"
-          @click="push({ key: '', value: '' })"
-        >
-          <AddIcon class="text-primary" />
-        </Button>
       </div>
 
       <div class="space-y-2">
@@ -69,8 +62,8 @@
           <!-- Remove Button -->
           <Button
             type="button"
-            class="text-destructive shrink-0 mt-0"
-            variant="outline"
+            class="text-destructive hover:opacity-75 shrink-0 mt-0"
+            variant="link"
             size="icon-sm"
             @click="remove(index)"
           >
@@ -78,6 +71,13 @@
           </Button>
         </div>
       </div>
+
+      <Button
+          type="button"
+          @click="push({ key: '', value: '' })"
+      >
+        <AddIcon /> {{addButtonText??  `Add ${label}`}}
+      </Button>
     </div>
   </VeeFieldArray>
 </template>

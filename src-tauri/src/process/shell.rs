@@ -2,7 +2,7 @@
 pub const ALLOWED_SHELLS: &[&str] = &["cmd", "powershell", "pwsh"];
 
 #[cfg(not(target_os = "windows"))]
-pub const ALLOWED_SHELLS: &[&str] = &["sh", "bash", "zsh", "fish", "dash", "ksh", "nu"];
+pub const ALLOWED_SHELLS: &[&str] = &["sh", "bash", "zsh", "fish", "nu"];
 
 #[cfg(not(target_os = "windows"))]
 const ALLOWED_SHELL_PATHS: &[&str] = &[

@@ -17,9 +17,9 @@ pub fn get_groups(
     db: State<'_, Database>,
     parent_id: Option<i64>,
     category_id: Option<i64>,
-    is_favorite: bool,
+    favorites_only: bool,
 ) -> Result<Vec<Group>, SerializableError> {
-    db.get_groups(parent_id, category_id, is_favorite)
+    db.get_groups(parent_id, category_id, favorites_only)
         .map_err(|err| err.into())
 }
 
