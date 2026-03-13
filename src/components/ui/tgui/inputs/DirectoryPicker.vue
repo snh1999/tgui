@@ -1,4 +1,3 @@
-<!-- DirectoryPicker.vue -->
 <script setup lang="ts">
   import { open } from "@tauri-apps/plugin-dialog";
   import {
@@ -13,9 +12,15 @@
     IInputEmits,
     IInputProps,
   } from "@/components/ui/tgui/inputs/tgui-input.types.ts";
+  import { computed } from "vue";
 
   const props = defineProps<IInputProps>();
   const emit = defineEmits<IInputEmits>();
+
+  const model = computed({
+    get: () => props.modelValue || "",
+    set: (v) => emit("update:modelValue", v),
+  });
 
   async function pickDir() {
     if (props.disabled) return;
@@ -32,12 +37,11 @@
 </script>
 
 <template>
-  {{ modelValue }}
   <InputGroup class="h-10">
     <InputGroupInput
       :id="id"
       :name="name"
-      :value="modelValue || ''"
+      v-model="model"
       :placeholder="placeholder || 'Select a directory...'"
       readonly
       :disabled="disabled"

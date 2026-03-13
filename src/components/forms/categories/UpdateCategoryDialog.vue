@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import { useGetCategory } from "@/lib/api/composables/categories.ts";
-  import UpsertCommandForm from "@/components/forms/commands/UpsertCommandForm.vue";
   import { EditIcon } from "@/assets/Icons";
   import { ref } from "vue";
   import FormDialog from "@/components/forms/common/FormDialog.vue";
@@ -8,6 +7,7 @@
   import ErrorDisplay from "@/components/ui/tgui/ErrorDisplay.vue";
   import { CATEGORY_FORM_ID } from "@/app.constants.ts";
   import { Button } from "@/components/ui/button";
+  import UpsertCategoryForm from "@/components/forms/categories/UpsertCategoryForm.vue";
 
   const props = defineProps<{
     id: number;
@@ -22,7 +22,7 @@
     refetch,
   } = useGetCategory(props.id);
 
-  const updateCategoryRef = ref<InstanceType<typeof UpsertCommandForm> | null>(
+  const updateCategoryRef = ref<InstanceType<typeof UpsertCategoryForm> | null>(
     null
   );
 </script>
@@ -36,7 +36,7 @@
     <template #default="{closeDialog}">
       <Loading v-if="isPending" />
       <ErrorDisplay v-if="isError" :error="error" :retry="refetch" />
-      <UpsertCommandForm
+      <UpsertCategoryForm
         v-if="category"
         :key="category.id"
         :category="category"

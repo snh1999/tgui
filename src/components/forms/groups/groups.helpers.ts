@@ -12,7 +12,7 @@ import { envVarsToArray, transformEnvVars } from "@/lib/helpers.ts";
 
 export const groupFormSchema = groupCommandFormSchema.extend({
   parentGroupId: z.number().nullable().optional(),
-  icon: z.string().optional(),
+  icon: z.string().optional().nullable(),
 });
 
 export interface IUpsertGroupForm {

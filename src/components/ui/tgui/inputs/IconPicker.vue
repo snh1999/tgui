@@ -1,4 +1,3 @@
-<!-- IconPicker.vue -->
 <script setup lang="ts">
   import { computed, ref, watch } from "vue";
   import * as Icons from "lucide-vue-next";
@@ -70,6 +69,11 @@
     return (Icons as Record<string, unknown>)[name] as object;
   }
 
+  const model = computed({
+    get: () => props.modelValue || "",
+    set: (v) => emit("update:modelValue", v),
+  });
+
   function select(name: string) {
     emit("update:modelValue", name);
     open.value = false;
@@ -87,7 +91,7 @@
       <InputGroupInput
         :id="id"
         :name="name"
-        :value="modelValue || ''"
+        v-model="model"
         :placeholder="placeholder || 'Select a directory...'"
         readonly
         :disabled="disabled"
