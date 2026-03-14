@@ -13,7 +13,7 @@ import { useOptimisticUpdate } from "@/lib/api/composables/helpers.ts";
 
 export function useGetGroups(filters?: MaybeRef<ICommandGroupFilter>) {
   return useQuery({
-    queryKey: queryKeys.groups.filteredList(unref(filters) ?? {}),
+    queryKey: queryKeys.groups.filteredList(unref(filters)),
     queryFn: () => groupsApi.getAll(unref(filters)),
   });
 }
@@ -26,13 +26,13 @@ export function useGetGroup(id: MaybeRef<number>) {
   });
 }
 
-export function useGetGroupTree(id: MaybeRef<number>) {
-  return useQuery({
-    queryKey: [queryKeys.groups.detail(unref(id)), "tree"],
-    queryFn: () => groupsApi.getGroupTree(unref(id)),
-    enabled: () => unref(id) > 0,
-  });
-}
+// export function useGetGroupTree(id: MaybeRef<number>) {
+//   return useQuery({
+//     queryKey: [queryKeys.groups.detail(unref(id)), "tree"],
+//     queryFn: () => groupsApi.getGroupTree(unref(id)),
+//     enabled: () => unref(id) > 0,
+//   });
+// }
 
 export function useGetGroupPath(id: MaybeRef<number>) {
   return useQuery({

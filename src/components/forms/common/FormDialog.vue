@@ -17,7 +17,7 @@
 </script>
 
 <template>
-  <Button v-if="$slots.trigger" @click="openDialog" class="gap-2">
+  <Button v-if="$slots.trigger" @click="openDialog" size="sm" class="gap-1">
     <slot name="trigger" />
   </Button>
 

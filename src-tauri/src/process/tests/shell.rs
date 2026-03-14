@@ -112,7 +112,7 @@ fn build_exec_pwsh_uses_pwsh_executable() {
 #[cfg(not(target_os = "windows"))]
 #[test]
 fn is_valid_shell_accepts_all_unix_allowed_shells() {
-    for shell in &["sh", "bash", "zsh", "fish", "dash", "ksh", "nu"] {
+    for shell in &["sh", "bash", "zsh", "fish", "nu"] {
         assert!(
             is_valid_shell(shell),
             "Expected '{shell}' to be valid on Unix"

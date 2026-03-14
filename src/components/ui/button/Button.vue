@@ -26,6 +26,7 @@
     :as-child="asChild"
     :disabled="isPending"
     :class="cn(buttonVariants({ variant, size }), props.class)"
+    class="cursor-pointer text-[13px] font-semibold whitespace-nowrap"
   >
     <Spinner v-if="isPending" />
     <slot />

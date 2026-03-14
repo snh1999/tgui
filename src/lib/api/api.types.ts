@@ -51,7 +51,7 @@ export interface IMovePosition {
 
 export interface IGroup extends IGroupCommandCommon {
   parentGroupId?: number | null;
-  icon?: string;
+  icon?: string | null;
 }
 
 export interface IWorkflow extends ICommonPositionFields {

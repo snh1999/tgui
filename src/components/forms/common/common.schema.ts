@@ -9,13 +9,13 @@ export const envVarEntrySchema = z.object({
 });
 
 const commonFormSchema = z.object({
+  id: z.number().default(0),
   name: z
     .string()
-    .min(3, "Command name must be at least 3 characters.")
-    .max(32, "Command name must be less than 32 characters."),
+    .min(3, "Name must be at least 3 characters.")
+    .max(50, "Name must be less than 50 characters."),
   description: z.string().optional().nullable(),
   position: z.number().default(0),
-  id: z.number().default(0),
   isFavorite: z.boolean().default(false),
 });
 
