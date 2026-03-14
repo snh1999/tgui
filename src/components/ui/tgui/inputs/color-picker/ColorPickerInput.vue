@@ -1,18 +1,17 @@
 <script lang="ts" setup>
-  import { ref } from "vue";
-  import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-  } from "@/components/ui/popover";
+  import { Brush, X as ClearIcon, Paintbrush } from "lucide-vue-next";
+  import { computed, ref } from "vue";
   import {
     InputGroup,
     InputGroupAddon,
     InputGroupButton,
     InputGroupInput,
   } from "@/components/ui/input-group";
-
-  import { Brush, Paintbrush, X as ClearIcon } from "lucide-vue-next";
+  import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+  } from "@/components/ui/popover";
   import ColorPicker from "@/components/ui/tgui/inputs/color-picker/ColorPicker.vue";
   import {
     IInputEmits,
@@ -24,6 +23,11 @@
 
   const open = ref(false);
 
+  const model = computed({
+    get: () => props.modelValue || "",
+    set: (v) => emit("update:modelValue", v),
+  });
+
   function clear() {
     emit("update:modelValue", "");
   }
@@ -33,20 +37,20 @@
   <Popover v-model:open="open">
     <InputGroup class="h-10">
       <InputGroupInput
-        readonly
         :id="id"
-        :name="name"
-        :value="modelValue || ''"
-        :placeholder="placeholder || 'Select a Color...'"
-        :disabled="disabled"
-        class="flex-1 truncate"
         :class="{ 'text-muted-foreground': !modelValue }"
+        :disabled="disabled"
+        :name="name"
+        :placeholder="placeholder || 'Select a Color...'"
+        v-model="model"
+        class="flex-1 truncate"
+        readonly
       />
       <InputGroupAddon>
         <div
           v-if="modelValue"
-          class="h-5 w-5 rounded-md"
           :style="{backgroundColor: modelValue as string}"
+          class="h-5 w-5 rounded-md"
         />
         <Paintbrush v-else />
       </InputGroupAddon>
@@ -54,18 +58,19 @@
       <InputGroupAddon align="inline-end">
         <InputGroupButton
           v-if="modelValue && !disabled"
+          type="button"
           variant="ghost"
           @click.stop="clear"
         >
           <ClearIcon />
         </InputGroupButton>
 
-        <PopoverTrigger as-child :disabled="disabled">
+        <PopoverTrigger :disabled="disabled" as-child>
           <InputGroupButton
-            type="button"
-            size="sm"
             :disabled="disabled"
             class="shrink-0"
+            size="sm"
+            type="button"
             variant="ghost"
           >
             <Brush />
@@ -74,7 +79,7 @@
         </PopoverTrigger>
       </InputGroupAddon>
     </InputGroup>
-    <PopoverContent class="w-80 p-0" align="start" :side-offset="4">
+    <PopoverContent :side-offset="4" align="start" class="w-80 p-0">
       <ColorPicker
         :model-value="modelValue"
         @update:model-value="emit('update:modelValue', $event)"

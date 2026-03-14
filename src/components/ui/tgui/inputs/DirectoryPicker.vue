@@ -1,18 +1,18 @@
 <script setup lang="ts">
   import { open } from "@tauri-apps/plugin-dialog";
+  import { X as CloseIcon } from "lucide-vue-next";
+  import { computed } from "vue";
+  import { DirectoryIcon } from "@/assets/Icons.ts";
   import {
     InputGroup,
     InputGroupAddon,
     InputGroupButton,
     InputGroupInput,
   } from "@/components/ui/input-group";
-  import { DirectoryIcon } from "@/assets/Icons.ts";
-  import { X as CloseIcon } from "lucide-vue-next";
   import {
     IInputEmits,
     IInputProps,
   } from "@/components/ui/tgui/inputs/tgui-input.types.ts";
-  import { computed } from "vue";
 
   const props = defineProps<IInputProps>();
   const emit = defineEmits<IInputEmits>();
@@ -23,7 +23,9 @@
   });
 
   async function pickDir() {
-    if (props.disabled) return;
+    if (props.disabled) {
+      return;
+    }
     const selected = await open({ directory: true });
 
     if (selected) {
@@ -51,6 +53,7 @@
     <InputGroupAddon align="inline-end">
       <InputGroupButton
         v-if="modelValue && !disabled"
+        type="button"
         variant="ghost"
         @click.stop="clearDir"
       >

@@ -1,31 +1,27 @@
 <script setup lang="ts">
-  import { computed, ref, watch } from "vue";
+  // biome-ignore lint/performance/noNamespaceImport: <needs all icons>
   import * as Icons from "lucide-vue-next";
+  import { computed, ref, watch } from "vue";
   import { Button } from "@/components/ui/button";
   import { Input } from "@/components/ui/input";
-  import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-  } from "@/components/ui/popover";
   import {
     InputGroup,
     InputGroupAddon,
     InputGroupButton,
     InputGroupInput,
   } from "@/components/ui/input-group";
+  import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+  } from "@/components/ui/popover";
+  import {
+    IInputEmits,
+    IInputProps,
+  } from "@/components/ui/tgui/inputs/tgui-input.types.ts";
 
-  const props = defineProps<{
-    modelValue?: string;
-    id?: string;
-    name?: string;
-    placeholder?: string;
-    disabled?: boolean;
-  }>();
-
-  const emit = defineEmits<{
-    "update:modelValue": [value: string];
-  }>();
+  const props = defineProps<IInputProps>();
+  const emit = defineEmits<IInputEmits>();
 
   const ALL_ICONS: string[] = Object.keys(Icons).filter(
     (key) =>
@@ -48,7 +44,9 @@
   // Match icon name without case, also support space-separated words ("arrow left")
   const filteredIcons = computed(() => {
     const q = search.value.trim().toLowerCase().replace(/\s+/g, "");
-    if (!q) return ALL_ICONS;
+    if (!q) {
+      return ALL_ICONS;
+    }
     return ALL_ICONS.filter((name) => name.toLowerCase().includes(q));
   });
 
@@ -116,6 +114,7 @@
       <InputGroupAddon align="inline-end">
         <InputGroupButton
           v-if="modelValue && !disabled"
+          type="button"
           variant="ghost"
           @click.stop="clear"
         >

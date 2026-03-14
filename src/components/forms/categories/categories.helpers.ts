@@ -1,8 +1,8 @@
-import { z } from "zod";
-import { ICategory } from "@/lib/api/api.types.ts";
-import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
+import { useForm } from "vee-validate";
 import { computed } from "vue";
+import { z } from "zod";
+import type { ICategory } from "@/lib/api/api.types.ts";
 import {
   useCreateCategory,
   useUpdateCategory,
@@ -32,13 +32,11 @@ export function useCategoryForm(
       ? props.category
       : {
           name: "",
-          icon: "",
-          color: "",
         },
   });
 
   const isValid = computed(() => meta.value.valid);
-  const isDirty = computed(() => meta.value.pending);
+  const isDirty = computed(() => meta.value.dirty);
 
   const { mutate: createCategory, isPending: isCreatePending } =
     useCreateCategory();
