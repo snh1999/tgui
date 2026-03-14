@@ -1,6 +1,7 @@
 use crate::utils::get_utc_timestamp_string;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::ops::Deref;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -54,6 +55,20 @@ pub struct Command {
     pub created_at: String,
     #[serde(skip_deserializing, default)]
     pub updated_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CommandWithHistory {
+    pub command: Command,
+    pub history: Option<ExecutionHistory>,
+}
+
+impl Deref for CommandWithHistory {
+    type Target = Command;
+    fn deref(&self) -> &Self::Target {
+        &self.command
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

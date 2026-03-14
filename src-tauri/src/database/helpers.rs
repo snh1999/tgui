@@ -114,10 +114,10 @@ impl Database {
         parent_column: Option<&'static str>,
         parent_id: Option<i64>,
     ) -> Result<i64> {
-        let mut query = format!("SELECT COALESCE(MAX(position), -1) + 1 FROM {} ", table);
+        let mut query = format!("SELECT COALESCE(MAX(position), -1) + 1 FROM {table} ");
 
         if let Some(parent_column) = parent_column {
-            query.push_str(&format!(" WHERE {} IS ?1", parent_column));
+            query.push_str(&format!(" WHERE {parent_column} IS ?1"));
         }
 
         let params = if parent_column.is_some() {
@@ -153,10 +153,7 @@ impl Database {
                     error!("Invalid env variable key: {}", key);
                     return Err(DatabaseError::InvalidData {
                         field: "env_vars",
-                        reason: format!(
-                            "Invalid key '{}': only alphanumeric, underscore, dash",
-                            key
-                        ),
+                        reason: format!("Invalid key '{key}': only alphanumeric, underscore, dash"),
                     });
                 }
             }
@@ -166,10 +163,10 @@ impl Database {
 
     pub(crate) fn validate_non_empty(&self, field: &'static str, value: &str) -> Result<()> {
         if value.trim().is_empty() {
-            error!("Empty field: {}", field);
+            error!("Empty field: {field}");
             Err(DatabaseError::InvalidData {
                 field,
-                reason: format!("{} cannot be empty", field),
+                reason: format!("{field} cannot be empty"),
             })
         } else {
             Ok(())
@@ -224,7 +221,7 @@ impl Database {
             new_pos = (prev_pos + next_pos) / 2;
         }
 
-        let query = format!("UPDATE {} SET position = ?1 WHERE id = ?2", table);
+        let query = format!("UPDATE {table} SET position = ?1 WHERE id = ?2");
         self.execute_db(table, item_id, &query, params![new_pos, item_id])?;
 
         info!(entity = table, id = item_id, "Workflow position updated");
@@ -241,10 +238,10 @@ impl Database {
         let mut connection = self.conn()?;
         let tx = connection.transaction()?;
 
-        let mut query = format!("SELECT id FROM {}", table);
+        let mut query = format!("SELECT id FROM {table}");
 
         if let Some(parent_column_name) = parent_column_name {
-            query.push_str(&format!(" WHERE {} IS ? ", parent_column_name));
+            query.push_str(&format!(" WHERE {parent_column_name} IS ? "));
         }
         query.push_str(" ORDER BY position, id");
 
@@ -259,7 +256,7 @@ impl Database {
             .query_map(params, |row| row.get(0))?
             .collect::<rusqlite::Result<_>>()?;
 
-        let update_query = format!("UPDATE {} SET position = ? WHERE id = ?", table);
+        let update_query = format!("UPDATE {table} SET position = ? WHERE id = ?");
 
         for (index, id) in ids.iter().enumerate() {
             let position = (index as i64 + 1) * Self::POSITION_GAP;
@@ -287,20 +284,16 @@ impl Database {
         })
     }
 
-    pub(crate) fn get_items_groups_commands<T, F>(
+    pub(crate) fn get_items_groups_commands_count(
         &self,
         table: &'static str,
         column: &'static str,
         id: Option<i64>,
         category_id: Option<i64>,
         favorites_only: bool,
-        row_mapper: F,
-    ) -> Result<Vec<T>>
-    where
-        F: FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
-    {
+    ) -> Result<i64> {
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-        let mut sql_statement = format!("SELECT * FROM {} WHERE {} IS ?1", table, column);
+        let mut sql_statement = format!("SELECT COUNT(*) FROM {table} WHERE {column} IS ?1");
         params.push(Box::new(id));
 
         if let Some(cid) = category_id {
@@ -312,10 +305,13 @@ impl Database {
             sql_statement.push_str(" AND is_favorite = 1");
         }
 
-        sql_statement.push_str(" ORDER BY position");
-
         let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
 
-        self.query_database(&sql_statement, &*param_refs, row_mapper)
+        let count = self
+            .query_database(&sql_statement, &*param_refs, |row| row.get(0))?
+            .into_iter()
+            .next()
+            .ok_or_else(|| rusqlite::Error::QueryReturnedNoRows)?;
+        Ok(count)
     }
 }
