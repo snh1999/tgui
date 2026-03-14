@@ -1,4 +1,4 @@
-use crate::database::{Command, Database};
+use crate::database::{Command, CommandWithHistory, Database};
 use crate::handlers::serialize_errors::SerializableError;
 use tauri::State;
 
@@ -18,8 +18,8 @@ pub fn get_commands(
     parent_id: Option<i64>,
     category_id: Option<i64>,
     favorites_only: bool,
-) -> Result<Vec<Command>, SerializableError> {
-    db.get_commands(parent_id, category_id, favorites_only)
+) -> Result<Vec<CommandWithHistory>, SerializableError> {
+    db.get_commands(parent_id, category_id, favorites_only, None, None)
         .map_err(|e| e.into())
 }
 
