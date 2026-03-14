@@ -12,6 +12,20 @@ and Vue frontend.
 
 ## 6.1 Command Management
 
+## Common
+### Row Deserialization Edge Cases
+
+**Arguments Parsing**:
+- Invalid JSON in arguments field returns empty `Vec::new()` (graceful degradation)
+- Warning logged: "Failed to parse arguments, using default"
+
+**Execution Status Deserialization**:
+- Unknown status strings default to `ExecutionStatus::Completed`
+- Safe fallback prevents application crashes on data corruption
+
+**TriggeredBy Deserialization**:
+- Unknown trigger strings default to `TriggeredBy::Manual`
+
 ## Command Management
 
 ### Create Command
@@ -48,6 +62,15 @@ struct CommandPayload {
 - `category_id`: Optional category ID
 - `is_favorite`: Star the command
 - `env_vars`: Optional environment variables
+  - **keys handling**
+    - Environment variable keys must match `^[a-zA-Z_][a-zA-Z0-9_]*$`
+    - Must start with letter or underscore
+    - Subsequent characters: alphanumeric + underscore only
+    - Unicode characters, emoji, and special symbols are rejected
+  - **Value Handling**:
+    - Empty string values are allowed
+    - Special characters in values are preserved (shell injection patterns stored as-is)
+    - Values are JSON-serialized with HashMap structure
 
 **Returns**:
 
@@ -139,6 +162,7 @@ const commandId = await invoke('create_command', {
 - `Ok(command)`: Command object
 - `Err("Command not found")`: Invalid ID
 
+
 ---
 
 ### List commands
@@ -162,6 +186,14 @@ struct CommandFilter {
 - `group_id`: Filter by group
 - `category_id`: Filter by category
 - `favorites_only`: Show only favorites
+- **Pagination Parameters**:
+  - `limit`: Maximum number of commands to return (None = unlimited)
+  - `offset`: Number of commands to skip (None = start from beginning)
+
+**History Join/Retrieval Behavior**:
+- Returns `WithHistory<Command>` where `history` contains the most recent non-workflow execution
+- Workflow-associated history (where `workflow_id IS NOT NULL`) is excluded from the join
+- History is ordered by `started_at DESC` with `ROW_NUMBER() = 1` to get latest entry per command
 
 **Returns**:
 
@@ -198,6 +230,30 @@ const favoriteCommands = await invoke('get_commands', {
 
 ---
 
+### Get Commands Count
+
+`get_commands_count(group_id: Option<i64>, category_id: Option<i64>, favorites_only: bool) -> Result<i64>`
+
+**Description**: Returns the count of commands matching the specified filters.
+
+**Parameters**:
+- `group_id`: Filter by group (None for root-level commands)
+- `category_id`: Filter by category (None for all categories)
+- `favorites_only`: Count only favorited commands when true
+
+**Returns**: Count of matching commands (i64)
+
+**Usage**:
+```typescript
+const totalCount = await invoke('get_commands_count', {
+  groupId: 1,
+  categoryId: null,
+  favoritesOnly: false
+})
+```
+
+---
+
 ### Search commands
 
 `get_commands(search_term: String) -> Result<Vec<Command>>`
@@ -207,6 +263,15 @@ const favoriteCommands = await invoke('get_commands', {
 **Parameters:**
 
 - `search_term`: Search string (case-insensitive, matches name/description/command)
+
+
+**Behavior Note**:
+- Case-insensitive matching using SQLite `LIKE`
+- Searches across `name`, `command`, and `description` fields
+- Pattern: `%search_term%` (substring match)
+- Ordering: `is_favorite DESC, updated_at DESC` (favorites first, then most recently updated)
+- Special characters (`%`, `_`) in search term are treated as wildcards by SQLite
+- **Empty Search Term**: Returns all commands ordered by favorites and updated_at
 
 ---
 
@@ -230,9 +295,14 @@ indexing.
 
 **Behavior Note**:
 
-- Calculates midpoint between `prev` and `next` positions
-- If gap exhausted (positions too close), automatically renumbers entire group
-- After renumbering, positions are reset with `POSITION_GAP` spacing (default `1000`)
+- Calculates midpoint between `prev` and `next` positions (between adjacent items)
+- `POSITION_GAP` constant (default: 1000) used for initial positioning and renumbering
+- If gap exhausted (difference in gap <= 1), automatic renumbering triggers
+- After renumbering, positions are reset with `POSITION_GAP` spacing
+
+**Error Cases**:
+- Returns `NotFound` if `cmd_id`, `prev_id`, or `next_id` don't exist
+- Returns error if `prev_id` and `next_id` belong to different groups than `cmd_id`
 
 **Why this approach?**
 

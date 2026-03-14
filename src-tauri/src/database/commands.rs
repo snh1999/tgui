@@ -1,4 +1,6 @@
-use super::{Command, Database, Result};
+use super::{
+    Command, CommandWithHistory, Database, ExecutionHistory, ExecutionStatus, Result, TriggeredBy,
+};
 use crate::constants::{COMMANDS_TABLE, COMMAND_GROUP_COLUMN};
 use rusqlite::{named_params, params};
 use tracing::{debug, instrument, warn};
@@ -45,20 +47,116 @@ impl Database {
     }
 
     #[instrument(skip(self))]
-    pub fn get_commands(
+    pub fn get_commands_count(
         &self,
         group_id: Option<i64>,
         category_id: Option<i64>,
         favorites_only: bool,
-    ) -> Result<Vec<Command>> {
-        self.get_items_groups_commands(
+    ) -> Result<i64> {
+        self.get_items_groups_commands_count(
             COMMANDS_TABLE,
             COMMAND_GROUP_COLUMN,
             group_id,
             category_id,
             favorites_only,
-            Self::row_to_command,
         )
+    }
+
+    #[instrument(skip(self))]
+    pub fn get_commands(
+        &self,
+        group_id: Option<i64>,
+        category_id: Option<i64>,
+        favorites_only: bool,
+        limit: Option<i64>,
+        offset: Option<i64>,
+    ) -> Result<Vec<CommandWithHistory>> {
+        let mut conditions = vec!["1=1"];
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![];
+
+        if let Some(gid) = group_id {
+            conditions.push("c.group_id = ?");
+            params.push(Box::new(gid));
+        } else {
+            conditions.push("c.group_id IS NULL");
+        }
+
+        if let Some(cid) = category_id {
+            conditions.push("c.category_id = ?");
+            params.push(Box::new(cid));
+        }
+
+        if favorites_only {
+            conditions.push("c.is_favorite = 1");
+        }
+
+        let where_clause = conditions.join(" AND ");
+
+        let pagination = match (limit, offset) {
+            (Some(l), Some(o)) => format!("LIMIT {} OFFSET {}", l, o),
+            (Some(l), None) => format!("LIMIT {}", l),
+            (None, Some(o)) => format!("LIMIT -1 OFFSET {}", o), // SQLite requires LIMIT with OFFSET
+            (None, None) => String::new(),
+        };
+
+        let query = format!(
+            "SELECT c.*,
+            h.id as h_id, h.status as h_status, h.exit_code as h_exit_code,
+            h.started_at as h_started_at, h.completed_at as h_completed_at,
+            h.triggered_by as h_triggered_by, h.context as h_context,
+            h.pid as h_pid, h.workflow_id as h_workflow_id,
+            h.workflow_step_id as h_workflow_step_id,
+            h.command_id as h_command_id
+         FROM commands c
+         LEFT JOIN (
+             SELECT *, ROW_NUMBER() OVER (PARTITION BY command_id ORDER BY started_at DESC) as rn
+             FROM execution_history
+             WHERE workflow_id IS NULL
+         ) h ON c.id = h.command_id AND h.rn = 1
+         WHERE {}
+         ORDER BY c.position
+         {}",
+            where_clause, pagination
+        );
+
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+
+        self.conn()?
+            .prepare(&query)?
+            .query_map(param_refs.as_slice(), |row| {
+                let command = Self::row_to_command(row)?;
+                let history = match row.get::<_, Option<i64>>("h_id")? {
+                    Some(_) => Some(Self::row_to_execution_history_with_prefix(row)?),
+                    None => None,
+                };
+                Ok(CommandWithHistory { command, history })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(Into::into)
+    }
+
+    fn row_to_execution_history_with_prefix(
+        row: &rusqlite::Row,
+    ) -> rusqlite::Result<ExecutionHistory> {
+        let status_str: String = row.get("h_status")?;
+        let status = ExecutionStatus::from_str(&status_str).unwrap_or(ExecutionStatus::Completed);
+
+        let triggered_by_str: String = row.get("h_triggered_by")?;
+        let triggered_by = TriggeredBy::from_str(&triggered_by_str).unwrap_or(TriggeredBy::Manual);
+
+        Ok(ExecutionHistory {
+            id: row.get("h_id")?,
+            command_id: row.get("h_command_id")?, // fix 3: aliased column
+            workflow_id: row.get("h_workflow_id")?,
+            workflow_step_id: row.get("h_workflow_step_id")?,
+            pid: row.get("h_pid")?,
+            status,
+            exit_code: row.get("h_exit_code")?,
+            started_at: row.get("h_started_at")?,
+            completed_at: row.get("h_completed_at")?,
+            triggered_by,
+            context: row.get("h_context")?,
+        })
     }
 
     #[instrument(skip(self))]

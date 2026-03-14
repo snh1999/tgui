@@ -52,14 +52,24 @@ impl Database {
         category_id: Option<i64>,
         favorites_only: bool,
     ) -> Result<Vec<Group>> {
-        self.get_items_groups_commands(
-            GROUPS_TABLE,
-            GROUP_PARENT_GROUP_COLUMN,
-            parent_id,
-            category_id,
-            favorites_only,
-            Self::row_to_group,
-        )
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+        let mut sql_statement = "SELECT * FROM groups WHERE parent_group_id IS ?1".to_string();
+        params.push(Box::new(parent_id));
+
+        if let Some(cid) = category_id {
+            sql_statement.push_str(&format!(" AND category_id = ?{}", params.len() + 1));
+            params.push(Box::new(cid));
+        }
+
+        if favorites_only {
+            sql_statement.push_str(" AND is_favorite = 1");
+        }
+
+        sql_statement.push_str(" ORDER BY position");
+
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+
+        self.query_database(&sql_statement, &*param_refs, Self::row_to_group)
     }
 
     #[instrument(skip(self))]
