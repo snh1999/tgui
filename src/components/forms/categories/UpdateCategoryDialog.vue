@@ -1,13 +1,13 @@
 <script setup lang="ts">
-  import { useGetCategory } from "@/lib/api/composables/categories.ts";
-  import { EditIcon } from "@/assets/Icons";
   import { ref } from "vue";
-  import FormDialog from "@/components/forms/common/FormDialog.vue";
-  import Loading from "@/components/ui/tgui/Loading.vue";
-  import ErrorDisplay from "@/components/ui/tgui/ErrorDisplay.vue";
   import { CATEGORY_FORM_ID } from "@/app.constants.ts";
-  import { Button } from "@/components/ui/button";
+  import { EditIcon } from "@/assets/Icons";
   import UpsertCategoryForm from "@/components/forms/categories/UpsertCategoryForm.vue";
+  import FormDialog from "@/components/forms/common/FormDialog.vue";
+  import { Button } from "@/components/ui/button";
+  import ErrorDisplay from "@/components/ui/tgui/ErrorDisplay.vue";
+  import Loading from "@/components/ui/tgui/Loading.vue";
+  import { useGetCategory } from "@/lib/api/composables/categories.ts";
 
   const props = defineProps<{
     id: number;
@@ -30,7 +30,8 @@
 <template>
   <FormDialog title="Update category">
     <template v-if="viewTrigger" #trigger>
-      <EditIcon /> Edit Category
+      <EditIcon />
+      Edit Category
     </template>
 
     <template #default="{closeDialog}">
@@ -55,7 +56,7 @@
       </Button>
     </template>
 
-    <template>
+    <template #submit>
       <Button
         type="submit"
         :form="CATEGORY_FORM_ID"

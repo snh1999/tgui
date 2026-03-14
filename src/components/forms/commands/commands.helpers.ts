@@ -37,13 +37,10 @@ export function useCommandForm(
       : {
           name: "",
           command: "",
-          description: "",
           id: 0,
-          workingDirectory: "",
           position: 0,
           envVars: [],
           isFavorite: false,
-          shell: "",
           arguments: [],
         },
   });
