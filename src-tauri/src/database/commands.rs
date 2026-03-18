@@ -1,9 +1,22 @@
-use super::{CategoryFilter, Command, Database, ExecutionHistory, ExecutionStatus, GroupFilter, Result, StatsTarget, TriggeredBy, WithHistory};
+use super::{
+    CategoryFilter, Command, Database, ExecutionHistory, ExecutionStatus, GroupFilter, Result,
+    StatsTarget, TriggeredBy, WithHistory,
+};
 use crate::constants::{COMMANDS_TABLE, COMMAND_GROUP_COLUMN};
+use crate::database::helpers::QueryBuilder;
 use rusqlite::{named_params, params};
 use tracing::{debug, instrument, warn};
 
 impl Database {
+    const EXECUTION_HISTORY_SELECT: &str = "SELECT c.*,
+    h.id as h_id, h.status as h_status, h.exit_code as h_exit_code,
+    h.started_at as h_started_at, h.completed_at as h_completed_at,
+    h.triggered_by as h_triggered_by, h.context as h_context,
+    h.pid as h_pid, h.workflow_id as h_workflow_id,
+    h.workflow_step_id as h_workflow_step_id,
+    h.command_id as h_command_id
+    FROM commands c";
+
     #[instrument(skip(self, cmd), fields(name = %cmd.name))]
     pub fn create_command(&self, cmd: &Command) -> Result<i64> {
         self.validate_command(cmd)?;
@@ -69,59 +82,53 @@ impl Database {
         limit: Option<i64>,
         offset: Option<i64>,
     ) -> Result<Vec<WithHistory<Command>>> {
-        let mut conditions = vec!["1=1"];
-        let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![];
+        let mut query_builder = QueryBuilder::new();
 
         match group_id {
             GroupFilter::Group(id) => {
-                conditions.push("c.group_id = ?");
-                params.push(Box::new(id));
+                query_builder.add_condition("c.group_id = ?", id);
             }
             GroupFilter::None => {
-                conditions.push("c.group_id IS NULL");
+                query_builder.add_condition_without_param("c.group_id IS NULL");
             }
             GroupFilter::All => {}
         }
 
         match category_id {
             CategoryFilter::Category(id) => {
-                conditions.push("c.category_id = ?");
-                params.push(Box::new(id));
+                query_builder.add_condition("c.category_id = ?", id);
             }
             CategoryFilter::None => {
-                conditions.push("c.category_id IS NULL");
+                query_builder.add_condition_without_param("c.category_id IS NULL");
             }
             CategoryFilter::All => {}
         }
 
         if favorites_only {
-            conditions.push("c.is_favorite = 1");
+            query_builder.add_condition_without_param("c.is_favorite = 1");
         }
 
-        let where_clause = conditions.join(" AND ");
+        let (where_clause, param_refs) = query_builder.build();
 
         let pagination = match (limit, offset) {
             (Some(l), Some(o)) => format!("LIMIT {} OFFSET {}", l, o),
             (Some(l), None) => format!("LIMIT {}", l),
-            (None, Some(o)) => format!("LIMIT -1 OFFSET {}", o), // SQLite requires LIMIT with OFFSET
+            (None, Some(o)) => format!("LIMIT -1 OFFSET {}", o),
             (None, None) => String::new(),
         };
 
-        let select_clause = Self::get_execution_history_query();
-
         let query = format!(
-            "{select_clause}
+            "{}
          LEFT JOIN (
              SELECT *, ROW_NUMBER() OVER (PARTITION BY command_id ORDER BY started_at DESC) as rn
              FROM execution_history
              WHERE workflow_id IS NULL
          ) h ON c.id = h.command_id AND h.rn = 1
-         WHERE {where_clause}
+         {where_clause}
          ORDER BY c.position
-         {pagination}"
+         {pagination}",
+            Self::EXECUTION_HISTORY_SELECT
         );
-
-        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
 
         self.conn()?
             .prepare(&query)?
@@ -164,26 +171,10 @@ impl Database {
         })
     }
 
-    /// the base SELECT clause for queries joining commands with execution history.
-    /// Provides consistent column aliasing (`h_` prefix) for history fields.
-    /// Returns: SQL SELECT string with all command columns and aliased history columns
-    fn get_execution_history_query() -> String {
-        "SELECT c.*,
-            h.id as h_id, h.status as h_status, h.exit_code as h_exit_code,
-            h.started_at as h_started_at, h.completed_at as h_completed_at,
-            h.triggered_by as h_triggered_by, h.context as h_context,
-            h.pid as h_pid, h.workflow_id as h_workflow_id,
-            h.workflow_step_id as h_workflow_step_id,
-            h.command_id as h_command_id
-         FROM commands c"
-            .to_string()
-    }
-
     #[instrument(skip(self))]
     pub fn get_recent_commands(&self, limit: i64) -> Result<Vec<WithHistory<Command>>> {
-        let select_clause = Self::get_execution_history_query();
         let query = format!(
-            "{select_clause}
+            "{}
             LEFT JOIN (
                 SELECT *, ROW_NUMBER() OVER (
                     PARTITION BY command_id
@@ -198,7 +189,8 @@ impl Database {
             )
             ORDER BY h.started_at DESC NULLS LAST
             LIMIT :limit
-        "
+        ",
+            Self::EXECUTION_HISTORY_SELECT
         );
 
         self.conn()?
@@ -232,12 +224,13 @@ impl Database {
         )
     }
 
+    // TODO: consider using transaction
     #[instrument(skip(self))]
     pub fn update_command(&self, cmd: &Command) -> Result<()> {
         self.validate_command(cmd)?;
         let old_cmd = self.get_command(cmd.id)?;
 
-        if (old_cmd.group_id != cmd.group_id) {
+        if old_cmd.group_id != cmd.group_id {
             self.update_parent_group(COMMANDS_TABLE, COMMAND_GROUP_COLUMN, cmd.id, cmd.group_id)?;
         }
 
@@ -372,10 +365,13 @@ impl Database {
     /// Name, Command must not be empty
     /// env var keys (alphanumeric + underscore + dash only)
     fn validate_command(&self, cmd: &Command) -> Result<()> {
-        self.validate_non_empty("name", &cmd.name)?;
-        self.validate_non_empty("command", &cmd.command)?;
-        self.validate_env_var_keys(&cmd.env_vars)?;
+        self.validate_field_length("name", &cmd.name, Self::MAX_NAME_LENGTH)?;
+        self.validate_field_length("command", &cmd.command, Self::MAX_COMMAND_LENGTH)?;
+        if let Some(desc) = &cmd.description {
+            self.validate_field_length("description", desc, Self::MAX_DESCRIPTION_LENGTH)?;
+        }
 
+        self.validate_env_var_keys(&cmd.env_vars)?;
         Ok(())
     }
 }

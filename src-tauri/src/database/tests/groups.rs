@@ -360,7 +360,7 @@ fn test_delete_group_cascades_to_commands() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, None, None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
         .unwrap();
     assert_eq!(commands.len(), 0);
 }

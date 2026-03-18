@@ -29,6 +29,7 @@ pub struct Group {
     pub category_id: Option<i64>,
     pub is_favorite: bool,
     pub icon: Option<String>,
+    pub color: Option<String>,
     #[serde(skip_deserializing, default)]
     pub created_at: String,
     #[serde(skip_deserializing, default)]
@@ -59,15 +60,15 @@ pub struct Command {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct CommandWithHistory {
-    pub command: Command,
+pub struct WithHistory<T> {
+    #[serde(flatten)]
+    pub item: T,
     pub history: Option<ExecutionHistory>,
 }
-
-impl Deref for CommandWithHistory {
-    type Target = Command;
+impl<T> Deref for WithHistory<T> {
+    type Target = T;
     fn deref(&self) -> &Self::Target {
-        &self.command
+        &self.item
     }
 }
 
@@ -109,7 +110,6 @@ pub enum ExecutionMode {
     Parallel,    // Run all at once (TODO: future implementation)
     Conditional, // Run based on conditions (TODO: future implementation)
 }
-
 impl ExecutionMode {
     pub fn as_str(&self) -> &str {
         match self {
@@ -135,6 +135,23 @@ pub enum StepCondition {
     OnSuccess, // Run only if previous step succeeded
     OnFailure, // Run only if previous step failed
 }
+impl StepCondition {
+    pub fn as_str(&self) -> &str {
+        match self {
+            StepCondition::Always => "always",
+            StepCondition::OnSuccess => "on_success",
+            StepCondition::OnFailure => "on_failure",
+        }
+    }
+    pub fn from_str(s: &str) -> Result<Self, String> {
+        match s {
+            "always" => Ok(StepCondition::Always),
+            "on_success" => Ok(StepCondition::OnSuccess),
+            "on_failure" => Ok(StepCondition::OnFailure),
+            _ => Err(format!("Invalid condition: {}", s)),
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -153,24 +170,6 @@ pub struct WorkflowStep {
     pub created_at: String,
     #[serde(skip_deserializing, default)]
     pub updated_at: String,
-}
-
-impl StepCondition {
-    pub fn as_str(&self) -> &str {
-        match self {
-            StepCondition::Always => "always",
-            StepCondition::OnSuccess => "on_success",
-            StepCondition::OnFailure => "on_failure",
-        }
-    }
-    pub fn from_str(s: &str) -> Result<Self, String> {
-        match s {
-            "always" => Ok(StepCondition::Always),
-            "on_success" => Ok(StepCondition::OnSuccess),
-            "on_failure" => Ok(StepCondition::OnFailure),
-            _ => Err(format!("Invalid condition: {}", s)),
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -194,7 +193,6 @@ pub struct ExecutionHistory {
     /// Optional JSON for extra metadata (e.g., workflow context)
     pub context: Option<String>,
 }
-
 impl ExecutionHistory {
     pub fn new_with_command(command_id: i64, triggered_by: TriggeredBy) -> ExecutionHistory {
         ExecutionHistory {
@@ -220,7 +218,6 @@ pub enum TriggeredBy {
     Workflow,
     Schedule,
 }
-
 impl TriggeredBy {
     pub fn as_str(&self) -> &str {
         match self {
@@ -252,7 +249,6 @@ pub enum ExecutionStatus {
     Skipped,
     Completed,
 }
-
 impl ExecutionStatus {
     pub fn as_str(&self) -> &str {
         match self {
@@ -279,4 +275,42 @@ impl ExecutionStatus {
             _ => Err(format!("Invalid execution mode: {}", s)),
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ExecutionStats {
+    pub total_count: i64,
+    pub success_count: i64,
+    pub failed_count: i64,
+    pub cancelled_count: i64,
+    pub timeout_count: i64,
+    pub running_count: i64,
+    pub paused_count: i64,
+    pub skipped_count: i64,
+    pub success_rate: f64,
+    pub average_duration_ms: Option<i64>,
+    pub last_executed_at: Option<String>,
+    pub first_executed_at: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum StatsTarget {
+    Command(i64),
+    Workflow(i64),
+    Global,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum GroupFilter {
+    Group(i64),
+    None,
+    All,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum CategoryFilter {
+    Category(i64),
+    None,
+    All,
 }

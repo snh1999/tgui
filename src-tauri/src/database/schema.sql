@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS groups (
     category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
     is_favorite BOOLEAN NOT NULL DEFAULT 0 CHECK(is_favorite IN (0,1)),
     icon TEXT,
+    color TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CHECK (parent_group_id IS NULL OR parent_group_id != id),
@@ -139,15 +140,16 @@ CREATE INDEX IF NOT EXISTS idx_workflow_steps_workflow ON workflow_steps(workflo
 CREATE INDEX IF NOT EXISTS idx_workflow_steps_command ON workflow_steps(command_id);
 CREATE INDEX IF NOT EXISTS idx_workflow_steps_position ON workflow_steps(workflow_id, command_id, position);
 
-CREATE INDEX IF NOT EXISTS idx_execution_history_command ON execution_history(command_id);
-CREATE INDEX IF NOT EXISTS idx_execution_history_workflow ON execution_history(workflow_id);
+-- CREATE INDEX IF NOT EXISTS idx_execution_history_command ON execution_history(command_id);
+-- CREATE INDEX IF NOT EXISTS idx_execution_history_workflow ON execution_history(workflow_id);
 CREATE INDEX IF NOT EXISTS idx_execution_history_workflow_step ON execution_history(command_id, workflow_id, workflow_step_id);
 CREATE INDEX IF NOT EXISTS idx_execution_history_status ON execution_history(status);
 CREATE INDEX IF NOT EXISTS idx_execution_history_command_status ON execution_history(command_id, status);
 CREATE INDEX IF NOT EXISTS idx_execution_history_workflow_status ON execution_history(workflow_id, status);
-CREATE INDEX IF NOT EXISTS idx_execution_history_time ON execution_history(completed_at);
-CREATE INDEX IF NOT EXISTS idx_execution_history_running ON execution_history(status);
-
+-- CREATE INDEX IF NOT EXISTS idx_execution_history_completed ON execution_history(completed_at);
+CREATE INDEX IF NOT EXISTS idx_execution_history_started ON execution_history(started_at);
+CREATE INDEX IF NOT EXISTS idx_execution_history_command_time ON execution_history(command_id, started_at);
+CREATE INDEX IF NOT EXISTS idx_execution_history_workflow_time ON execution_history(workflow_id, started_at);
 
 -- Triggers
 -- Updated At time

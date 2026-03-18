@@ -5,8 +5,63 @@ use serde_json::Error;
 use std::collections::HashMap;
 use tracing::{debug, error, info, warn};
 
+pub(crate) struct QueryBuilder {
+    conditions: Vec<String>,
+    params: Vec<Box<dyn rusqlite::ToSql>>,
+}
+
+impl QueryBuilder {
+    pub fn new() -> Self {
+        Self {
+            conditions: vec![],
+            params: vec![],
+        }
+    }
+
+    pub fn add_condition(&mut self, condition: &str, param: impl rusqlite::ToSql + 'static) -> &mut Self {
+        self.conditions.push(condition.to_string());
+        self.params.push(Box::new(param));
+        self
+    }
+
+    pub fn add_condition_without_param(&mut self, condition: &str) -> &mut Self {
+        self.conditions.push(condition.to_string());
+        self
+    }
+
+    pub fn build(&self) -> (String, Vec<&dyn rusqlite::ToSql>) {
+        let where_clause = if self.conditions.is_empty() {
+            String::new()
+        } else {
+            format!("WHERE {}", self.conditions.join(" AND "))
+        };
+        let param_refs: Vec<&dyn rusqlite::ToSql> = self.params.iter().map(|p| p.as_ref()).collect();
+        (where_clause, param_refs)
+    }
+}
+
+
 impl Database {
     pub(crate) const POSITION_GAP: i64 = 1000;
+    pub(crate) const MAX_NAME_LENGTH: usize = 255;
+    pub(crate) const MAX_COMMAND_LENGTH: usize = 10000;
+    pub(crate) const MAX_DESCRIPTION_LENGTH: usize = 2000;
+
+    pub(crate) fn validate_field_length(&self, field: &'static str, value: &str, max: usize) -> Result<()> {
+        if value.trim().is_empty() {
+            error!("Empty field: {field}");
+            return Err(DatabaseError::InvalidData {
+                field,
+                reason: format!("{field} cannot be empty"),
+            });
+        } else if value.len() > max {
+            return Err(DatabaseError::InvalidData {
+                field,
+                reason: format!("{} exceeds maximum length of {}", field, max),
+            });
+        }
+        Ok(())
+    }
 
     pub(crate) fn create<P: rusqlite::Params>(
         &self,
@@ -174,18 +229,6 @@ impl Database {
         Ok(())
     }
 
-    pub(crate) fn validate_non_empty(&self, field: &'static str, value: &str) -> Result<()> {
-        if value.trim().is_empty() {
-            error!("Empty field: {field}");
-            Err(DatabaseError::InvalidData {
-                field,
-                reason: format!("{field} cannot be empty"),
-            })
-        } else {
-            Ok(())
-        }
-    }
-
     /// Move command between two positions (calculates midpoint)
     /// prev_id None means move to top
     /// next_id None means move to bottom
@@ -305,23 +348,21 @@ impl Database {
         category_id: Option<i64>,
         favorites_only: bool,
     ) -> Result<i64> {
-        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-        let mut sql_statement = format!("SELECT COUNT(*) FROM {table} WHERE {column} IS ?1");
-        params.push(Box::new(id));
+        let mut query_builder = QueryBuilder::new();
+        query_builder.add_condition(&format!("{column} IS ?"), id);
 
         if let Some(cid) = category_id {
-            sql_statement.push_str(&format!(" AND category_id = ?{}", params.len() + 1));
-            params.push(Box::new(cid));
+            query_builder.add_condition("category_id = ?", cid);
         }
-
         if favorites_only {
-            sql_statement.push_str(" AND is_favorite = 1");
+            query_builder.add_condition_without_param("is_favorite = 1");
         }
 
-        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        let (where_clause, param_refs) = query_builder.build();
+        let sql_statement = format!("SELECT COUNT(*) FROM {table} {where_clause}");
 
         let count = self
-            .query_database(&sql_statement, &*param_refs, |row| row.get(0))?
+            .query_database(&sql_statement, param_refs.as_slice(), |row| row.get(0))?
             .into_iter()
             .next()
             .ok_or_else(|| rusqlite::Error::QueryReturnedNoRows)?;
