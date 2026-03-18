@@ -4,11 +4,12 @@ use super::{
 use crate::constants::{WORKFLOWS_TABLE, WORKFLOW_STEPS_TABLE};
 use rusqlite::{named_params, params};
 use tracing::{debug, info, instrument, warn};
+use crate::database::helpers::QueryBuilder;
 
 impl Database {
     #[instrument(skip(self, workflow), fields(name = %workflow.name))]
     pub fn create_workflow(&self, workflow: &Workflow) -> Result<i64> {
-        self.validate_non_empty("name", &workflow.name)?;
+        self.validate_field_length("name", &workflow.name, Self::MAX_NAME_LENGTH)?;
 
         let position: i64 = self.get_position(WORKFLOWS_TABLE, None, None)?;
 
@@ -66,8 +67,8 @@ impl Database {
 
     #[instrument(skip(self, workflow))]
     pub fn update_workflow(&self, workflow: &Workflow) -> Result<()> {
-        self.validate_non_empty("name", &workflow.name)?;
-
+        self.validate_field_length("name", &workflow.name, Self::MAX_NAME_LENGTH)?;
+        
         self.execute_db(
             WORKFLOWS_TABLE,
             workflow.id,
@@ -192,24 +193,22 @@ impl Database {
         command_id: Option<i64>,
         enabled_only: bool,
     ) -> Result<Vec<WorkflowStep>> {
-        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-        let mut query = "SELECT * FROM workflow_steps WHERE 1=1".to_string();
-
+        let mut query_builder = QueryBuilder::new();
+        
         if let Some(workflow_id) = workflow_id {
-            query.push_str(" AND workflow_id = ?1 ");
-            params.push(Box::new(workflow_id));
+            query_builder.add_condition(" workflow_id = ?", workflow_id);
         }
         if let Some(command_id) = command_id {
-            query.push_str(&format!(" AND command_id = ?{} ", params.len() + 1));
-            params.push(Box::new(command_id));
+            query_builder.add_condition(" command_id = ?", command_id);
         }
         if enabled_only {
-            query.push_str(" AND enabled = 1 ");
+            query_builder.add_condition_without_param("enabled = 1");
         }
-        query.push_str(" ORDER BY position");
 
-        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
-        self.query_database(&query, &*param_refs, Self::row_to_workflow_step)
+        let (where_clause, param_refs) = query_builder.build();
+        let query = format!("SELECT * FROM workflow_steps {where_clause} ORDER BY position");
+
+        self.query_database(&query, param_refs.as_slice(), Self::row_to_workflow_step)
     }
 
     #[instrument(skip(self))]

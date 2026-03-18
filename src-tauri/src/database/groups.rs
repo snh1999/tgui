@@ -1,8 +1,9 @@
 use super::{Database, DatabaseError, Group, Result};
-use crate::constants::{GROUPS_TABLE, GROUP_PARENT_GROUP_COLUMN};
+use crate::constants::{COMMANDS_TABLE, COMMAND_GROUP_COLUMN, GROUPS_TABLE, GROUP_PARENT_GROUP_COLUMN};
 use rusqlite::{named_params, params};
 use std::collections::HashSet;
 use tracing::{debug, instrument, warn};
+use crate::database::helpers::QueryBuilder;
 
 impl Database {
     #[instrument(skip(self, group), fields(name = %group.name))]
@@ -18,8 +19,8 @@ impl Database {
 
         self.create(
             GROUPS_TABLE,
-            "INSERT INTO groups (name, description, parent_group_id, position, working_directory, env_vars, shell, category_id, is_favorite, icon)
-             VALUES (:name, :description, :parent_group_id, :position, :working_directory, :env_vars, :shell, :category_id, :is_favorite, :icon)",
+            "INSERT INTO groups (name, description, parent_group_id, position, working_directory, env_vars, shell, category_id, is_favorite, icon, color)
+             VALUES (:name, :description, :parent_group_id, :position, :working_directory, :env_vars, :shell, :category_id, :is_favorite, :icon, :color)",
             named_params! {
                 ":name": group.name,
                 ":description": group.description,
@@ -31,6 +32,7 @@ impl Database {
                 ":category_id": group.category_id,
                 ":is_favorite": group.is_favorite,
                 ":icon": group.icon,
+                ":color": group.color,
             },
         )
     }
@@ -52,24 +54,38 @@ impl Database {
         category_id: Option<i64>,
         favorites_only: bool,
     ) -> Result<Vec<Group>> {
-        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-        let mut sql_statement = "SELECT * FROM groups WHERE parent_group_id IS ?1".to_string();
-        params.push(Box::new(parent_id));
+        let mut query_builder = QueryBuilder::new();
+        query_builder.add_condition("parent_group_id IS ?", parent_id);
 
         if let Some(cid) = category_id {
-            sql_statement.push_str(&format!(" AND category_id = ?{}", params.len() + 1));
-            params.push(Box::new(cid));
+            query_builder.add_condition("category_id IS ?", cid);
         }
 
         if favorites_only {
-            sql_statement.push_str(" AND is_favorite = 1");
+            query_builder.add_condition_without_param("is_favorite = 1");
         }
 
-        sql_statement.push_str(" ORDER BY position");
+        let (where_clause, param_refs) = query_builder.build();
 
-        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        let query = format!("SELECT * FROM groups {where_clause} ORDER BY position");
 
-        self.query_database(&sql_statement, &*param_refs, Self::row_to_group)
+        self.query_database(&query, param_refs.as_slice(), Self::row_to_group)
+    }
+
+    #[instrument(skip(self))]
+    pub fn get_groups_count(
+        &self,
+        group_id: Option<i64>,
+        category_id: Option<i64>,
+        favorites_only: bool,
+    ) -> Result<i64> {
+        self.get_items_groups_commands_count(
+            GROUPS_TABLE,
+            GROUP_PARENT_GROUP_COLUMN,
+            group_id,
+            category_id,
+            favorites_only,
+        )
     }
 
     #[instrument(skip(self))]
@@ -99,7 +115,8 @@ impl Database {
             env_vars = :env_vars,
             shell = :shell,
             category_id = :category_id,
-            icon = :icon
+            icon = :icon,
+            color = :color
             WHERE id = :id",
             named_params! {
                 ":name": group.name,
@@ -110,6 +127,7 @@ impl Database {
                 ":shell": group.shell,
                 ":category_id": group.category_id,
                 ":icon": group.icon,
+                ":color": group.color,
                 ":id": group.id
             },
         )
@@ -156,6 +174,7 @@ impl Database {
         )
     }
 
+    // TODO: include it with get path
     #[instrument(skip(self))]
     pub fn get_group_command_count(&self, id: i64) -> Result<i64> {
         self.query_row(
@@ -247,13 +266,14 @@ impl Database {
             category_id: row.get("category_id")?,
             is_favorite: row.get("is_favorite")?,
             icon: row.get("icon")?,
+            color: row.get("color")?,
             created_at: row.get("created_at")?,
             updated_at: row.get("updated_at")?,
         })
     }
 
     fn validate_group(&self, group: &Group) -> Result<()> {
-        self.validate_non_empty("name", &group.name)?;
+        self.validate_field_length("name", &group.name, Self::MAX_NAME_LENGTH)?;
         self.validate_env_var_keys(&group.env_vars)?;
 
         Ok(())

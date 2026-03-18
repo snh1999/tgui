@@ -148,6 +148,7 @@ impl GroupBuilder {
                 category_id: None,
                 is_favorite: false,
                 icon: None,
+                color: None,
                 created_at: String::new(),
                 updated_at: String::new(),
             },
