@@ -1,6 +1,4 @@
-use super::{
-    Command, CommandWithHistory, Database, ExecutionHistory, ExecutionStatus, Result, TriggeredBy,
-};
+use super::{CategoryFilter, Command, Database, ExecutionHistory, ExecutionStatus, GroupFilter, Result, StatsTarget, TriggeredBy, WithHistory};
 use crate::constants::{COMMANDS_TABLE, COMMAND_GROUP_COLUMN};
 use rusqlite::{named_params, params};
 use tracing::{debug, instrument, warn};
@@ -65,25 +63,35 @@ impl Database {
     #[instrument(skip(self))]
     pub fn get_commands(
         &self,
-        group_id: Option<i64>,
-        category_id: Option<i64>,
+        group_id: GroupFilter,
+        category_id: CategoryFilter,
         favorites_only: bool,
         limit: Option<i64>,
         offset: Option<i64>,
-    ) -> Result<Vec<CommandWithHistory>> {
+    ) -> Result<Vec<WithHistory<Command>>> {
         let mut conditions = vec!["1=1"];
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![];
 
-        if let Some(gid) = group_id {
-            conditions.push("c.group_id = ?");
-            params.push(Box::new(gid));
-        } else {
-            conditions.push("c.group_id IS NULL");
+        match group_id {
+            GroupFilter::Group(id) => {
+                conditions.push("c.group_id = ?");
+                params.push(Box::new(id));
+            }
+            GroupFilter::None => {
+                conditions.push("c.group_id IS NULL");
+            }
+            GroupFilter::All => {}
         }
 
-        if let Some(cid) = category_id {
-            conditions.push("c.category_id = ?");
-            params.push(Box::new(cid));
+        match category_id {
+            CategoryFilter::Category(id) => {
+                conditions.push("c.category_id = ?");
+                params.push(Box::new(id));
+            }
+            CategoryFilter::None => {
+                conditions.push("c.category_id IS NULL");
+            }
+            CategoryFilter::All => {}
         }
 
         if favorites_only {
@@ -99,24 +107,18 @@ impl Database {
             (None, None) => String::new(),
         };
 
+        let select_clause = Self::get_execution_history_query();
+
         let query = format!(
-            "SELECT c.*,
-            h.id as h_id, h.status as h_status, h.exit_code as h_exit_code,
-            h.started_at as h_started_at, h.completed_at as h_completed_at,
-            h.triggered_by as h_triggered_by, h.context as h_context,
-            h.pid as h_pid, h.workflow_id as h_workflow_id,
-            h.workflow_step_id as h_workflow_step_id,
-            h.command_id as h_command_id
-         FROM commands c
+            "{select_clause}
          LEFT JOIN (
              SELECT *, ROW_NUMBER() OVER (PARTITION BY command_id ORDER BY started_at DESC) as rn
              FROM execution_history
              WHERE workflow_id IS NULL
          ) h ON c.id = h.command_id AND h.rn = 1
-         WHERE {}
+         WHERE {where_clause}
          ORDER BY c.position
-         {}",
-            where_clause, pagination
+         {pagination}"
         );
 
         let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
@@ -129,7 +131,10 @@ impl Database {
                     Some(_) => Some(Self::row_to_execution_history_with_prefix(row)?),
                     None => None,
                 };
-                Ok(CommandWithHistory { command, history })
+                Ok(WithHistory {
+                    item: command,
+                    history,
+                })
             })?
             .collect::<rusqlite::Result<Vec<_>>>()
             .map_err(Into::into)
@@ -159,6 +164,60 @@ impl Database {
         })
     }
 
+    /// the base SELECT clause for queries joining commands with execution history.
+    /// Provides consistent column aliasing (`h_` prefix) for history fields.
+    /// Returns: SQL SELECT string with all command columns and aliased history columns
+    fn get_execution_history_query() -> String {
+        "SELECT c.*,
+            h.id as h_id, h.status as h_status, h.exit_code as h_exit_code,
+            h.started_at as h_started_at, h.completed_at as h_completed_at,
+            h.triggered_by as h_triggered_by, h.context as h_context,
+            h.pid as h_pid, h.workflow_id as h_workflow_id,
+            h.workflow_step_id as h_workflow_step_id,
+            h.command_id as h_command_id
+         FROM commands c"
+            .to_string()
+    }
+
+    #[instrument(skip(self))]
+    pub fn get_recent_commands(&self, limit: i64) -> Result<Vec<WithHistory<Command>>> {
+        let select_clause = Self::get_execution_history_query();
+        let query = format!(
+            "{select_clause}
+            LEFT JOIN (
+                SELECT *, ROW_NUMBER() OVER (
+                    PARTITION BY command_id
+                    ORDER BY started_at DESC, id DESC
+                ) as rn
+                FROM execution_history
+                WHERE command_id IS NOT NULL
+            ) h ON c.id = h.command_id AND h.rn = 1
+            WHERE EXISTS (
+                SELECT 1 FROM execution_history
+                WHERE command_id = c.id
+            )
+            ORDER BY h.started_at DESC NULLS LAST
+            LIMIT :limit
+        "
+        );
+
+        self.conn()?
+            .prepare(&query)?
+            .query_map(named_params! { ":limit": limit }, |row| {
+                let command = Self::row_to_command(row)?;
+                let history = match row.get::<_, Option<i64>>("h_id")? {
+                    Some(_) => Some(Self::row_to_execution_history_with_prefix(row)?),
+                    None => None,
+                };
+                Ok(WithHistory {
+                    item: command,
+                    history,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(Into::into)
+    }
+
     #[instrument(skip(self))]
     pub fn search_commands(&self, search_term: &str) -> Result<Vec<Command>> {
         debug!(search_term_length = search_term.len(), "Searching commands");
@@ -176,6 +235,11 @@ impl Database {
     #[instrument(skip(self))]
     pub fn update_command(&self, cmd: &Command) -> Result<()> {
         self.validate_command(cmd)?;
+        let old_cmd = self.get_command(cmd.id)?;
+
+        if (old_cmd.group_id != cmd.group_id) {
+            self.update_parent_group(COMMANDS_TABLE, COMMAND_GROUP_COLUMN, cmd.id, cmd.group_id)?;
+        }
 
         let arguments = serde_json::to_string(&cmd.arguments)?;
         let env_vars = Self::hashmap_to_string(&cmd.env_vars)?;
@@ -195,7 +259,6 @@ impl Database {
             command = :command,
             arguments = :arguments,
             description = :description,
-            group_id = :group_id,
             working_directory = :working_directory,
             env_vars = :env_vars,
             shell = :shell,
@@ -207,7 +270,6 @@ impl Database {
                 ":command": cmd.command,
                 ":arguments": arguments,
                 ":description": cmd.description,
-                ":group_id": cmd.group_id,
                 ":working_directory": cmd.working_directory,
                 ":env_vars": env_vars,
                 ":shell": cmd.shell,
