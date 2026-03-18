@@ -140,6 +140,19 @@ impl Database {
         Ok(position)
     }
 
+    pub(crate) fn update_parent_group(
+        &self,
+        table: &'static str,
+        parent_column: &'static str,
+        id: i64,
+        parent_id: Option<i64>,
+    ) -> Result<()> {
+        let position = self.get_position(table, Some(parent_column), parent_id)?;
+        let query = format!("UPDATE {table} SET {parent_column}=?1, position=?2 WHERE id = {id}");
+        self.execute_db(table, id, &query, params![parent_id, position])?;
+        Ok(())
+    }
+
     pub(crate) fn validate_env_var_keys(
         &self,
         env_vars: &Option<HashMap<String, String>>,

@@ -11,7 +11,7 @@ impl Database {
         icon: Option<&str>,
         color: Option<&str>,
     ) -> Result<i64> {
-        self.validate_non_empty("name", &name)?;
+        self.validate_field_length("name", &name, Self::MAX_NAME_LENGTH)?;
 
         self.create(
             CATEGORIES_TABLE,
@@ -47,7 +47,7 @@ impl Database {
         icon: Option<&str>,
         color: Option<&str>,
     ) -> Result<()> {
-        self.validate_non_empty("name", &name)?;
+        self.validate_field_length("name", &name, Self::MAX_NAME_LENGTH)?;
 
         self.execute_db(
             CATEGORIES_TABLE,

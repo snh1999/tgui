@@ -307,7 +307,7 @@ fn test_get_commands_by_group() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, None, None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
         .unwrap();
     assert_eq!(commands.len(), 2);
     assert!(commands.iter().all(|c| c.group_id == Some(group_id)));
@@ -325,7 +325,7 @@ fn test_get_commands_root_group() {
 
     let commands = test_db
         .db
-        .get_commands(None, None, false, None, None)
+        .get_commands(GroupFilter::None, CategoryFilter::None, false, None, None)
         .unwrap();
     assert_eq!(commands.len(), 3);
     assert!(commands.iter().all(|c| c.group_id == None));
@@ -348,9 +348,9 @@ fn test_get_commands_by_none_category() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, None, None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
         .unwrap();
-    assert_eq!(commands.len(), 3);
+    assert_eq!(commands.len(), 2);
 }
 #[test]
 fn test_get_commands_by_category() {
@@ -369,7 +369,7 @@ fn test_get_commands_by_category() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), Some(category_id), false, None, None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::Category(category_id), false, None, None)
         .unwrap();
     assert_eq!(commands.len(), 1);
     assert!(commands.iter().all(|c| c.category_id == Some(category_id)));
@@ -405,7 +405,7 @@ fn test_get_commands_by_category_and_group() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), Some(category_id), false, None, None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::Category(category_id), false, None, None)
         .unwrap();
     assert_eq!(commands.len(), 2);
     assert!(commands.iter().all(|c| c.group_id == Some(group_id)));
@@ -424,7 +424,7 @@ fn test_get_favorite_commands() {
 
     let favorites = test_db
         .db
-        .get_commands(Some(group_id), None, true, None, None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, true, None, None)
         .unwrap();
     assert_eq!(favorites.len(), 1);
     assert_eq!(favorites[0].id, fav_id);
@@ -441,7 +441,7 @@ fn test_get_commands_pagination_limit() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, Some(3), None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, Some(3), None)
         .unwrap();
     assert_eq!(commands.len(), 3);
 }
@@ -462,10 +462,10 @@ fn test_get_commands_pagination_offset() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, None, Some(2))
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, Some(2))
         .unwrap();
     assert_eq!(commands.len(), 3);
-    assert_eq!(commands[0].command.id, ids[2]);
+    assert_eq!(commands[0].id, ids[2]);
 }
 
 #[test]
@@ -484,11 +484,11 @@ fn test_get_commands_pagination_limit_and_offset() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, Some(2), Some(1))
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, Some(2), Some(1))
         .unwrap();
     assert_eq!(commands.len(), 2);
-    assert_eq!(commands[0].command.id, ids[1]);
-    assert_eq!(commands[1].command.id, ids[2]);
+    assert_eq!(commands[0].id, ids[1]);
+    assert_eq!(commands[1].id, ids[2]);
 }
 
 #[test]
@@ -500,7 +500,7 @@ fn test_get_commands_pagination_offset_beyond_total() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, None, Some(100))
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, Some(100))
         .unwrap();
     assert!(commands.is_empty());
 }
@@ -521,7 +521,7 @@ fn test_get_commands_with_history_joined() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, None, None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
         .unwrap();
     assert_eq!(commands.len(), 1);
 
@@ -554,7 +554,7 @@ fn test_get_commands_with_history_status_updated() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, None, None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
         .unwrap();
     assert_eq!(commands.len(), 1);
 
@@ -591,7 +591,7 @@ fn test_get_commands_history_most_recent_only() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, None, None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
         .unwrap();
     let retrieved_history = commands[0].history.as_ref().unwrap();
     assert_eq!(retrieved_history.id, history_id2);
@@ -618,9 +618,162 @@ fn test_get_commands_excludes_workflow_history() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, None, None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
         .unwrap();
     assert!(commands[0].history.is_none());
+}
+
+#[test]
+fn test_get_recent_commands_basic() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+
+    // Create command with history
+    let cmd_id = test_db.create_test_command("Test", "echo test", Some(group_id));
+    test_db
+        .db
+        .create_execution_history(&ExecutionHistoryBuilder::new().with_command(cmd_id).build())
+        .unwrap();
+
+    let recent = test_db.db.get_recent_commands(10).unwrap();
+    assert_eq!(recent.len(), 1);
+    assert_eq!(recent[0].item.id, cmd_id);
+    assert!(recent[0].history.is_some());
+}
+
+#[test]
+fn test_get_recent_commands_empty_when_no_history() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+
+    // Create command WITHOUT history
+    test_db.create_test_command("Test", "echo test", Some(group_id));
+
+    let recent = test_db.db.get_recent_commands(10).unwrap();
+    assert!(recent.is_empty());
+}
+
+#[test]
+fn test_get_recent_commands_limit() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+
+    for i in 0..5 {
+        let cmd_id = test_db.create_test_command(&format!("Cmd{}", i), "echo test", Some(group_id));
+        test_db
+            .db
+            .create_execution_history(&ExecutionHistoryBuilder::new().with_command(cmd_id).build())
+            .unwrap();
+    }
+
+    let recent = test_db.db.get_recent_commands(3).unwrap();
+    assert_eq!(recent.len(), 3);
+}
+
+#[test]
+fn test_get_recent_commands_ordering_by_started_at() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+
+    let cmd1 = test_db.create_test_command("Old", "echo old", Some(group_id));
+    let cmd2 = test_db.create_test_command("New", "echo new", Some(group_id));
+    let cmd3 = test_db.create_test_command("Middle", "echo middle", Some(group_id));
+    let cmd4 = test_db.create_test_command("Middle", "echo middle", Some(group_id));
+
+    for cmd_id in [cmd4, cmd1, cmd3, cmd2] {
+        test_db
+            .db
+            .create_execution_history(&ExecutionHistoryBuilder::new().with_command(cmd_id).build())
+            .unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(1000));
+    }
+
+    let recent = test_db.db.get_recent_commands(3).unwrap();
+    assert_eq!(recent.len(), 3);
+    assert_eq!(recent[0].item.id, cmd2);
+    assert_eq!(recent[1].item.id, cmd3);
+    assert_eq!(recent[2].item.id, cmd1);
+}
+
+#[test]
+fn test_get_recent_commands_multiple_history_per_command() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+    let cmd_id = test_db.create_test_command("Test", "echo test", Some(group_id));
+
+    let mut execution_id = 0;
+
+    for _ in 0..3 {
+        execution_id = test_db
+            .db
+            .create_execution_history(&ExecutionHistoryBuilder::new().with_command(cmd_id).build())
+            .unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(1000));
+    }
+
+    let recent = test_db.db.get_recent_commands(10).unwrap();
+    assert_eq!(recent.len(), 1);
+    assert_eq!(recent[0].history.as_ref().unwrap().id, execution_id);
+}
+
+#[test]
+fn test_get_recent_commands_includes_workflow_history() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+    let cmd_id = test_db.create_test_command("Test", "echo test", Some(group_id));
+    let workflow_id = test_db.create_test_workflow("Test Workflow");
+    let flow_step_id = test_db.create_test_workflow_step(workflow_id, cmd_id);
+
+    let history = ExecutionHistoryBuilder::new()
+        .with_workflow_step(cmd_id, workflow_id, flow_step_id)
+        .build();
+    test_db.db.create_execution_history(&history).unwrap();
+
+    let recent = test_db.db.get_recent_commands(10).unwrap();
+    assert_eq!(recent.len(), 1);
+    assert_eq!(
+        recent[0].history.as_ref().unwrap().triggered_by,
+        TriggeredBy::Workflow
+    );
+}
+
+#[test]
+fn test_get_recent_commands_zero_limit() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+
+    let cmd_id = test_db.create_test_command("Test", "echo test", Some(group_id));
+    let history = ExecutionHistoryBuilder::new().with_command(cmd_id).build();
+    test_db.db.create_execution_history(&history).unwrap();
+
+    let recent = test_db.db.get_recent_commands(0).unwrap();
+    assert!(recent.is_empty());
+}
+
+#[test]
+fn test_get_recent_commands_preserves_command_fields() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+    let category_id = test_db.create_test_category("Test Category");
+
+    let cmd = CommandBuilder::new("Full", "echo full")
+        .with_group(group_id)
+        .with_category(category_id)
+        .with_env("KEY", "value")
+        .build();
+    let cmd_id = test_db.save_command_to_db(&cmd);
+
+    let history = ExecutionHistoryBuilder::new().with_command(cmd_id).build();
+    test_db.db.create_execution_history(&history).unwrap();
+
+    let recent = test_db.db.get_recent_commands(10).unwrap();
+    assert_eq!(recent.len(), 1);
+
+    let retrieved = &recent[0].item;
+    assert_eq!(retrieved.name, "Full");
+    assert_eq!(retrieved.command, "echo full");
+    assert_eq!(retrieved.group_id, Some(group_id));
+    assert_eq!(retrieved.category_id, Some(category_id));
 }
 
 #[test]
@@ -785,7 +938,7 @@ fn test_move_command_between() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, None, None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
         .unwrap();
     assert_eq!(commands[0].id, id1);
     assert_eq!(commands[1].id, id3);
@@ -807,7 +960,7 @@ fn test_move_command_to_top() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, None, None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
         .unwrap();
     assert_eq!(commands[0].id, id2); // B now first
     assert_eq!(commands[1].id, id1);
@@ -829,7 +982,7 @@ fn test_move_command_to_bottom() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, None, None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
         .unwrap();
     assert_eq!(commands[0].id, id2);
     assert_eq!(commands[1].id, id1); // A now last
@@ -912,7 +1065,7 @@ fn test_position_gap_exhaustion_triggers_renumber() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, None, None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
         .unwrap();
     assert_eq!(commands.len(), 3);
 
@@ -934,7 +1087,7 @@ fn test_foreign_key_constraint_on_delete_group() {
 
     let commands = test_db
         .db
-        .get_commands(Some(group_id), None, false, None, None)
+        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
         .unwrap();
     assert_eq!(commands.len(), 0);
 }
@@ -957,10 +1110,15 @@ fn test_very_long_command_name() {
     let test_db = TestDb::setup_test_db();
     let long_name = "a".repeat(1000);
 
+    let result = test_db.db.create_command(&CommandBuilder::new(&long_name, "echo").build());
+
+    assert!(result.is_err());
+
+    let long_name = "a".repeat(254);
     let cmd_id = test_db.create_test_command(&long_name, "echo", None);
     let retrieved = test_db.db.get_command(cmd_id).unwrap();
+    assert_eq!(retrieved.name.len(), 254);
 
-    assert_eq!(retrieved.name.len(), 1000);
 }
 
 #[test]
