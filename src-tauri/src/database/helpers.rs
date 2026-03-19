@@ -203,7 +203,7 @@ impl Database {
         parent_id: Option<i64>,
     ) -> Result<()> {
         let position = self.get_position(table, Some(parent_column), parent_id)?;
-        let query = format!("UPDATE {table} SET {parent_column}=?1, position=?2 WHERE id = {id}");
+        let query = format!("UPDATE {table} SET {parent_column} = ?1, position = ?2 WHERE id = {id}");
         self.execute_db(table, id, &query, params![parent_id, position])?;
         Ok(())
     }

@@ -6,6 +6,7 @@ mod groups;
 mod integration;
 mod settings;
 mod workflows;
+pub mod helpers;
 
 use tempfile::TempDir;
 

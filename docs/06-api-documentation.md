@@ -66,7 +66,7 @@ struct CommandPayload {
     - Environment variable keys must match `^[a-zA-Z_][a-zA-Z0-9_]*$`
     - Must start with letter or underscore
     - Subsequent characters: alphanumeric + underscore only
-    - Unicode characters, emoji, and special symbols are rejected
+    - Spaces, dots, unicode, and other special characters are rejected with `InvalidData { field: "env_vars" }`
   - **Value Handling**:
     - Empty string values are allowed
     - Special characters in values are preserved (shell injection patterns stored as-is)
@@ -167,7 +167,7 @@ const commandId = await invoke('create_command', {
 
 ### List commands
 
-`get_commands(group_id: Option<i64>, favorites_only: bool) -> Result<Vec<Command>>`
+`get_commands(group_id: GroupFilter, category_id: CategoryFilter, favorites_only: bool) -> Result<Vec<Command>>`
 
 **Description**: Get commands with optional filtering.
 
@@ -182,10 +182,16 @@ struct CommandFilter {
 ```
 
 **Parameters**:
+- `parent_id`: `GroupFilter` 
+  - `Group(id)` filters to children of that parent; 
+  - `None` returns root-level groups (NULL parent); 
+  - `All` returns all groups regardless of parent
+- `category_id`: `CategoryFilter` 
+  - `Category(id)` filters by category; 
+  - `None` returns uncategorized groups; 
+  - `All` ignores category
+- `favorites_only`: When `true`, only groups with `is_favorite = 1` are returned
 
-- `group_id`: Filter by group
-- `category_id`: Filter by category
-- `favorites_only`: Show only favorites
 - **Pagination Parameters**:
   - `limit`: Maximum number of commands to return (None = unlimited)
   - `offset`: Number of commands to skip (None = start from beginning)
@@ -197,7 +203,7 @@ struct CommandFilter {
 
 **Returns**:
 
-- `Ok(commands)`: Array of commands with resolved inheritance (settings applied)
+- `Ok(commands)`: Array of commands with latest execution history entry (settings applied)
 - `Err(msg)`: Database error
 
 **Usage**:
@@ -228,6 +234,44 @@ const favoriteCommands = await invoke('get_commands', {
 })
 ```
 
+---
+### List Recent Commands
+
+`get_recent_commands(limit: i64) -> Result<Vec<WithHistory<Command>>>`
+
+**Description**: Returns commands that have been executed recently, ordered by their most recent execution time. 
+- Only commands with at least one execution history entry are included (Returns empty vector if none found)
+- Commands with multiple executions only appear once (most recent)
+- Workflow-associated executions are included (unlike get_commands filter)
+
+**Parameters**:
+- `limit`: Maximum number of commands to return (required, `i64`)
+
+**Returns**: Array of commands wrapped with their most recent execution history, ordered by `started_at DESC` (most recent executions first).
+
+**Key Differences from `get_commands`**:
+- Only returns commands that have been executed at least once
+- Results ordered by execution time, not by command position
+- No filtering by group, category, or favorites
+
+**SQL Implementation Notes**:
+- Uses `ROW_NUMBER() OVER (PARTITION BY command_id ORDER BY started_at DESC, id DESC)` to select most recent history per command
+- The `id DESC` tie-breaker ensures deterministic ordering when timestamps are identical
+- Uses `WHERE EXISTS` to filter only commands with history entries
+- `NULLS LAST` option requires SQLite 3.30.0+ (2019-10-04)
+
+**Edge Cases**:
+- **No executions exist**: Returns an empty vector; 
+- **Command executed multiple times**: Appears exactly once, with the most recent history entry attached
+- Identical `started_at` timestamps: Tie-broken by `id`, ensuring deterministic ordering
+- Workflow executions: Unlike `get_commands`, workflow-associated executions (`workflow_id IS NOT NULL`) are included here; if a command was only ever run via a workflow it will still appear
+- `limit = 0`: Returns an empty vector without error
+
+
+**Usage**:
+```typescript
+const recent = await invoke('get_recent_commands', { limit: 10 })
+```
 ---
 
 ### Get Commands Count
@@ -275,7 +319,7 @@ const totalCount = await invoke('get_commands_count', {
 
 ---
 
-### Move Command Between Positions
+    ### Move Command Between Positions
 
 `
 move_command_between(
@@ -385,6 +429,8 @@ struct Group {
     env_vars: Option<HashMap<String, String>>,
     shell: Option<String>,
     category_id: Option<i64>,
+    icon: Option<String>,
+    color: Option<String>,
 }
 ```
 
@@ -1459,11 +1505,11 @@ Default: keep_last = 100 (matches EXECUTION_HISTORY_LIMIT).
 
 **Example usage**:
 
-```rust
-let total   = db.get_command_execution_stats(cmd_id, None) ?;
-let success = db.get_command_execution_stats(cmd_id, Some(Status::Success)) ?;
-let failed  = db.get_command_execution_stats(cmd_id, Some(Status::Failed)) ?;
-let rate    = success as f64 / total as f64 * 100.0;
+```rs
+let total = db.get_command_execution_stats(cmd_id, None)?;
+let success = db.get_command_execution_stats(cmd_id, Some(Status::Success))?;
+let failed = db.get_command_execution_stats(cmd_id, Some(Status::Failed))?;
+let rate = success as f64 / total as f64 * 100.0;
 ```
 
 ---

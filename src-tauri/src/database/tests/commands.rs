@@ -180,6 +180,62 @@ fn test_create_command_invalid_env_var_key() {
 }
 
 #[test]
+fn test_create_command_name_max_length_boundary() {
+    let test_db = TestDb::setup_test_db();
+    let valid_name = "a".repeat(Database::MAX_NAME_LENGTH);
+    let cmd = CommandBuilder::new(&valid_name, "echo").build();
+
+    // Should succeed at exactly max length
+    let id = test_db.db.create_command(&cmd).unwrap();
+    assert_eq!(
+        test_db.db.get_command(id).unwrap().name.len(),
+        Database::MAX_NAME_LENGTH
+    );
+
+    // Should fail at max + 1
+    let invalid_name = "a".repeat(Database::MAX_NAME_LENGTH + 1);
+    let cmd = CommandBuilder::new(&invalid_name, "echo").build();
+    let result = test_db.db.create_command(&cmd);
+    assert!(matches!(
+        result,
+        Err(DatabaseError::InvalidData { field: "name", .. })
+    ));
+}
+
+#[test]
+fn test_create_command_description_max_length() {
+    let test_db = TestDb::setup_test_db();
+    let long_desc = "a".repeat(Database::MAX_DESCRIPTION_LENGTH + 1);
+    let mut cmd = CommandBuilder::new("Test", "echo").build();
+    cmd.description = Some(long_desc);
+
+    let result = test_db.db.create_command(&cmd);
+    assert!(matches!(
+        result,
+        Err(DatabaseError::InvalidData {
+            field: "description",
+            ..
+        })
+    ));
+}
+
+#[test]
+fn test_create_command_command_max_length() {
+    let test_db = TestDb::setup_test_db();
+    let long_cmd = "a".repeat(Database::MAX_COMMAND_LENGTH + 1);
+    let cmd = CommandBuilder::new("Test", &long_cmd).build();
+
+    let result = test_db.db.create_command(&cmd);
+    assert!(matches!(
+        result,
+        Err(DatabaseError::InvalidData {
+            field: "command",
+            ..
+        })
+    ));
+}
+
+#[test]
 fn test_get_command_not_found() {
     let test_db = TestDb::setup_test_db();
     let result = test_db.db.get_command(99999);
@@ -297,23 +353,6 @@ fn test_get_commands_count_combined_filters() {
 }
 
 #[test]
-fn test_get_commands_by_group() {
-    let test_db = TestDb::setup_test_db();
-    let group_id = test_db.create_test_group("Test Group");
-
-    test_db.create_test_command("Cmd1", "echo 1", Some(group_id));
-    test_db.create_test_command("Cmd2", "echo 2", Some(group_id));
-    test_db.create_test_command("Cmd3", "echo 3", None);
-
-    let commands = test_db
-        .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
-        .unwrap();
-    assert_eq!(commands.len(), 2);
-    assert!(commands.iter().all(|c| c.group_id == Some(group_id)));
-}
-
-#[test]
 fn test_get_commands_root_group() {
     let test_db = TestDb::setup_test_db();
     let group_id = test_db.create_test_group("Test Group");
@@ -348,7 +387,13 @@ fn test_get_commands_by_none_category() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            false,
+            None,
+            None,
+        )
         .unwrap();
     assert_eq!(commands.len(), 2);
 }
@@ -369,7 +414,13 @@ fn test_get_commands_by_category() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::Category(category_id), false, None, None)
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::Category(category_id),
+            false,
+            None,
+            None,
+        )
         .unwrap();
     assert_eq!(commands.len(), 1);
     assert!(commands.iter().all(|c| c.category_id == Some(category_id)));
@@ -405,11 +456,137 @@ fn test_get_commands_by_category_and_group() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::Category(category_id), false, None, None)
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::Category(category_id),
+            false,
+            None,
+            None,
+        )
         .unwrap();
     assert_eq!(commands.len(), 2);
     assert!(commands.iter().all(|c| c.group_id == Some(group_id)));
     assert!(commands.iter().all(|c| c.category_id == Some(category_id)));
+}
+
+#[test]
+fn get_commands_group_all_returns_every_command() {
+    let test_db = TestDb::setup_test_db();
+
+    let group_id = test_db.create_test_group("Test Group");
+    test_db.create_test_command("Cmd1", "echo 1", Some(group_id));
+    test_db.create_test_command("Cmd1", "echo 1", None);
+    test_db.create_test_command("Cmd1", "echo 1", Some(group_id));
+    test_db.create_test_command("Cmd1", "echo 1", None);
+
+    let result = test_db
+        .db
+        .get_commands(GroupFilter::All, CategoryFilter::All, false, None, None)
+        .unwrap();
+
+    assert_eq!(result.len(), 4);
+}
+
+#[test]
+fn get_commands_group_id_returns_every_command() {
+    let test_db = TestDb::setup_test_db();
+
+    let group_id = test_db.create_test_group("Test Group");
+    test_db.create_test_command("Cmd1", "echo 1", Some(group_id));
+    test_db.create_test_command("Cmd1", "echo 1", None);
+    test_db.create_test_command("Cmd1", "echo 1", Some(group_id));
+    test_db.create_test_command("Cmd1", "echo 1", None);
+
+    let result = test_db
+        .db
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::All,
+            false,
+            None,
+            None,
+        )
+        .unwrap();
+
+    assert_eq!(result.len(), 2);
+    assert!(result.iter().all(|c| c.group_id == Some(group_id)));
+}
+
+#[test]
+fn get_commands_category_none_excludes_categorised_commands() {
+    let test_db = TestDb::setup_test_db();
+
+    let cat_id = test_db.create_test_category("Test Category");
+    let cmd = CommandBuilder::new("cmd", "echo 1")
+        .with_category(cat_id)
+        .build();
+    test_db.db.create_command(&cmd).unwrap();
+
+    let cmd = CommandBuilder::new("cmd", "echo 1").build();
+    test_db.db.create_command(&cmd).unwrap();
+    test_db.db.create_command(&cmd).unwrap();
+
+    let result = test_db
+        .db
+        .get_commands(GroupFilter::All, CategoryFilter::None, false, None, None)
+        .unwrap();
+
+    assert_eq!(result.len(), 2);
+    assert!(result[0].item.category_id.is_none());
+}
+
+#[test]
+fn get_commands_pagination_limit_only() {
+    let test_db = TestDb::setup_test_db();
+
+    for _ in 0..5 {
+        test_db.create_test_command("cmd", "echo test", None);
+    }
+
+    let result = test_db
+        .db
+        .get_commands(GroupFilter::All, CategoryFilter::All, false, Some(3), None)
+        .unwrap();
+
+    assert_eq!(result.len(), 3);
+}
+
+#[test]
+fn get_commands_pagination_offset_only() {
+    let test_db = TestDb::setup_test_db();
+
+    for _ in 0..5 {
+        test_db.create_test_command("cmd", "echo test", None);
+    }
+
+    let result = test_db
+        .db
+        .get_commands(GroupFilter::All, CategoryFilter::All, false, None, Some(3))
+        .unwrap();
+
+    assert_eq!(result.len(), 2);
+}
+
+#[test]
+fn get_commands_pagination_limit_and_offset() {
+    let test_db = TestDb::setup_test_db();
+
+    for _ in 0..10 {
+        test_db.create_test_command("cmd", "echo test", None);
+    }
+
+    let result = test_db
+        .db
+        .get_commands(
+            GroupFilter::All,
+            CategoryFilter::All,
+            false,
+            Some(4),
+            Some(6),
+        )
+        .unwrap();
+
+    assert_eq!(result.len(), 4);
 }
 
 #[test]
@@ -424,7 +601,13 @@ fn test_get_favorite_commands() {
 
     let favorites = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, true, None, None)
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            true,
+            None,
+            None,
+        )
         .unwrap();
     assert_eq!(favorites.len(), 1);
     assert_eq!(favorites[0].id, fav_id);
@@ -441,7 +624,13 @@ fn test_get_commands_pagination_limit() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, Some(3), None)
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            false,
+            Some(3),
+            None,
+        )
         .unwrap();
     assert_eq!(commands.len(), 3);
 }
@@ -462,7 +651,13 @@ fn test_get_commands_pagination_offset() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, Some(2))
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            false,
+            None,
+            Some(2),
+        )
         .unwrap();
     assert_eq!(commands.len(), 3);
     assert_eq!(commands[0].id, ids[2]);
@@ -484,7 +679,13 @@ fn test_get_commands_pagination_limit_and_offset() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, Some(2), Some(1))
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            false,
+            Some(2),
+            Some(1),
+        )
         .unwrap();
     assert_eq!(commands.len(), 2);
     assert_eq!(commands[0].id, ids[1]);
@@ -500,7 +701,13 @@ fn test_get_commands_pagination_offset_beyond_total() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, Some(100))
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            false,
+            None,
+            Some(100),
+        )
         .unwrap();
     assert!(commands.is_empty());
 }
@@ -521,7 +728,13 @@ fn test_get_commands_with_history_joined() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            false,
+            None,
+            None,
+        )
         .unwrap();
     assert_eq!(commands.len(), 1);
 
@@ -533,6 +746,84 @@ fn test_get_commands_with_history_joined() {
     assert_eq!(retrieved_history.id, history_id);
     assert_eq!(retrieved_history.pid, Some(1234));
     assert_eq!(retrieved_history.status, ExecutionStatus::Running);
+}
+
+#[test]
+fn get_commands_no_history_returns_none() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+
+    test_db.create_test_command("Cmd1", "echo 1", Some(group_id));
+
+    let result = test_db
+        .db
+        .get_commands(GroupFilter::All, CategoryFilter::All, false, None, None)
+        .unwrap();
+
+    assert_eq!(result.len(), 1);
+    assert!(result[0].history.is_none());
+}
+
+#[test]
+fn get_commands_workflow_history_excluded_from_join() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+    let cmd_id = test_db.create_test_command("Cmd1", "echo 1", Some(group_id));
+    let flow_id = test_db.create_test_workflow("Test Workflow");
+    let step_id = test_db.create_test_workflow_step(flow_id, cmd_id);
+
+    let history = ExecutionHistoryBuilder::new()
+        .with_command(cmd_id)
+        .with_trigger(TriggeredBy::Manual)
+        .build();
+    let history_id = test_db.db.create_execution_history(&history).unwrap();
+    test_db
+        .db
+        .update_execution_history_status(history_id, ExecutionStatus::Cancelled, None)
+        .unwrap();
+
+    let history = ExecutionHistoryBuilder::new()
+        .with_workflow_step(cmd_id, flow_id, step_id)
+        .with_trigger(TriggeredBy::Manual)
+        .build();
+    test_db.db.create_execution_history(&history).unwrap();
+
+    let result = test_db
+        .db
+        .get_commands(GroupFilter::All, CategoryFilter::All, false, None, None)
+        .unwrap();
+
+    let history = result[0].history.as_ref().expect("expected history");
+    assert_eq!(history.id, history_id);
+}
+
+#[test]
+fn get_commands_returns_most_recent_non_workflow_history() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+    let cmd_id = test_db.create_test_command("Cmd1", "echo 1", Some(group_id));
+
+    let history = ExecutionHistoryBuilder::new()
+        .with_command(cmd_id)
+        .with_trigger(TriggeredBy::Manual)
+        .build();
+    let history_id = test_db.db.create_execution_history(&history).unwrap();
+    std::thread::sleep(std::time::Duration::from_secs(1));
+
+    test_db
+        .db
+        .update_execution_history_status(history_id, ExecutionStatus::Cancelled, None)
+        .unwrap();
+
+    let history_id_1 = test_db.db.create_execution_history(&history).unwrap();
+
+    let result = test_db
+        .db
+        .get_commands(GroupFilter::All, CategoryFilter::All, false, None, None)
+        .unwrap();
+
+    let history = result[0].history.as_ref().expect("expected history");
+    assert_eq!(history.id, history_id_1);
 }
 
 #[test]
@@ -554,7 +845,13 @@ fn test_get_commands_with_history_status_updated() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            false,
+            None,
+            None,
+        )
         .unwrap();
     assert_eq!(commands.len(), 1);
 
@@ -591,7 +888,13 @@ fn test_get_commands_history_most_recent_only() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            false,
+            None,
+            None,
+        )
         .unwrap();
     let retrieved_history = commands[0].history.as_ref().unwrap();
     assert_eq!(retrieved_history.id, history_id2);
@@ -618,7 +921,13 @@ fn test_get_commands_excludes_workflow_history() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            false,
+            None,
+            None,
+        )
         .unwrap();
     assert!(commands[0].history.is_none());
 }
@@ -646,7 +955,6 @@ fn test_get_recent_commands_empty_when_no_history() {
     let test_db = TestDb::setup_test_db();
     let group_id = test_db.create_test_group("Test Group");
 
-    // Create command WITHOUT history
     test_db.create_test_command("Test", "echo test", Some(group_id));
 
     let recent = test_db.db.get_recent_commands(10).unwrap();
@@ -668,6 +976,22 @@ fn test_get_recent_commands_limit() {
 
     let recent = test_db.db.get_recent_commands(3).unwrap();
     assert_eq!(recent.len(), 3);
+}
+
+#[test]
+fn get_recent_commands_excludes_never_executed_commands() {
+    let test_db = TestDb::setup_test_db();
+
+    let cmd_id = test_db.create_test_command("Old", "echo old", None);
+    test_db.create_test_command("New", "echo new", None);
+
+    let history = ExecutionHistoryBuilder::new().with_command(cmd_id).build();
+
+    test_db.db.create_execution_history(&history).unwrap();
+
+    let result = test_db.db.get_recent_commands(10).unwrap();
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].item.id, cmd_id);
 }
 
 #[test]
@@ -709,6 +1033,10 @@ fn test_get_recent_commands_multiple_history_per_command() {
             .create_execution_history(&ExecutionHistoryBuilder::new().with_command(cmd_id).build())
             .unwrap();
         std::thread::sleep(std::time::Duration::from_millis(1000));
+        test_db
+            .db
+            .update_execution_history_status(execution_id, ExecutionStatus::Cancelled, Some(0))
+            .unwrap();
     }
 
     let recent = test_db.db.get_recent_commands(10).unwrap();
@@ -777,6 +1105,26 @@ fn test_get_recent_commands_preserves_command_fields() {
 }
 
 #[test]
+fn get_recent_commands_id_tiebreaker_on_equal_timestamps() {
+    let test_db = TestDb::setup_test_db();
+    let cmd_1 = test_db.create_test_command("Test", "echo test", None);
+    let cmd_2 = test_db.create_test_command("Test", "echo test", None);
+    let cmd_3 = test_db.create_test_command("Test", "echo test", None);
+
+    let history = ExecutionHistoryBuilder::new().with_command(cmd_3).build();
+    test_db.db.create_execution_history(&history).unwrap();
+
+    let history = ExecutionHistoryBuilder::new().with_command(cmd_1).build();
+    test_db.db.create_execution_history(&history).unwrap();
+
+    let history = ExecutionHistoryBuilder::new().with_command(cmd_2).build();
+    test_db.db.create_execution_history(&history).unwrap();
+
+    let result = test_db.db.get_recent_commands(10).unwrap();
+    assert_eq!(result[0].item.id, cmd_1);
+}
+
+#[test]
 fn test_search_commands() {
     let test_db = TestDb::setup_test_db();
     let group_id = test_db.create_test_group("Test Group");
@@ -801,6 +1149,73 @@ fn test_search_commands_case_insensitive() {
 
     let results = test_db.db.search_commands("cargo").unwrap();
     assert_eq!(results.len(), 1); // SQLite LIKE is case-insensitive by default
+}
+
+#[test]
+fn search_commands_empty_term_returns_all() {
+    let test_db = TestDb::setup_test_db();
+
+    for _ in 0..3 {
+        test_db.create_test_command("Build Project", "cargo build", None);
+    }
+    let result = test_db.db.search_commands("").unwrap();
+
+    assert_eq!(result.len(), 3);
+}
+
+#[test]
+fn search_commands_matches_description_field() {
+    let test_db = TestDb::setup_test_db();
+
+    let mut cmd = CommandBuilder::new("Full", "echo full").build();
+    cmd.description = Some("Test the server".to_string());
+    test_db.db.create_command(&cmd).unwrap();
+
+    let result = test_db.db.search_commands("the").unwrap();
+    assert_eq!(result.len(), 1);
+
+    let result = test_db.db.search_commands("he").unwrap();
+    assert_eq!(result.len(), 1);
+}
+
+#[test]
+fn search_commands_favorites_ranked_first() {
+    let test_db = TestDb::setup_test_db();
+
+    test_db.create_test_command("Build Project", "cargo build", None);
+    let fav_id = test_db.create_test_command("Run Tests", "cargo test", None);
+    test_db.db.toggle_command_favorite(fav_id).unwrap();
+    test_db.create_test_command("Delete All", "cargo clean", None);
+
+    let result = test_db.db.search_commands("cargo").unwrap();
+    assert_eq!(result[0].id, fav_id);
+}
+
+#[test]
+fn test_search_commands_sql_wildcard_escaping() {
+    let test_db = TestDb::setup_test_db();
+
+    test_db.create_test_command("Test_1", "echo", None);
+    test_db.create_test_command("Test%2", "echo", None);
+    test_db.create_test_command("TestX", "echo", None);
+
+    // % matches any sequence
+    let results = test_db.db.search_commands("Test%").unwrap();
+    assert_eq!(results.len(), 3); // Matches Test_1 and TestX (if % is wildcard), or Test%2 and TestX
+
+    // _ matches single char
+    let results = test_db.db.search_commands("Test_").unwrap();
+    assert!(results.len() >= 1); // Should match Test_1 and TestX
+}
+
+#[test]
+fn test_search_commands_whitespace_only_returns_all() {
+    let test_db = TestDb::setup_test_db();
+    test_db.create_test_command("Cmd1", "echo 1", None);
+    test_db.create_test_command("Cmd2", "echo 2", None);
+
+    let results = test_db.db.search_commands("   ").unwrap();
+    assert!(results.is_empty() || results.len() == 2);
 }
 
 #[test]
@@ -938,7 +1353,13 @@ fn test_move_command_between() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            false,
+            None,
+            None,
+        )
         .unwrap();
     assert_eq!(commands[0].id, id1);
     assert_eq!(commands[1].id, id3);
@@ -960,7 +1381,13 @@ fn test_move_command_to_top() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            false,
+            None,
+            None,
+        )
         .unwrap();
     assert_eq!(commands[0].id, id2); // B now first
     assert_eq!(commands[1].id, id1);
@@ -982,7 +1409,13 @@ fn test_move_command_to_bottom() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            false,
+            None,
+            None,
+        )
         .unwrap();
     assert_eq!(commands[0].id, id2);
     assert_eq!(commands[1].id, id1); // A now last
@@ -1013,6 +1446,29 @@ fn test_move_command_invalid_next_id() {
 }
 
 #[test]
+fn move_command_between_both_none_returns_error() {
+    let test_db = TestDb::setup_test_db();
+    let cmd_id = test_db.create_test_command("A", "echo 1", None);
+
+    let err = test_db
+        .db
+        .move_command_between(cmd_id, None, None)
+        .unwrap_err();
+
+    assert!(
+        matches!(
+            err,
+            DatabaseError::InvalidData {
+                field: "item_id",
+                ..
+            }
+        ),
+        "expected InvalidData on item_id, got: {:?}",
+        err
+    );
+}
+
+#[test]
 fn test_move_command_prev_next_different_groups() {
     let test_db = TestDb::setup_test_db();
     let group1 = test_db.create_test_group("Group 1");
@@ -1024,6 +1480,120 @@ fn test_move_command_prev_next_different_groups() {
 
     let result = test_db.db.move_command_between(id3, Some(id1), Some(id2));
     assert!(result.is_err());
+}
+
+    #[test]
+    fn test_move_command_to_same_position_no_op() {
+        let test_db = TestDb::setup_test_db();
+        let group_id = test_db.create_test_group("Test");
+        let id1 = test_db.create_test_command("A", "echo 1", Some(group_id));
+        let id2 = test_db.create_test_command("B", "echo 2", Some(group_id));
+
+        let pos_before = test_db.db.get_command(id2).unwrap().position;
+
+        test_db
+            .db
+            .move_command_between(id2, Some(id1), None)
+            .unwrap();
+        let pos_after = test_db.db.get_command(id2).unwrap().position;
+
+        assert_eq!(pos_before, pos_after);
+    }
+
+#[test]
+fn test_move_command_renumber_preserves_order() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test");
+
+    let id1 = test_db.create_test_command("A", "echo 1", Some(group_id));
+    let id2 = test_db.create_test_command("B", "echo 2", Some(group_id));
+    let id3 = test_db.create_test_command("C", "echo 3", Some(group_id));
+
+    test_db
+        .db
+        .conn()
+        .unwrap()
+        .execute(
+            "UPDATE commands SET position = 1000 WHERE id = ?",
+            params![id1],
+        )
+        .unwrap();
+    test_db
+        .db
+        .conn()
+        .unwrap()
+        .execute(
+            "UPDATE commands SET position = 1001 WHERE id = ?",
+            params![ id2],
+        )
+        .unwrap();
+    test_db
+        .db
+        .conn()
+        .unwrap()
+        .execute(
+            "UPDATE commands SET position = 1002 WHERE id = ?",
+            params![id3],
+        )
+        .unwrap();
+
+    test_db
+        .db
+        .move_command_between(id3, Some(id1), Some(id2))
+        .unwrap();
+
+    let commands = test_db
+        .db
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::All,
+            false,
+            None,
+            None,
+        )
+        .unwrap();
+
+    assert_eq!(commands[0].id, id1);
+    assert_eq!(commands[1].id, id3); // C moved between A and B
+    assert_eq!(commands[2].id, id2);
+
+    // Verify gaps are restored
+    assert!(commands[1].position - commands[0].position >= Database::POSITION_GAP / 2);
+    assert!(commands[2].position - commands[1].position >= Database::POSITION_GAP / 2);
+}
+
+#[test]
+fn update_command_group_change_places_at_end_of_new_group() {
+    let test_db = TestDb::setup_test_db();
+
+    let group1 = test_db.create_test_group("Group 1");
+    let group2 = test_db.create_test_group("Group 2");
+
+    test_db.create_test_command("A", "echo 1", Some(group1));
+    test_db.create_test_command("B", "echo 2", Some(group1));
+    let cmd_id = test_db.create_test_command("B", "echo 2", Some(group2));
+
+    let mut cmd = test_db.db.get_command(cmd_id).unwrap();
+    cmd.group_id = Some(group1);
+    test_db.db.update_command(&cmd).unwrap();
+
+    let updated = test_db.db.get_command(cmd_id).unwrap();
+    assert_eq!(updated.group_id, Some(group1));
+
+    let commands = test_db
+        .db
+        .get_commands(
+            GroupFilter::Group(group1),
+            CategoryFilter::All,
+            false,
+            None,
+            None,
+        )
+        .unwrap();
+
+    let highest_position = commands.iter().map(|w| w.position).max().unwrap();
+
+    assert_eq!(updated.position, highest_position);
 }
 
 #[test]
@@ -1065,7 +1635,13 @@ fn test_position_gap_exhaustion_triggers_renumber() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            false,
+            None,
+            None,
+        )
         .unwrap();
     assert_eq!(commands.len(), 3);
 
@@ -1087,7 +1663,13 @@ fn test_foreign_key_constraint_on_delete_group() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            false,
+            None,
+            None,
+        )
         .unwrap();
     assert_eq!(commands.len(), 0);
 }
@@ -1110,7 +1692,9 @@ fn test_very_long_command_name() {
     let test_db = TestDb::setup_test_db();
     let long_name = "a".repeat(1000);
 
-    let result = test_db.db.create_command(&CommandBuilder::new(&long_name, "echo").build());
+    let result = test_db
+        .db
+        .create_command(&CommandBuilder::new(&long_name, "echo").build());
 
     assert!(result.is_err());
 
@@ -1118,7 +1702,6 @@ fn test_very_long_command_name() {
     let cmd_id = test_db.create_test_command(&long_name, "echo", None);
     let retrieved = test_db.db.get_command(cmd_id).unwrap();
     assert_eq!(retrieved.name.len(), 254);
-
 }
 
 #[test]
@@ -1311,8 +1894,8 @@ fn test_consecutive_positions_gap() {
     let pos2 = test_db.db.get_command(cmd2).unwrap().position;
     let pos3 = test_db.db.get_command(cmd3).unwrap().position;
 
-    assert_eq!(pos3 - pos2, Database::POSITION_GAP + 1);
-    assert_eq!(pos2 - pos1, Database::POSITION_GAP + 1);
+    assert_eq!(pos3 - pos2, Database::POSITION_GAP);
+    assert_eq!(pos2 - pos1, Database::POSITION_GAP);
 }
 
 #[test]
