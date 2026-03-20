@@ -84,16 +84,18 @@ CREATE TABLE IF NOT EXISTS workflow_steps (
     position INTEGER NOT NULL,
     condition TEXT NOT NULL DEFAULT 'always',
     timeout_seconds INTEGER,
+    delay_seconds INTEGER,
     auto_retry_count INTEGER DEFAULT 0,
     enabled BOOLEAN NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)),
     continue_on_failure BOOLEAN NOT NULL DEFAULT 0 CHECK(continue_on_failure IN (0,1)),
+    wait_for_completion BOOLEAN NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CHECK(condition IN ('always', 'on_success', 'on_failure'))
 );
 
 CREATE TABLE IF NOT EXISTS execution_history (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     command_id INTEGER REFERENCES commands(id) ON DELETE CASCADE,
     workflow_id INTEGER REFERENCES workflows(id) ON DELETE CASCADE,
     workflow_step_id INTEGER REFERENCES workflow_steps(id) ON DELETE CASCADE,
@@ -194,7 +196,7 @@ SET
         ELSE started_at
     END,
     completed_at = CASE
-       WHEN NEW.status IN ('success', 'failed', 'timeout', 'cancelled')
+       WHEN NEW.status IN ('success', 'failed', 'timeout', 'cancelled', 'completed')
            AND OLD.status = 'running'
            THEN CURRENT_TIMESTAMP
        ELSE completed_at
