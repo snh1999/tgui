@@ -7,10 +7,12 @@ import "./themes/catppuccin.css";
 import { VueQueryPlugin } from "@tanstack/vue-query";
 import { apiClient } from "@/lib/api/api.client.ts";
 import router from "@/router";
+import { createPinia } from "pinia";
 
 const app = createApp(App);
 app.use(router);
 app.use(VueQueryPlugin, {
   queryClient: apiClient,
 });
+app.use(createPinia());
 app.mount("#app");

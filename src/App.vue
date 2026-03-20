@@ -1,18 +1,22 @@
 <script setup lang="ts">
-  import MainSidebar from "@/components/shared/MainSidebar.vue";
+  import AppSidebar from "@/components/core/AppSidebar.vue";
+  import TitleBar from "@/components/core/title-bar/TitleBar.vue";
   import { SidebarProvider } from "@/components/ui/sidebar";
   import { Toaster } from "@/components/ui/sonner";
 </script>
 
 <template>
   <SidebarProvider storage-key="sidebar">
-    <MainSidebar />
-    <main
-      class="flex-1 flex flex-col h-full overflow-auto bg-background text-foreground"
-    >
-      <slot />
-      <RouterView />
-    </main>
+    <TitleBar class="fixed top-0 left-0 right-0 z-50" />
+    <div class="flex pt-10 h-screen w-screen">
+      <AppSidebar />
+      <main
+        class="flex-1 flex flex-col h-full overflow-auto bg-background text-foreground"
+      >
+        <slot />
+        <RouterView />
+      </main>
+    </div>
     <Toaster />
   </SidebarProvider>
 </template>

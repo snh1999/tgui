@@ -1,8 +1,10 @@
 <script setup lang="ts">
   import { ChevronRight, ListPlus, Plus, Settings } from "lucide-vue-next";
   import { useRoute } from "vue-router";
-  import { DashboardIcon } from "@/assets/Icons.ts";
+  import { DashboardIcon, GroupIcon } from "@/assets/Icons.ts";
   import logo from "@/assets/logo.svg";
+  import CreateCategoryDialog from "@/components/forms/categories/CreateCategoryDialog.vue";
+  import TitleBar from "@/components/core/title-bar/TitleBar.vue";
   import { Collapsible } from "@/components/ui/collapsible";
   import {
     Sidebar,
@@ -18,6 +20,8 @@
     SidebarTrigger,
     useSidebar,
   } from "@/components/ui/sidebar";
+  import { useGetCategories } from "@/lib/api/composables/categories.ts";
+  import { appStateStore } from "@/stores/app.store.ts";
 
   const sidebarState = useSidebar();
   const route = useRoute();
@@ -35,28 +39,34 @@
       icon: ListPlus,
     },
     {
+      title: "Browse",
+      url: "/browse",
+      icon: ListPlus,
+    },
+    {
+      title: "Groups",
+      url: "/groups",
+      icon: GroupIcon,
+    },
+    {
       title: "Settings",
       url: "/settings",
       icon: Settings,
     },
   ];
+
+  const { data: categories } = useGetCategories();
 </script>
 
 <template>
-  <Sidebar collapsible="icon" side="left" variant="sidebar">
+  <Sidebar collapsible="icon" side="left" variant="sidebar" :top-offset="40">
     <SidebarHeader>
-      <div class="grid grid-cols-[1fr_auto_1fr] mb-3 mt-2">
-        <div />
-        <div
-          v-show="sidebarState.open.value"
-          class="flex items-center justify-center gap-3"
-        >
-          <img class="h-8 w-8" alt="logo" :src="logo">
-          <div class="text-xl font-semibold tracking-tighter">TGUI</div>
-        </div>
-        <div class="flex justify-end">
-          <SidebarTrigger />
-        </div>
+      <div
+        v-show="sidebarState.open.value"
+        class="mb-3 mt-2 flex items-center justify-center gap-3"
+      >
+        <img class="h-8 w-8" alt="logo" :src="logo">
+        <div class="text-xl font-semibold tracking-tighter">TGUI</div>
       </div>
     </SidebarHeader>
     <SidebarContent>
@@ -80,19 +90,25 @@
             <CollapsibleTrigger
               class="group/label w-full text-left text-sm text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground [&[data-state=open]>svg]:rotate-90"
             >
-              Group
+              Categories
               <ChevronRight
                 class="transition-transform group-data-[state=open]/collapsible:rotate-90"
               />
             </CollapsibleTrigger>
             <SidebarGroupAction>
               <Plus />
+              <CreateCategoryDialog viewTrigger />
             </SidebarGroupAction>
           </SidebarGroupLabel>
           <CollapsibleContent>
             <SidebarGroupContent>
               <SidebarMenu>
-                <!-- Menu items -->
+                <SidebarMenuItem
+                  v-for="category in categories"
+                  :key="category.id"
+                >
+                  {{ category.name }}
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </CollapsibleContent>
