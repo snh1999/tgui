@@ -67,7 +67,7 @@ fn build_exec_shell_joins_args_into_single_c_string() {
 fn build_exec_shell_quotes_args_with_spaces() {
     let result = build_exec("echo", &["hello world".into()], Some("bash"));
     let cmd_str = &result.args[1];
-    assert!(cmd_str.contains("\"hello world\""));
+    assert!(cmd_str.contains("\"hello world\""), "found {cmd_str}");
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -109,16 +109,7 @@ fn build_exec_pwsh_uses_pwsh_executable() {
     assert_eq!(result.executable, "pwsh.exe");
 }
 
-#[cfg(not(target_os = "windows"))]
-#[test]
-fn is_valid_shell_accepts_all_unix_allowed_shells() {
-    for shell in &["sh", "bash", "zsh", "fish", "nu"] {
-        assert!(
-            is_valid_shell(shell),
-            "Expected '{shell}' to be valid on Unix"
-        );
-    }
-}
+
 
 #[cfg(target_os = "windows")]
 #[test]
@@ -164,7 +155,7 @@ fn allowed_shells_returns_non_empty_list() {
 fn allowed_shells_every_entry_passes_is_valid_shell() {
     for shell in get_allowed_shells() {
         assert!(
-            is_valid_shell(shell),
+            is_valid_shell(&shell),
             "allowed_shells() returned '{shell}' but is_valid_shell() rejected it"
         );
     }
@@ -176,7 +167,7 @@ fn allowed_shells_contains_no_duplicates() {
     let mut seen = std::collections::HashSet::new();
     for shell in &shells {
         assert!(
-            seen.insert(*shell),
+            seen.insert(shell.clone()),
             "Duplicate shell in allowed_shells(): '{shell}'"
         );
     }

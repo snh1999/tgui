@@ -95,6 +95,7 @@ pub async fn stop_all_processes(
     Ok(count)
 }
 
+// TODO: remove this and switch to execution history
 #[tauri::command]
 pub async fn get_tray_status(
     pm: State<'_, Arc<ProcessManager>>,
@@ -112,6 +113,6 @@ pub async fn get_tray_status(
 }
 
 #[tauri::command]
-pub fn get_valid_shells() -> Vec<&'static str> {
+pub fn get_valid_shells() -> Vec<String> {
     crate::process::shell::get_allowed_shells()
 }

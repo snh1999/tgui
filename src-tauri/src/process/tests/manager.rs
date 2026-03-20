@@ -1212,7 +1212,7 @@ async fn resolve_spawn_context_nonexistent_working_dir_returns_error() {
 async fn resolve_spawn_context_shell_command_uses_command_shell() {
     let db = create_test_db();
 
-    db.set_settings("default_shell", "sh").ok();
+    db.set_setting("default_shell", "sh").ok();
 
     let mut group = GroupBuilder::new("group").build();
     group.working_directory = Some("/tmp".to_string());
@@ -1238,7 +1238,7 @@ async fn resolve_spawn_context_shell_command_uses_command_shell() {
 #[cfg(unix)]
 async fn resolve_spawn_context_shell_falls_back_to_group() {
     let db = create_test_db();
-    db.set_settings("default_shell", "sh").ok();
+    db.set_setting("default_shell", "sh").ok();
 
     let mut group = GroupBuilder::new("group").build();
     group.working_directory = Some("/tmp".to_string());
@@ -1262,7 +1262,7 @@ async fn resolve_spawn_context_shell_falls_back_to_group() {
 #[cfg(unix)]
 async fn resolve_spawn_context_shell_no_group_falls_back_to_default_setting() {
     let db = create_test_db();
-    db.set_settings("default_shell", "sh").ok();
+    db.set_setting("default_shell", "sh").ok();
 
     let cmd_id = db
         .create_command(&CommandBuilder::new("test", "echo test").build())
@@ -1277,7 +1277,7 @@ async fn resolve_spawn_context_shell_no_group_falls_back_to_default_setting() {
 #[cfg(unix)]
 async fn resolve_spawn_context_shell_falls_back_to_default_setting() {
     let db = create_test_db();
-    db.set_settings("default_shell", "sh").ok();
+    db.set_setting("default_shell", "sh").ok();
 
     let mut group = GroupBuilder::new("group").build();
     group.working_directory = Some("/tmp".to_string());
