@@ -12,6 +12,37 @@ and Vue frontend.
 
 ## 6.1 Command Management
 
+## Common
+
+### Row Deserialization Edge Cases
+
+**Arguments Parsing**:
+
+- Invalid JSON in arguments field returns empty `Vec::new()` (graceful degradation)
+- Warning logged: "Failed to parse arguments, using default"
+
+**Environment Variables Deserialization**:
+
+- Invalid JSON in `env_vars` field returns `None` (graceful degradation)
+- Warning logged: "Failed to parse env_vars, using None"
+- Empty JSON object `{}` deserializes to empty HashMap, not None
+
+**Execution Status Deserialization**:
+
+- Unknown status strings default to `ExecutionStatus::Completed`
+- Safe fallback prevents application crashes on data corruption
+
+**TriggeredBy Deserialization**:
+
+- If `workflow_id` is present → `TriggeredBy::Workflow`
+- Otherwise → `TriggeredBy::Manual`
+
+
+**Status Deserialization**: Unknown status strings in DB default to `ExecutionStatus::Completed`
+with a warning log. This is a safety fallback, not a valid state to set intentionally.
+
+
+
 ## Command Management
 
 ### Create Command
@@ -48,6 +79,16 @@ struct CommandPayload {
 - `category_id`: Optional category ID
 - `is_favorite`: Star the command
 - `env_vars`: Optional environment variables
+    - **keys handling**
+        - Environment variable keys must match `^[a-zA-Z_][a-zA-Z0-9_]*$`
+        - Must start with letter or underscore
+        - Subsequent characters: alphanumeric + underscore only
+        - Spaces, dots, unicode, and other special characters are rejected with
+          `InvalidData { field: "env_vars" }`
+    - **Value Handling**:
+        - Empty string values are allowed
+        - Special characters in values are preserved (shell injection patterns stored as-is)
+        - Values are JSON-serialized with HashMap structure
 
 **Returns**:
 
@@ -64,17 +105,17 @@ struct CommandPayload {
 **Usage**:
 
 ```typescript
-import {invoke} from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/tauri'
 
 const commandId = await invoke('create_command', {
-    name: 'Start Dev Server',
-    command: 'npm',
-    arguments: ['run', 'dev'],
-    description: 'Starts Vite dev server',
-    workingDirectory: '/home/user/project',
-    categoryId: 1,
-    isFavorite: false,
-    envVars: {NODE_ENV: 'development'}
+  name: 'Start Dev Server',
+  command: 'npm',
+  arguments: ['run', 'dev'],
+  description: 'Starts Vite dev server',
+  workingDirectory: '/home/user/project',
+  categoryId: 1,
+  isFavorite: false,
+  envVars: {NODE_ENV: 'development'}
 })
 ```
 
@@ -83,6 +124,9 @@ const commandId = await invoke('create_command', {
 ### Update Command
 
 `update_command(id: CommandId, payload: CommandPayload) -> Result<(), Error>`
+
+- Changing `group_id` automatically recalculates `position` and assigns the last position of the
+  group.
 
 **Description**: Update an existing command.
 
@@ -143,7 +187,7 @@ const commandId = await invoke('create_command', {
 
 ### List commands
 
-`get_commands(group_id: Option<i64>, favorites_only: bool) -> Result<Vec<Command>>`
+`get_commands(group_id: GroupFilter, category_id: CategoryFilter, favorites_only: bool) -> Result<Vec<Command>>`
 
 **Description**: Get commands with optional filtering.
 
@@ -159,40 +203,134 @@ struct CommandFilter {
 
 **Parameters**:
 
-- `group_id`: Filter by group
-- `category_id`: Filter by category
-- `favorites_only`: Show only favorites
+- `parent_id`: `GroupFilter`
+    - `Group(id)` filters to children of that parent;
+    - `None` returns root-level groups (NULL parent);
+    - `All` returns all groups regardless of parent
+- `category_id`: `CategoryFilter`
+    - `Category(id)` filters by category;
+    - `None` returns uncategorized groups;
+    - `All` ignores category
+- `favorites_only`: When `true`, only groups with `is_favorite = 1` are returned
+
+- **Pagination Parameters**:
+    - `limit`: Maximum number of commands to return (None = unlimited)
+    - `offset`: Number of commands to skip (None = start from beginning)
+
+**History Join/Retrieval Behavior**:
+
+- Returns `WithHistory<Command>` where `history` contains the most recent non-workflow execution
+- Workflow-associated history (where `workflow_id IS NOT NULL`) is excluded from the join
+- History is ordered by `started_at DESC` with `ROW_NUMBER() = 1` to get latest entry per command
 
 **Returns**:
 
-- `Ok(commands)`: Array of commands with resolved inheritance (settings applied)
+- `Ok(commands)`: Array of commands with latest execution history entryo (settings applied)
 - `Err(msg)`: Database error
 
 **Usage**:
 
 ```typescript
 interface Command {
-    id: number
-    name: string
-    command: string
-    arguments: string[]
-    description?: string
-    workingDirectory: string
-    categoryId?: number
-    isFavorite: boolean
-    envVars?: Record
-    createdAt: string
-    updatedAt: string
+  id: number
+  name: string
+  command: string
+  arguments: string[]
+  description?: string
+  workingDirectory: string
+  categoryId?: number
+  isFavorite: boolean
+  envVars?: Record
+  createdAt: string
+  updatedAt: string
 }
 
 const topLevelCommands = await invoke('get_commands', {
-    groupId: null,
-    favoritesOnly: false
+  groupId: null,
+  favoritesOnly: false
 })
 
 const favoriteCommands = await invoke('get_commands', {
-    groupId: 1,
-    favoritesOnly: true
+  groupId: 1,
+  favoritesOnly: true
+})
+```
+
+---
+
+### List Recent Commands
+
+`get_recent_commands(limit: i64) -> Result<Vec<WithHistory<Command>>>`
+
+**Description**: Returns commands that have been executed recently, ordered by their most recent
+execution time.
+
+- Only commands with at least one execution history entry are included (Returns empty vector if none
+  found)
+- Commands with multiple executions only appear once (most recent)
+- Workflow-associated executions are included (unlike get_commands filter)
+
+**Parameters**:
+
+- `limit`: Maximum number of commands to return (required, `i64`)
+
+**Returns**: Array of commands wrapped with their most recent execution history, ordered by
+`started_at DESC` (most recent executions first).
+
+**Key Differences from `get_commands`**:
+
+- Only returns commands that have been executed at least once
+- Results ordered by execution time, not by command position
+- No filtering by group, category, or favorites
+
+**SQL Implementation Notes**:
+
+- Uses `ROW_NUMBER() OVER (PARTITION BY command_id ORDER BY started_at DESC, id DESC)` to select
+  most recent history per command
+- The `id DESC` tie-breaker ensures deterministic ordering when timestamps are identical
+- Uses `WHERE EXISTS` to filter only commands with history entries
+- `NULLS LAST` option requires SQLite 3.30.0+ (2019-10-04)
+
+**Edge Cases**:
+
+- **No executions exist**: Returns an empty vector;
+- **Command executed multiple times**: Appears exactly once, with the most recent history entry
+  attached
+- Identical `started_at` timestamps: Tie-broken by `id`, ensuring deterministic ordering
+- Workflow executions: Unlike `get_commands`, workflow-associated executions (
+  `workflow_id IS NOT NULL`) are included here; if a command was only ever run via a workflow it
+  will still appear
+- `limit = 0`: Returns an empty vector without error
+
+**Usage**:
+
+```typescript
+const recent = await invoke('get_recent_commands', {limit: 10})
+```
+
+---
+
+### Get Commands Count
+
+`get_commands_count(group_id: Option<i64>, category_id: Option<i64>, favorites_only: bool) -> Result<i64>`
+
+**Description**: Returns the count of commands matching the specified filters.
+
+**Parameters**:
+
+- `group_id`: Filter by group (None for root-level commands)
+- `category_id`: Filter by category (None for all categories)
+- `favorites_only`: Count only favorited commands when true
+
+**Returns**: Count of matching commands (i64)
+
+**Usage**:
+
+```typescript
+const totalCount = await invoke('get_commands_count', {
+  groupId: 1,
+  categoryId: null,
+  favoritesOnly: false
 })
 ```
 
@@ -207,6 +345,15 @@ const favoriteCommands = await invoke('get_commands', {
 **Parameters:**
 
 - `search_term`: Search string (case-insensitive, matches name/description/command)
+
+**Behavior Note**:
+
+- Case-insensitive matching using SQLite `LIKE`
+- Searches across `name`, `command`, and `description` fields
+- Pattern: `%search_term%` (substring match)
+- Ordering: `is_favorite DESC, updated_at DESC` (favorites first, then most recently updated)
+- Special characters (`%`, `_`) in search term are treated as wildcards by SQLite
+- Empty Search Term returns all commands ordered by favorites and updated_at
 
 ---
 
@@ -230,9 +377,23 @@ indexing.
 
 **Behavior Note**:
 
-- Calculates midpoint between `prev` and `next` positions
-- If gap exhausted (positions too close), automatically renumbers entire group
-- After renumbering, positions are reset with `POSITION_GAP` spacing (default `1000`)
+- Calculates midpoint between `prev` and `next` positions (between adjacent items)
+- `POSITION_GAP` constant (default: 1000) used for initial positioning and renumbering
+- If gap exhausted (difference in gap <= 1), automatic renumbering triggers
+- After renumbering, positions are reset with `POSITION_GAP` spacing
+
+**Edge Cases**:
+
+- Moving to same position (prev/next unchanged) is idempotent
+- When gap ≤ 1 between adjacent items, automatic renumbering triggers with `POSITION_GAP` spacing
+- Renumbering preserves relative order of all items in group
+
+**Error Cases**:
+
+- Returns `InvalidData { field: "item_id" }` if **both** `prev_id` and `next_id` are `None`
+- Returns `InvalidData { field: "parent_id" }` if `prev_id` or `next_id` belong to a different
+  parent group than `group_id`
+- Returns `NotFound` if `group_id`, `prev_id`, or `next_id` don't exist
 
 **Why this approach?**
 
@@ -250,23 +411,23 @@ indexing.
 ```typescript
 // Move command 5 between commands 2 and 7
 await invoke('move_command_between', {
-    cmdId: 5,
-    prevId: 2,
-    nextId: 7
+  cmdId: 5,
+  prevId: 2,
+  nextId: 7
 })
 
 // Move to top of list
 await invoke('move_command_between', {
-    cmdId: 5,
-    prevId: null,
-    nextId: 2  // first command
+  cmdId: 5,
+  prevId: null,
+  nextId: 2  // first command
 })
 
 // Move to bottom
 await invoke('move_command_between', {
-    cmdId: 5,
-    prevId: 7,  // last command
-    nextId: null
+  cmdId: 5,
+  prevId: 7,  // last command
+  nextId: null
 })
 ```
 
@@ -315,6 +476,8 @@ struct Group {
     env_vars: Option<HashMap<String, String>>,
     shell: Option<String>,
     category_id: Option<i64>,
+    icon: Option<String>,
+    color: Option<String>,
 }
 ```
 
@@ -329,13 +492,13 @@ struct Group {
 
 ```typescript
 const groupId = await invoke('create_group', {
-    name: 'Docker Services',
-    description: 'All Docker-related commands',
-    parentGroupId: null,
-    workingDirectory: '/home/user/docker',
-    envVars: {DOCKER_HOST: 'unix:///var/run/docker.sock'},
-    shell: '/bin/bash',
-    categoryId: 2
+  name: 'Docker Services',
+  description: 'All Docker-related commands',
+  parentGroupId: null,
+  workingDirectory: '/home/user/docker',
+  envVars: {DOCKER_HOST: 'unix:///var/run/docker.sock'},
+  shell: '/bin/bash',
+  categoryId: 2
 })
 ```
 
@@ -356,13 +519,13 @@ const groupId = await invoke('create_group', {
 
 ### Get Groups
 
-`get_groups(parent_id: Option<GroupId>) -> Result<Vec<Group>>`
+`get_groups(parent_id: GroupFilter, category_id: CategoryFilter, favorites_only: bool) -> Result<Vec<Group>>`
 
 **Description**: Get groups filtered by parent, ordered by position.
 
 **Parameters**:
 
-- `parent_id`: Filter by parent group (NULL for top-level groups)
+- same as `get_commands`
 
 **Returns**: Array of groups ordered by position
 
@@ -370,22 +533,33 @@ const groupId = await invoke('create_group', {
 
 ```typescript
 interface Group {
-    id: number
-    name: string
-    description?: string
-    parentGroupId?: number
-    position: number
-    workingDirectory?: string
-    envVars?: Record<string, string>
-    shell?: string
-    categoryId?: number
-    createdAt: string
-    updatedAt: string
+  id: number
+  name: string
+  description?: string
+  parentGroupId?: number
+  position: number
+  workingDirectory?: string
+  envVars?: Record<string, string>
+  shell?: string
+  categoryId?: number
+  isFavorite: boolean
+  icon?: string
+  color?: string
+  createdAt: string
+  updatedAt: string
 }
 
-const topGroups = await invoke('get_groups', {parentId: null})
+const topGroups = await invoke('get_groups', {
+  parentId: null,
+  categoryId: null,
+  favoritesOnly: false
+})
 
-const childGroups = await invoke('get_groups', {parentId: 3})
+const childGroups = await invoke('get_groups', {
+  parentId: 3,
+  categoryId: null,
+  favoritesOnly: false
+})
 ```
 
 ---
@@ -396,11 +570,21 @@ const childGroups = await invoke('get_groups', {parentId: 3})
 
 **Description**: Updates an existing group. Includes circular reference validation.
 
+- Changing `parent_group_id` automatically recalculates `position` and assigns the last position of
+  the group.
+
 **Validation**:
 
 - Name must not be empty
 - Environment variable keys must be valid
 - **Circular reference check**: Prevents setting a parent that would create a cycle
+    - Fires when `parent_group_id` is set and either:
+        - `parent_group_id == group.id` (self-reference), or
+        - Walking the ancestor chain of `parent_group_id` upward reaches `group.id` (multi-level
+          cycle, e.g. A→B→C then setting A's parent to C)
+        - Duplicate IDs detected in the ancestor chain (data corruption guard)
+        - Returns `CircularReference { group_id, parent_id }`
+    - Setting `parent_group_id` to `None` (promoting to root) skips the check entirely
 
 **Errors**:
 
@@ -412,11 +596,11 @@ const childGroups = await invoke('get_groups', {parentId: 3})
 
 ```typescript
 await invoke('update_group', {
-    id: 5,
-    name: 'Updated Group',
-    description: 'New description',
-    parentGroupId: 2,  // Moving to different parent
-    // ... other fields
+  id: 5,
+  name: 'Updated Group',
+  description: 'New description',
+  parentGroupId: 2,  // Moving to different parent
+  // ... other fields
 })
 ```
 
@@ -438,6 +622,8 @@ await invoke('update_group', {
 - `next_id`: Group after new position (None = move to bottom)
 
 **Behavior**: Same as command reordering - calculates midpoint, auto-renumbers if gap exhausted.
+
+- behavior is same as `move_group_between`, both uses same helper function
 
 ---
 
@@ -479,7 +665,11 @@ const count = await invoke('get_group_command_count', {id: 5})
 
 **Description**: Recursively retrieves a group and all its descendants using SQL recursive CTE.
 
-**Returns**: Flattened array of groups in the tree, ordered by position
+**Returns**: Flattened array of groups ordered by `depth ASC, position ASC`
+
+- root is always first,
+- then all depth-1 children by position,
+- then depth-2, and so on. A single-node tree returns just the root.
 
 **Usage**:
 
@@ -508,6 +698,106 @@ const path = await invoke('get_group_path', {groupId: 8})
 ```
 
 ---
+---
+
+### Search Groups
+
+`search_groups(search_term: String) -> Result<Vec<Group>>`
+
+**Description**: Search groups by name or description.
+
+**Parameters**:
+
+- `search_term`: Substring to match (case-insensitive). Empty string returns all groups.
+
+**Behavior**:
+
+- Pattern: `%search_term%` applied to both `name` and `description` fields
+- Results ordered by `name ASC`
+- Special characters (`%`, `_`) are treated as SQLite wildcards
+- Empty `search_term` (`""`) returns all groups ordered by name.
+
+**Returns**: Matching groups ordered alphabetically by name
+
+**Usage**:
+
+```typescript
+const groups = await invoke('search_groups', {searchTerm: 'docker'})
+```
+
+---
+
+### Get Groups Count
+
+`get_groups_count(group_id: Option<i64>, category_id: Option<i64>, favorites_only: bool) -> Result<i64>`
+
+**Description**: Returns the count of groups matching the specified filters. Uses the same filter
+logic as `get_groups`.
+
+**Parameters**:
+
+- `group_id`: Filter by parent group (`None` = root-level groups)
+- `category_id`: Filter by category (`None` = uncategorised)
+- `favorites_only`: Count only favorited groups when `true`
+
+**Returns**: Count of matching groups (`i64`)
+
+**Usage**:
+
+```typescript
+const count = await invoke('get_groups_count', {
+  groupId: null,
+  categoryId: null,
+  favoritesOnly: false
+})
+```
+
+---
+
+### Get Group Ancestor Chain
+
+`get_group_ancestor_chain(group_id: i64) -> Result<Vec<Group>>`
+
+**Description**: Returns the group itself followed by all its ancestors walking up the parent chain,
+closest-first (direct parent before grandparent, root last).
+
+**Returns**: Array ordered closest-first. A root group returns a single-element array containing
+itself.
+
+**SQL Implementation**: Recursive CTE walking `parent_group_id` upward from `group_id`.
+
+**Usage**:
+
+```typescript
+// For a group at path Root > Docker > Production:
+const chain = await invoke('get_group_ancestor_chain', {groupId: productionId})
+// Returns: [Production, Docker, Root]
+```
+
+---
+
+### Toggle Group Favorite
+
+`toggle_group_favorite(id: i64) -> Result<()>`
+
+**Description**: Toggles the `is_favorite` flag for a group.
+
+**Parameters**:
+
+- `id`: Group ID
+
+**Returns**:
+
+- `Ok(())`: Success
+- `Err(NotFound { entity: "groups", id })`: Group not found
+
+**Usage**:
+
+```typescript
+await invoke('toggle_group_favorite', {id: 5})
+```
+
+---
 
 ## 6.3 Category Management
 
@@ -529,9 +819,9 @@ const path = await invoke('get_group_path', {groupId: 8})
 
 ```typescript
 const categoryId = await invoke('create_category', {
-    name: 'Docker',
-    icon: '🐳',
-    color: '#2496ed'
+  name: 'Docker',
+  icon: '🐳',
+  color: '#2496ed'
 })
 ```
 
@@ -564,12 +854,12 @@ const categoryId = await invoke('create_category', {
 
 ```typescript
 interface Category {
-    id: number
-    name: string
-    icon?: string
-    color?: string
-    createdAt: string
-    updatedAt: string
+  id: number
+  name: string
+  icon?: string
+  color?: string
+  createdAt: string
+  updatedAt: string
 }
 
 const categories = await invoke('get_categories')
@@ -671,13 +961,13 @@ const theme = await invoke('get_setting', {key: 'theme'})
 
 ```typescript
 await invoke('set_setting', {
-    key: 'theme',
-    value: 'dark'
+  key: 'theme',
+  value: 'dark'
 })
 
 await invoke('set_setting', {
-    key: 'log_buffer_size',
-    value: '20000'
+  key: 'log_buffer_size',
+  value: '20000'
 })
 ```
 
@@ -767,16 +1057,16 @@ struct Workflow {
 **Usage**:
 
 ```typescript
-import {invoke} from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/tauri'
 
 const workflowId = await invoke('create_workflow', {
-    workflow: {
-        name: 'Deploy to Production',
-        description: 'Full deployment workflow',
-        categoryId: 2,
-        isFavorite: true,
-        position: 0
-    }
+  workflow: {
+    name: 'Deploy to Production',
+    description: 'Full deployment workflow',
+    categoryId: 2,
+    isFavorite: true,
+    position: 0
+  }
 })
 ```
 
@@ -819,26 +1109,26 @@ const workflowId = await invoke('create_workflow', {
 
 ```typescript
 interface Workflow {
-    id: number
-    name: string
-    description?: string
-    categoryId?: number
-    isFavorite: boolean
-    position: number
-    createdAt: string
-    updatedAt: string
+  id: number
+  name: string
+  description?: string
+  categoryId?: number
+  isFavorite: boolean
+  position: number
+  createdAt: string
+  updatedAt: string
 }
 
 // Get all workflows
 const allWorkflows = await invoke('get_workflows', {
-    categoryId: null,
-    favoritesOnly: false
+  categoryId: null,
+  favoritesOnly: false
 })
 
 // Get favorite workflows in category 2
 const favoriteWorkflows = await invoke('get_workflows', {
-    categoryId: 2,
-    favoritesOnly: true
+  categoryId: 2,
+  favoritesOnly: true
 })
 ```
 
@@ -945,9 +1235,9 @@ indexing.
 ```typescript
 // Move workflow 5 between workflows 2 and 7
 await invoke('move_workflow_between', {
-    workflowId: 5,
-    prevId: 2,
-    nextId: 7
+  workflowId: 5,
+  prevId: 2,
+  nextId: 7
 })
 ```
 
@@ -992,14 +1282,14 @@ struct WorkflowStep {
 
 ```typescript
 const stepId = await invoke('create_workflow_step', {
-    flowSteps: {
-        workflowId: 1,
-        commandId: 5,
-        position: 0,
-        enabled: true,
-        waitForCompletion: true,
-        delaySeconds: 5
-    }
+  flowSteps: {
+    workflowId: 1,
+    commandId: 5,
+    position: 0,
+    enabled: true,
+    waitForCompletion: true,
+    delaySeconds: 5
+  }
 })
 ```
 
@@ -1040,29 +1330,29 @@ const stepId = await invoke('create_workflow_step', {
 
 ```typescript
 interface WorkflowStep {
-    id: number
-    workflowId: number
-    commandId: number
-    position: number
-    enabled: boolean
-    waitForCompletion: boolean
-    delaySeconds?: number
-    createdAt: string
-    updatedAt: string
+  id: number
+  workflowId: number
+  commandId: number
+  position: number
+  enabled: boolean
+  waitForCompletion: boolean
+  delaySeconds?: number
+  createdAt: string
+  updatedAt: string
 }
 
 // Get all steps for workflow 1
 const steps = await invoke('get_workflow_steps', {
-    workflowId: 1,
-    commandId: null,
-    enabledOnly: false
+  workflowId: 1,
+  commandId: null,
+  enabledOnly: false
 })
 
 // Get enabled steps that use command 5
 const enabledSteps = await invoke('get_workflow_steps', {
-    workflowId: null,
-    commandId: 5,
-    enabledOnly: true
+  workflowId: null,
+  commandId: 5,
+  enabledOnly: true
 })
 ```
 
@@ -1086,13 +1376,13 @@ displaying workflow execution details.
 
 ```typescript
 const stepsWithCommands = await invoke('get_workflow_steps_command_populated', {
-    workflowId: 1,
-    enabledOnly: true
+  workflowId: 1,
+  enabledOnly: true
 })
 
 // Returns: Array<[WorkflowStep, Command]>
 stepsWithCommands.forEach(([step, command]) => {
-    console.log(`Step ${step.id}: ${command.name}`)
+  console.log(`Step ${step.id}: ${command.name}`)
 })
 ```
 
@@ -1152,9 +1442,9 @@ stepsWithCommands.forEach(([step, command]) => {
 ```typescript
 // Move step 10 between steps 8 and 12
 await invoke('move_workflow_step_between', {
-    workflowId: 10,
-    prevId: 8,
-    nextId: 12
+  workflowId: 10,
+  prevId: 8,
+  nextId: 12
 })
 ```
 
@@ -1262,6 +1552,9 @@ Passing any other combination returns `DatabaseError::InvalidData`.
 
 - `NotFound` — `command_id`, `workflow_id`, or `workflow_step_id` does not exist
 - `InvalidData` — invalid ID combination (see table above)
+- `InvalidData { field: "command" }` — `command_id` references a command that already has a`Running`
+  execution
+-
 
 ### Get Execution History
 
@@ -1292,38 +1585,40 @@ Passing any other combination returns `DatabaseError::InvalidData`.
 
 ### Get Running Commands
 
-`get_running_commands(command_id: Option<i64>, workflow_id: Option<i64>) -> Result<Vec<ExecutionHistory>>`
+`get_running_commands() -> Result<Vec<ExecutionHistory>>`
 
-**Description**: Returns all rows with `status = 'running'`.
+**Description**: Returns all execution history rows with `status = 'running'` for standalone command
+executions only.
 
-- Used at startup for orphan detection and by the frontend's active-process list.
+- `command_id IS NOT NULL` — excludes pure workflow-level rows
+- `workflow_id IS NULL` — excludes workflow-step executions; use `get_workflow_execution_history`for
+  those
+- Used at app startup for orphan detection and by the frontend's active-process list
 
-**Parameters** (mutually exclusive — pass at most one):
-
-- `command_id` — filter to a specific command's running executions
-- `workflow_id` — filter to a specific workflow's running executions
-- both `None` — returns all currently running executions
-
-**Errors**: InvalidData if both `command_id` and `workflow_id` are Some.
+**Returns**: All currently running standalone command executions, unordered.
 
 ### Update Execution PID
 
 `update_execution_pid(id: i64, pid: u32) -> Result<()>`
 
 **Description**: Stores the OS process ID once `child.spawn()` has succeeded. Called immediately
-after
-spawn before any log streaming begins.
+after spawn before any log streaming begins.
 
 **Why separate from create**: The PID is only available after the OS process actually starts, which
 happens after the DB row is created.
+
+**Errors**:
+
+- `NotFound` — no row with that `id`
+- `InvalidData { field: "pid" }` — the row exists but its status is not `Running`; the PID can only
+  be stored on a live execution
 
 ### Update Execution History Status
 
 `update_execution_history_status(id: i64, status: Status, exit_code: Option<i32>) -> Result<()>`
 
 **Description**: Transition a running execution to a terminal state. The completed_at timestamp is
-set
-automatically by the execution_history_timestamps DB trigger.
+set automatically by the execution_history_timestamps DB trigger.
 
 **Valid terminal transitions from Running:**
 
@@ -1336,6 +1631,12 @@ automatically by the execution_history_timestamps DB trigger.
 
 - `status` — target terminal state (not Running or Skipped)
 - `exit_code` — OS exit code; None for signals/cancellation
+
+**Errors**:
+
+- `InvalidData { field: "status" }` — if the current status is already terminal (not `Running`), or
+  if the requested `status` is `Running` (re-entering running is never valid)
+- `NotFound` — row does not exist
 
 ### Cancel Execution History
 
@@ -1361,8 +1662,12 @@ automatically by the execution_history_timestamps DB trigger.
 
 **Description**: Retains only the most recent keep_last entries for a command; older rows are
 deleted. Implements the ADR-007 retention strategy.
+- Only standalone executions (`workflow_id IS NULL`) are considered for deletion; workflow-step history for the same command is never removed by this function.
+- **Default**: `keep_last = 100` (matches `EXECUTION_HISTORY_LIMIT`).
 
-Default: keep_last = 100 (matches EXECUTION_HISTORY_LIMIT).
+**Edge Case**: 
+- When `days = 0`, deletes all non-running history regardless of timestamp
+- except running entries which are always preserved
 
 **TODO**: Add equivalent cleanup for workflow and workflow-step history.
 
@@ -1375,25 +1680,45 @@ Default: keep_last = 100 (matches EXECUTION_HISTORY_LIMIT).
 - Skips rows with `status = 'running'` to avoid deleting live sessions.
 - Called on app startup based on the `log_retention_days` setting.
 
-### Get Command Execution Stats
+### Get Execution Stats
 
-`get_command_execution_stats(command_id: i64, status: Option<Status>) -> Result<i64>`
+`get_execution_stats(target: StatsTarget, days: Option<i64>) -> Result<ExecutionStats>`
 
-**Description**: Returns a count of execution history rows for a command.
-
-**Parameters:**
-
-- `status`:
-    - `None` — count of all executions for the command
-    - `Some(s)` — count of executions with that specific status
-
-**Example usage**:
-
+**Description**: Returns aggregate execution statistics for a command, workflow, or globally.
 ```rust
-let total   = db.get_command_execution_stats(cmd_id, None) ?;
-let success = db.get_command_execution_stats(cmd_id, Some(Status::Success)) ?;
-let failed  = db.get_command_execution_stats(cmd_id, Some(Status::Failed)) ?;
-let rate    = success as f64 / total as f64 * 100.0;
+enum StatsTarget {
+    Command(i64),   // standalone executions only (workflow_id IS NULL)
+    Workflow(i64),  // top-level workflow rows only (command_id IS NULL, workflow_step_id IS NULL)
+    Global,         // all rows where workflow_step_id IS NULL
+}
+
+struct ExecutionStats {
+    total_count: i64,
+    success_count: i64,
+    failed_count: i64,
+    cancelled_count: i64,
+    timeout_count: i64,
+    running_count: i64,
+    paused_count: i64,
+    skipped_count: i64,
+    success_rate: f64,           // success_count / total_count, rounded to 2dp; 0.0 if total = 0
+    average_duration_ms: Option<i64>,  // None if no completed executions
+    last_executed_at: Option<String>,
+    first_executed_at: Option<String>,
+}
+```
+
+**Parameters**:
+- `target` — scope of the query (see `StatsTarget` above)
+- `days` — when `Some(n)`, only rows where `started_at >= NOW - n days` are counted; `None` = all time
+
+**Edge cases**:
+- No matching rows → all counts zero, `success_rate = 0.0`, `average_duration_ms = None`
+- `average_duration_ms` is `None` if no rows have a `completed_at` value (e.g. all still running)
+
+**Usage**:
+```typescript
+const stats = await invoke('get_execution_stats', { target: { Command: commandId }, days: 30 })
 ```
 
 ---
@@ -1442,12 +1767,12 @@ let rate    = success as f64 / total as f64 * 100.0;
 **Usage**:
 
 ```typescript
-import {listen} from '@tauri-apps/api/event'
+import { listen } from '@tauri-apps/api/event'
 
 // Start listening for logs
 const unlisten = await listen('log-line', (event) => {
-    const {pid, line, source, timestamp} = event.payload
-    console.log(`[${pid}] ${source}: ${line}`)
+  const {pid, line, source, timestamp} = event.payload
+  console.log(`[${pid}] ${source}: ${line}`)
 })
 
 // Execute command
@@ -1503,13 +1828,13 @@ await invoke('kill_process', {pid: 12345, force: true})
 
 ```typescript
 interface ProcessInfo {
-    pid: number
-    commandId: number
-    commandName: string
-    command: string
-    status: 'Running' | 'Stopping' | 'Stopped' | 'Error'
-    startTime: number // Unix timestamp
-    exitCode?: number
+  pid: number
+  commandId: number
+  commandName: string
+  command: string
+  status: 'Running' | 'Stopping' | 'Stopped' | 'Error'
+  startTime: number // Unix timestamp
+  exitCode?: number
 }
 
 const processes = await invoke('get_running_processes')
@@ -1608,15 +1933,15 @@ memory)
 
 ```typescript
 interface LogLine {
-    line: string
-    source: 'stdout' | 'stderr'
-    timestamp: number
+  line: string
+  source: 'stdout' | 'stderr'
+  timestamp: number
 }
 
 const logs = await invoke('get_log_buffer', {
-    pid: 12345,
-    offset: 0,
-    limit: 1000,
+  pid: 12345,
+  offset: 0,
+  limit: 1000,
 })
 ```
 
@@ -1652,56 +1977,56 @@ struct TemplatePayload {
 
 ```typescript
 interface TemplateCommand {
-    name: string
-    command: string
-    arguments: string[]
-    workingDirectory: string // Can contain {{variables}}
-    categoryName?: string
-    envVars?: Record
+  name: string
+  command: string
+  arguments: string[]
+  workingDirectory: string // Can contain {{variables}}
+  categoryName?: string
+  envVars?: Record
 }
 
 interface TemplateVariable {
-    key: string
-    label: string
-    type: 'string' | 'path' | 'number'
-    default?: string
-    required: boolean
+  key: string
+  label: string
+  type: 'string' | 'path' | 'number'
+  default?: string
+  required: boolean
 }
 
 const templateId = await invoke('create_template', {
-    name: 'Python Development',
-    description: 'Common Python project commands',
-    commands: [
-        {
-            name: 'Create venv',
-            command: 'python',
-            arguments: ['-m', 'venv', '{{venv_name}}'],
-            workingDirectory: '{{directory}}',
-            categoryName: 'Python'
-        },
-        {
-            name: 'Install deps',
-            command: '{{directory}}/{{venv_name}}/bin/pip',
-            arguments: ['install', '-r', 'requirements.txt'],
-            workingDirectory: '{{directory}}',
-            categoryName: 'Python'
-        }
-    ],
-    variables: [
-        {
-            key: 'directory',
-            label: 'Project Directory',
-            type: 'path',
-            required: true
-        },
-        {
-            key: 'venv_name',
-            label: 'Virtual Environment Name',
-            type: 'string',
-            default: 'venv',
-            required: false
-        }
-    ]
+  name: 'Python Development',
+  description: 'Common Python project commands',
+  commands: [
+    {
+      name: 'Create venv',
+      command: 'python',
+      arguments: ['-m', 'venv', '{{venv_name}}'],
+      workingDirectory: '{{directory}}',
+      categoryName: 'Python'
+    },
+    {
+      name: 'Install deps',
+      command: '{{directory}}/{{venv_name}}/bin/pip',
+      arguments: ['install', '-r', 'requirements.txt'],
+      workingDirectory: '{{directory}}',
+      categoryName: 'Python'
+    }
+  ],
+  variables: [
+    {
+      key: 'directory',
+      label: 'Project Directory',
+      type: 'path',
+      required: true
+    },
+    {
+      key: 'venv_name',
+      label: 'Virtual Environment Name',
+      type: 'string',
+      default: 'venv',
+      required: false
+    }
+  ]
 })
 ```
 
@@ -1733,11 +2058,11 @@ const templateId = await invoke('create_template', {
 
 ```typescript
 const commandIds = await invoke('apply_template', {
-    templateId: 1,
-    variableValues: {
-        directory: '/home/user/my-project',
-        venv_name: 'venv'
-    }
+  templateId: 1,
+  variableValues: {
+    directory: '/home/user/my-project',
+    venv_name: 'venv'
+  }
 })
 ```
 
@@ -1828,17 +2153,17 @@ enum DatabaseError {
 
 ```typescript
 try {
-    await invoke('delete_command', {id: 5})
+  await invoke('delete_command', {id: 5})
 } catch (error) {
-    if (error.includes('NotFound')) {
-        showToast('Command not found', 'error')
-    } else if (error.includes('InvalidData')) {
-        showToast('Validation failed: ' + error, 'error')
-    } else if (error.includes('CircularReference')) {
-        showToast('Cannot create circular group hierarchy', 'error')
-    } else {
-        showToast('Database error: ' + error, 'error')
-    }
+  if (error.includes('NotFound')) {
+    showToast('Command not found', 'error')
+  } else if (error.includes('InvalidData')) {
+    showToast('Validation failed: ' + error, 'error')
+  } else if (error.includes('CircularReference')) {
+    showToast('Cannot create circular group hierarchy', 'error')
+  } else {
+    showToast('Database error: ' + error, 'error')
+  }
 }
 ```
 
@@ -1847,16 +2172,16 @@ try {
 Frontend subscribes to events via Tauri's listen:
 
 ```typeScript
-import {listen} from '@tauri-apps/api/event'
+import { listen } from '@tauri-apps/api/event'
 
 listen('log-line', (event) => {
-    const {pid, line, is_stderr} = event.payload
-    logStore.append(pid, line, is_stderr)
+  const {pid, line, is_stderr} = event.payload
+  logStore.append(pid, line, is_stderr)
 })
 
 listen('process-status-changed', (event) => {
-    const {pid, new_status} = event.payload
-    processStore.updateStatus(pid, new_status)
+  const {pid, new_status} = event.payload
+  processStore.updateStatus(pid, new_status)
 })
 ```
 

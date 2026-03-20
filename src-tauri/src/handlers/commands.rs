@@ -1,4 +1,4 @@
-use crate::database::{Command, Database};
+use crate::database::{CategoryFilter, Command, Database, GroupFilter, WithHistory};
 use crate::handlers::serialize_errors::SerializableError;
 use tauri::State;
 
@@ -15,13 +15,34 @@ pub fn get_command(db: State<'_, Database>, id: i64) -> Result<Command, Serializ
 #[tauri::command]
 pub fn get_commands(
     db: State<'_, Database>,
+    parent_id: GroupFilter,
+    category_id: CategoryFilter,
+    favorites_only: bool,
+) -> Result<Vec<WithHistory<Command>>, SerializableError> {
+    db.get_commands(parent_id, category_id, favorites_only, None, None)
+        .map_err(|e| e.into())
+}
+
+#[tauri::command]
+pub fn get_recent_commands(
+    db: State<'_, Database>,
+    limit: i64,
+) -> Result<Vec<WithHistory<Command>>, SerializableError> {
+    db.get_recent_commands(limit)
+        .map_err(|e| e.into())
+}
+
+#[tauri::command]
+pub fn get_command_count(
+    db: State<'_, Database>,
     parent_id: Option<i64>,
     category_id: Option<i64>,
     favorites_only: bool,
-) -> Result<Vec<Command>, SerializableError> {
-    db.get_commands(parent_id, category_id, favorites_only)
+) -> Result<i64, SerializableError> {
+    db.get_commands_count(parent_id, category_id, favorites_only)
         .map_err(|e| e.into())
 }
+
 
 #[tauri::command]
 pub fn update_command(db: State<'_, Database>, cmd: Command) -> Result<(), SerializableError> {

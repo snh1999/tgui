@@ -1,4 +1,4 @@
-use crate::database::{Database, Group};
+use crate::database::{CategoryFilter, Database, Group, GroupFilter};
 use crate::handlers::serialize_errors::SerializableError;
 use tauri::State;
 
@@ -15,8 +15,8 @@ pub fn get_group(db: State<'_, Database>, id: i64) -> Result<Group, Serializable
 #[tauri::command]
 pub fn get_groups(
     db: State<'_, Database>,
-    parent_id: Option<i64>,
-    category_id: Option<i64>,
+    parent_id: GroupFilter,
+    category_id: CategoryFilter,
     favorites_only: bool,
 ) -> Result<Vec<Group>, SerializableError> {
     db.get_groups(parent_id, category_id, favorites_only)
@@ -42,11 +42,6 @@ pub fn move_group_between(
 #[tauri::command]
 pub fn delete_group(db: State<'_, Database>, id: i64) -> Result<(), SerializableError> {
     db.delete_group(id).map_err(|err| err.into())
-}
-
-#[tauri::command]
-pub fn get_group_command_count(db: State<'_, Database>, id: i64) -> Result<i64, SerializableError> {
-    db.get_group_command_count(id).map_err(|err| err.into())
 }
 
 #[tauri::command]

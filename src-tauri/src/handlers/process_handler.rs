@@ -1,10 +1,20 @@
 use crate::database::{Database, TriggeredBy};
 use crate::handlers::serialize_errors::SerializableError;
 use crate::process::manager::ProcessManager;
-use crate::process::models::{LogLineEvent, ProcessInfo, TrayStatus};
+use crate::process::models::{LogLineEvent, ProcessInfo, SpawnContext, TrayStatus};
 use std::sync::Arc;
 use tauri::State;
 use tracing::debug;
+
+#[tauri::command]
+pub async fn resolve_command_context(
+    command_id: i64,
+    pm: State<'_, Arc<ProcessManager>>,
+) -> Result<SpawnContext, SerializableError> {
+    pm.resolve_spawn_context(command_id)
+        .await
+        .map_err(|e| SerializableError::from(e))
+}
 
 #[tauri::command]
 pub async fn spawn_command(
@@ -85,16 +95,14 @@ pub async fn stop_all_processes(
     Ok(count)
 }
 
+// TODO: remove this and switch to execution history
 #[tauri::command]
 pub async fn get_tray_status(
     pm: State<'_, Arc<ProcessManager>>,
     db: State<'_, Database>,
 ) -> Result<TrayStatus, SerializableError> {
     let running_count = pm.running_count().await as i64;
-    let total_commands = db
-        .get_commands(None, None, false)
-        .map(|cmds| cmds.len() as i64)
-        .unwrap_or(0);
+    let total_commands = db.get_commands_count(None, None, false).unwrap_or(0);
     let error_count = 0i64;
 
     Ok(TrayStatus {
@@ -105,6 +113,6 @@ pub async fn get_tray_status(
 }
 
 #[tauri::command]
-pub fn get_valid_shells() -> Vec<&'static str> {
+pub fn get_valid_shells() -> Vec<String> {
     crate::process::shell::get_allowed_shells()
 }

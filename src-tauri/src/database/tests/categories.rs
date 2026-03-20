@@ -15,6 +15,13 @@ fn test_create_and_get_category() {
 }
 
 #[test]
+fn test_get_categories_empty() {
+    let test_db = TestDb::setup_test_db();
+    let categories = test_db.db.get_categories().unwrap();
+    assert!(categories.is_empty());
+}
+
+#[test]
 fn test_create_category_with_icon_and_color() {
     let test_db = TestDb::setup_test_db();
     let cat_name = "Development";
@@ -58,6 +65,25 @@ fn test_create_category_duplicate_name() {
 
     let result = test_db.db.create_category("Unique", None, None);
     assert!(matches!(result, Err(DatabaseError::Internal(msg)) if msg.contains("UNIQUE")));
+}
+
+#[test]
+fn test_create_category_name_at_max_length() {
+    let test_db = TestDb::setup_test_db();
+    let name = "a".repeat(Database::MAX_NAME_LENGTH);
+    let result = test_db.db.create_category(&name, None, None);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_create_category_name_over_max_length() {
+    let test_db = TestDb::setup_test_db();
+    let name = "a".repeat(Database::MAX_NAME_LENGTH + 1);
+    let result = test_db.db.create_category(&name, None, None);
+    assert!(matches!(
+        result,
+        Err(DatabaseError::InvalidData { field: "name", .. })
+    ));
 }
 
 #[test]
@@ -139,6 +165,24 @@ fn test_update_category_duplicate_name() {
 }
 
 #[test]
+fn test_update_category_clears_optional_fields() {
+    let test_db = TestDb::setup_test_db();
+    let cat_id = test_db
+        .db
+        .create_category("Dev", Some("icon"), Some("#FFF"))
+        .unwrap();
+
+    test_db
+        .db
+        .update_category(cat_id, "Dev", None, None)
+        .unwrap();
+
+    let updated = test_db.db.get_category(cat_id).unwrap();
+    assert_eq!(updated.icon, None);
+    assert_eq!(updated.color, None);
+}
+
+#[test]
 fn test_delete_category() {
     let test_db = TestDb::setup_test_db();
     let cat_id = test_db.create_test_category("To Delete");
@@ -186,17 +230,93 @@ fn test_get_category_command_count() {
     let cat_id = test_db.create_test_category("Development");
     let group_id = test_db.create_test_group("Test Group");
 
-    let mut cmd1 = CommandBuilder::new("Build", "cargo build").build();
-    cmd1.category_id = Some(cat_id);
-    cmd1.group_id = Some(group_id);
+    let cmd = CommandBuilder::new("Build", "cargo build").with_category(cat_id).with_group(group_id).build();
 
-    let mut cmd2 = CommandBuilder::new("Test", "cargo test").build();
-    cmd2.category_id = Some(cat_id);
-    cmd2.group_id = Some(group_id);
-
-    test_db.db.create_command(&cmd1).unwrap();
-    test_db.db.create_command(&cmd2).unwrap();
+    test_db.db.create_command(&cmd).unwrap();
+    test_db.db.create_command(&cmd).unwrap();
 
     let count = test_db.db.get_category_command_count(cat_id).unwrap();
     assert_eq!(count, 2);
+}
+
+#[test]
+fn test_get_category_command_count_excludes_other_categories() {
+    let test_db = TestDb::setup_test_db();
+    let cat_a = test_db.create_test_category("A");
+    let cat_b = test_db.create_test_category("B");
+    let group_id = test_db.create_test_group("Group");
+
+    let cmd = CommandBuilder::new("Build", "cargo build").with_category(cat_b).with_group(group_id).build();
+    test_db.db.create_command(&cmd).unwrap();
+
+    let count = test_db.db.get_category_command_count(cat_a).unwrap();
+    assert_eq!(count, 0);
+}
+
+#[test]
+fn test_get_category_command_count_nonexistent_id_returns_zero() {
+    let test_db = TestDb::setup_test_db();
+    let result = test_db.db.get_category_command_count(99999);
+    assert!(matches!(result, Ok(0)));
+}
+
+#[test]
+fn test_get_category_group_count() {
+    let test_db = TestDb::setup_test_db();
+    let cat_id = test_db.create_test_category("Development");
+
+    let group = GroupBuilder::new("Test Group").with_category(cat_id).build();
+    test_db.db.create_group(&group).unwrap();
+    test_db.db.create_group(&group).unwrap();
+
+    let count = test_db.db.get_category_group_count(cat_id).unwrap();
+    assert_eq!(count, 2);
+}
+
+#[test]
+fn test_get_category_group_count_excludes_other_categories() {
+    let test_db = TestDb::setup_test_db();
+    let cat_a = test_db.create_test_category("A");
+    let cat_b = test_db.create_test_category("B");
+
+    let group =   GroupBuilder::new("Test Group").with_category(cat_a).build();
+    test_db.db.create_group(&group).unwrap();
+
+
+    let count = test_db.db.get_category_group_count(cat_b).unwrap();
+    assert_eq!(count, 0);
+}
+
+#[test]
+fn test_get_category_group_count_nonexistent_id_returns_zero() {
+    let test_db = TestDb::setup_test_db();
+    let result = test_db.db.get_category_group_count(99999);
+    assert!(matches!(result, Ok(0)));
+}
+
+
+#[test]
+fn test_delete_category_only_nulls_its_own_commands() {
+    let test_db = TestDb::setup_test_db();
+    let cat_a = test_db.create_test_category("A");
+    let cat_b = test_db.create_test_category("B");
+    let group_id = test_db.create_test_group("Group");
+
+    let mut cmd_a = CommandBuilder::new("CmdA", "echo a").build();
+    cmd_a.category_id = Some(cat_a);
+    cmd_a.group_id = Some(group_id);
+    let cmd_a_id = test_db.db.create_command(&cmd_a).unwrap();
+
+    let mut cmd_b = CommandBuilder::new("CmdB", "echo b").build();
+    cmd_b.category_id = Some(cat_b);
+    cmd_b.group_id = Some(group_id);
+    let cmd_b_id = test_db.db.create_command(&cmd_b).unwrap();
+
+    test_db.db.delete_category(cat_a).unwrap();
+
+    assert_eq!(test_db.db.get_command(cmd_a_id).unwrap().category_id, None);
+    assert_eq!(
+        test_db.db.get_command(cmd_b_id).unwrap().category_id,
+        Some(cat_b)
+    );
 }

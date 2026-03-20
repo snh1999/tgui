@@ -5,8 +5,63 @@ use serde_json::Error;
 use std::collections::HashMap;
 use tracing::{debug, error, info, warn};
 
+pub(crate) struct QueryBuilder {
+    conditions: Vec<String>,
+    params: Vec<Box<dyn rusqlite::ToSql>>,
+}
+
+impl QueryBuilder {
+    pub fn new() -> Self {
+        Self {
+            conditions: vec![],
+            params: vec![],
+        }
+    }
+
+    pub fn add_condition(&mut self, condition: &str, param: impl rusqlite::ToSql + 'static) -> &mut Self {
+        self.conditions.push(condition.to_string());
+        self.params.push(Box::new(param));
+        self
+    }
+
+    pub fn add_condition_without_param(&mut self, condition: &str) -> &mut Self {
+        self.conditions.push(condition.to_string());
+        self
+    }
+
+    pub fn build(&self) -> (String, Vec<&dyn rusqlite::ToSql>) {
+        let where_clause = if self.conditions.is_empty() {
+            String::new()
+        } else {
+            format!("WHERE {}", self.conditions.join(" AND "))
+        };
+        let param_refs: Vec<&dyn rusqlite::ToSql> = self.params.iter().map(|p| p.as_ref()).collect();
+        (where_clause, param_refs)
+    }
+}
+
+
 impl Database {
     pub(crate) const POSITION_GAP: i64 = 1000;
+    pub(crate) const MAX_NAME_LENGTH: usize = 255;
+    pub(crate) const MAX_COMMAND_LENGTH: usize = 10000;
+    pub(crate) const MAX_DESCRIPTION_LENGTH: usize = 2000;
+
+    pub(crate) fn validate_field_length(&self, field: &'static str, value: &str, max: usize) -> Result<()> {
+        if value.trim().is_empty() {
+            error!("Empty field: {field}");
+            return Err(DatabaseError::InvalidData {
+                field,
+                reason: format!("{field} cannot be empty"),
+            });
+        } else if value.len() > max {
+            return Err(DatabaseError::InvalidData {
+                field,
+                reason: format!("{} exceeds maximum length of {}", field, max),
+            });
+        }
+        Ok(())
+    }
 
     pub(crate) fn create<P: rusqlite::Params>(
         &self,
@@ -114,10 +169,10 @@ impl Database {
         parent_column: Option<&'static str>,
         parent_id: Option<i64>,
     ) -> Result<i64> {
-        let mut query = format!("SELECT COALESCE(MAX(position), -1) + 1 FROM {} ", table);
+        let mut query = format!("SELECT COALESCE(MAX(position), 0) FROM {table} ");
 
         if let Some(parent_column) = parent_column {
-            query.push_str(&format!(" WHERE {} IS ?1", parent_column));
+            query.push_str(&format!(" WHERE {parent_column} IS ?1"));
         }
 
         let params = if parent_column.is_some() {
@@ -140,6 +195,19 @@ impl Database {
         Ok(position)
     }
 
+    pub(crate) fn update_parent_group(
+        &self,
+        table: &'static str,
+        parent_column: &'static str,
+        id: i64,
+        parent_id: Option<i64>,
+    ) -> Result<()> {
+        let position = self.get_position(table, Some(parent_column), parent_id)?;
+        let query = format!("UPDATE {table} SET {parent_column} = ?1, position = ?2 WHERE id = {id}");
+        self.execute_db(table, id, &query, params![parent_id, position])?;
+        Ok(())
+    }
+
     pub(crate) fn validate_env_var_keys(
         &self,
         env_vars: &Option<HashMap<String, String>>,
@@ -153,27 +221,12 @@ impl Database {
                     error!("Invalid env variable key: {}", key);
                     return Err(DatabaseError::InvalidData {
                         field: "env_vars",
-                        reason: format!(
-                            "Invalid key '{}': only alphanumeric, underscore, dash",
-                            key
-                        ),
+                        reason: format!("Invalid key '{key}': only alphanumeric, underscore, dash"),
                     });
                 }
             }
         }
         Ok(())
-    }
-
-    pub(crate) fn validate_non_empty(&self, field: &'static str, value: &str) -> Result<()> {
-        if value.trim().is_empty() {
-            error!("Empty field: {}", field);
-            Err(DatabaseError::InvalidData {
-                field,
-                reason: format!("{} cannot be empty", field),
-            })
-        } else {
-            Ok(())
-        }
     }
 
     /// Move command between two positions (calculates midpoint)
@@ -186,7 +239,6 @@ impl Database {
         prev_id: Option<i64>,
         next_id: Option<i64>,
         parent_column: Option<&'static str>,
-        parent_id: Option<i64>,
         mut get_position_parent: F,
     ) -> Result<()>
     where
@@ -202,6 +254,7 @@ impl Database {
 
         let (prev_pos, prev_parent) = get_position_parent(prev_id, 0)?;
         let (next_pos, next_parent) = get_position_parent(next_id, prev_pos + Self::POSITION_GAP)?;
+        let (current_pos, parent_id) = get_position_parent(Some(item_id), 0)?;
 
         if (next_id.is_some() && next_parent != parent_id)
             || (prev_id.is_some() && prev_parent != parent_id)
@@ -211,6 +264,11 @@ impl Database {
                 field: "parent_id",
                 reason: "Invalid data, all groups must be from same parent".to_string(),
             });
+        }
+
+        if prev_pos == current_pos || next_pos == current_pos {
+            debug!("Item already at target position, skipping");
+            return Ok(());
         }
 
         let mut new_pos = (prev_pos + next_pos) / 2;
@@ -224,7 +282,7 @@ impl Database {
             new_pos = (prev_pos + next_pos) / 2;
         }
 
-        let query = format!("UPDATE {} SET position = ?1 WHERE id = ?2", table);
+        let query = format!("UPDATE {table} SET position = ?1 WHERE id = ?2");
         self.execute_db(table, item_id, &query, params![new_pos, item_id])?;
 
         info!(entity = table, id = item_id, "Workflow position updated");
@@ -241,10 +299,10 @@ impl Database {
         let mut connection = self.conn()?;
         let tx = connection.transaction()?;
 
-        let mut query = format!("SELECT id FROM {}", table);
+        let mut query = format!("SELECT id FROM {table}");
 
         if let Some(parent_column_name) = parent_column_name {
-            query.push_str(&format!(" WHERE {} IS ? ", parent_column_name));
+            query.push_str(&format!(" WHERE {parent_column_name} IS ? "));
         }
         query.push_str(" ORDER BY position, id");
 
@@ -259,7 +317,7 @@ impl Database {
             .query_map(params, |row| row.get(0))?
             .collect::<rusqlite::Result<_>>()?;
 
-        let update_query = format!("UPDATE {} SET position = ? WHERE id = ?", table);
+        let update_query = format!("UPDATE {table} SET position = ? WHERE id = ?");
 
         for (index, id) in ids.iter().enumerate() {
             let position = (index as i64 + 1) * Self::POSITION_GAP;
@@ -287,35 +345,32 @@ impl Database {
         })
     }
 
-    pub(crate) fn get_items_groups_commands<T, F>(
+    pub(crate) fn get_items_groups_commands_count(
         &self,
         table: &'static str,
         column: &'static str,
         id: Option<i64>,
         category_id: Option<i64>,
         favorites_only: bool,
-        row_mapper: F,
-    ) -> Result<Vec<T>>
-    where
-        F: FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
-    {
-        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-        let mut sql_statement = format!("SELECT * FROM {} WHERE {} IS ?1", table, column);
-        params.push(Box::new(id));
+    ) -> Result<i64> {
+        let mut query_builder = QueryBuilder::new();
+        query_builder.add_condition(&format!("{column} IS ?"), id);
 
         if let Some(cid) = category_id {
-            sql_statement.push_str(&format!(" AND category_id = ?{}", params.len() + 1));
-            params.push(Box::new(cid));
+            query_builder.add_condition("category_id = ?", cid);
         }
-
         if favorites_only {
-            sql_statement.push_str(" AND is_favorite = 1");
+            query_builder.add_condition_without_param("is_favorite = 1");
         }
 
-        sql_statement.push_str(" ORDER BY position");
+        let (where_clause, param_refs) = query_builder.build();
+        let sql_statement = format!("SELECT COUNT(*) FROM {table} {where_clause}");
 
-        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
-
-        self.query_database(&sql_statement, &*param_refs, row_mapper)
+        let count = self
+            .query_database(&sql_statement, param_refs.as_slice(), |row| row.get(0))?
+            .into_iter()
+            .next()
+            .ok_or_else(|| rusqlite::Error::QueryReturnedNoRows)?;
+        Ok(count)
     }
 }

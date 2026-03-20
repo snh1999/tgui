@@ -1,8 +1,9 @@
-use super::{Database, DatabaseError, Group, Result};
-use crate::constants::{GROUPS_TABLE, GROUP_PARENT_GROUP_COLUMN};
+use super::{CategoryFilter, Database, DatabaseError, Group, GroupFilter, Result};
+use crate::constants::{COMMANDS_TABLE, COMMAND_GROUP_COLUMN, GROUPS_TABLE, GROUP_PARENT_GROUP_COLUMN};
 use rusqlite::{named_params, params};
 use std::collections::HashSet;
 use tracing::{debug, instrument, warn};
+use crate::database::helpers::QueryBuilder;
 
 impl Database {
     #[instrument(skip(self, group), fields(name = %group.name))]
@@ -18,8 +19,8 @@ impl Database {
 
         self.create(
             GROUPS_TABLE,
-            "INSERT INTO groups (name, description, parent_group_id, position, working_directory, env_vars, shell, category_id, is_favorite, icon)
-             VALUES (:name, :description, :parent_group_id, :position, :working_directory, :env_vars, :shell, :category_id, :is_favorite, :icon)",
+            "INSERT INTO groups (name, description, parent_group_id, position, working_directory, env_vars, shell, category_id, is_favorite, icon, color)
+             VALUES (:name, :description, :parent_group_id, :position, :working_directory, :env_vars, :shell, :category_id, :is_favorite, :icon, :color)",
             named_params! {
                 ":name": group.name,
                 ":description": group.description,
@@ -31,6 +32,7 @@ impl Database {
                 ":category_id": group.category_id,
                 ":is_favorite": group.is_favorite,
                 ":icon": group.icon,
+                ":color": group.color,
             },
         )
     }
@@ -48,26 +50,78 @@ impl Database {
     #[instrument(skip(self))]
     pub fn get_groups(
         &self,
-        parent_id: Option<i64>,
-        category_id: Option<i64>,
+        parent_id: GroupFilter,
+        category_id: CategoryFilter,
         favorites_only: bool,
     ) -> Result<Vec<Group>> {
-        self.get_items_groups_commands(
+        let mut query_builder = QueryBuilder::new();
+        match parent_id {
+            GroupFilter::Group(id) => {
+                query_builder.add_condition("parent_group_id = ?", id);
+            }
+            GroupFilter::None => {
+                query_builder.add_condition_without_param("parent_group_id IS NULL");
+            }
+            GroupFilter::All => {}
+        }
+
+        match category_id {
+            CategoryFilter::Category(id) => {
+                query_builder.add_condition("category_id = ?", id);
+            }
+            CategoryFilter::None => {
+                query_builder.add_condition_without_param("category_id IS NULL");
+            }
+            CategoryFilter::All => {}
+        }
+
+        if favorites_only {
+            query_builder.add_condition_without_param("is_favorite = 1");
+        }
+
+        let (where_clause, param_refs) = query_builder.build();
+
+        let query = format!("SELECT * FROM groups {where_clause} ORDER BY position");
+
+        self.query_database(&query, param_refs.as_slice(), Self::row_to_group)
+    }
+
+    #[instrument(skip(self))]
+    pub fn get_groups_count(
+        &self,
+        group_id: Option<i64>,
+        category_id: Option<i64>,
+        favorites_only: bool,
+    ) -> Result<i64> {
+        self.get_items_groups_commands_count(
             GROUPS_TABLE,
             GROUP_PARENT_GROUP_COLUMN,
-            parent_id,
+            group_id,
             category_id,
             favorites_only,
+        )
+    }
+
+    pub fn search_groups(&self, search_term: &str) -> Result<Vec<Group>> {
+        let pattern = format!("%{}%", search_term);
+        self.query_database(
+            "SELECT * FROM groups WHERE name LIKE ? OR description LIKE ? ORDER BY name",
+            params![&pattern, &pattern],
             Self::row_to_group,
         )
     }
+
 
     #[instrument(skip(self))]
     pub fn update_group(&self, group: &Group) -> Result<()> {
         self.validate_group(group)?;
 
-        if let Some(parent_id) = group.parent_group_id {
-            self.validate_no_circular_reference(group.id, parent_id)?;
+        let old_group = self.get_group(group.id)?;
+        if old_group.parent_group_id != group.parent_group_id {
+            if let Some(parent_id) = group.parent_group_id {
+                self.validate_no_circular_reference(group.id, parent_id)?;
+            }
+            self.update_parent_group(GROUPS_TABLE, GROUP_PARENT_GROUP_COLUMN, group.id, group.parent_group_id)?;
         }
 
         let env_vars = Self::hashmap_to_string(&group.env_vars)?;
@@ -84,22 +138,22 @@ impl Database {
             "UPDATE groups SET
             name = :name,
             description = :description,
-            parent_group_id = :parent_group_id,
             working_directory = :working_directory,
             env_vars = :env_vars,
             shell = :shell,
             category_id = :category_id,
-            icon = :icon
+            icon = :icon,
+            color = :color
             WHERE id = :id",
             named_params! {
                 ":name": group.name,
                 ":description": group.description,
-                ":parent_group_id": group.parent_group_id,
                 ":working_directory": group.working_directory,
                 ":env_vars": env_vars,
                 ":shell": group.shell,
                 ":category_id": group.category_id,
                 ":icon": group.icon,
+                ":color": group.color,
                 ":id": group.id
             },
         )
@@ -120,7 +174,6 @@ impl Database {
             prev_id,
             next_id,
             Some(GROUP_PARENT_GROUP_COLUMN),
-            group.parent_group_id,
             |id, default| self.get_group_position_parent(id, default),
         )
     }
@@ -143,16 +196,6 @@ impl Database {
             id,
             "DELETE FROM groups WHERE id = ?1",
             params![id],
-        )
-    }
-
-    #[instrument(skip(self))]
-    pub fn get_group_command_count(&self, id: i64) -> Result<i64> {
-        self.query_row(
-            GROUPS_TABLE,
-            id,
-            "SELECT COUNT(*) FROM commands WHERE group_id = ?",
-            |row| row.get(0),
         )
     }
 
@@ -237,13 +280,14 @@ impl Database {
             category_id: row.get("category_id")?,
             is_favorite: row.get("is_favorite")?,
             icon: row.get("icon")?,
+            color: row.get("color")?,
             created_at: row.get("created_at")?,
             updated_at: row.get("updated_at")?,
         })
     }
 
     fn validate_group(&self, group: &Group) -> Result<()> {
-        self.validate_non_empty("name", &group.name)?;
+        self.validate_field_length("name", &group.name, Self::MAX_NAME_LENGTH)?;
         self.validate_env_var_keys(&group.env_vars)?;
 
         Ok(())
@@ -260,27 +304,25 @@ impl Database {
             });
         }
 
-        let mut current = Some(parent_id);
+        let chain = self.get_group_ancestor_chain(parent_id)?;
+
+        // TODO: is it the same code?
+        // if chain.iter().any(|g| g.id == group_id) {
+        //     return Err(DatabaseError::CircularReference { group_id, parent_id });
+        // }
+        // Ok(())
+
         let mut visited = HashSet::new();
 
-        while let Some(id) = current {
-            if id == group_id {
+        for i in 0..chain.len() {
+            if chain[i].id == group_id || !visited.insert(chain[i].id) {
                 return Err(DatabaseError::CircularReference {
                     group_id,
                     parent_id,
                 });
             }
-
-            if !visited.insert(id) {
-                return Err(DatabaseError::CircularReference {
-                    group_id,
-                    parent_id,
-                });
-            }
-
-            let parent_group = self.get_group(id)?;
-            current = parent_group.parent_group_id;
         }
+
 
         Ok(())
     }

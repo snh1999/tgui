@@ -4,15 +4,17 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 use tracing::{info, instrument};
 
+
 static DEFAULT_SETTINGS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
     HashMap::from([
         ("theme", "system"),
-        ("default_shell", "/bin/bash"),
         ("log_buffer_size", "10000"),
         ("max_concurrent_processes", "20"),
+        ("default_shell", ""),
         ("auto_scroll_logs", "true"),
         ("warn_before_kill", "true"),
         ("kill_process_tree_by_default", "false"),
+        ("available_shells", "[]"),
     ])
 });
 
@@ -26,6 +28,17 @@ impl Database {
                 params![key, value],
             )?;
         }
+
+        self.update_default_shell()?;
+        Ok(())
+    }
+    
+    pub fn update_default_shell(&self) -> Result<()> {
+        let default_shell = crate::process::shell::Shell::get_system_default_shell();
+        self.conn()?.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES ('default_shell', ?1)",
+            params![default_shell],
+        )?;
         Ok(())
     }
 
@@ -55,7 +68,6 @@ impl Database {
             "INSERT OR REPLACE INTO settings (key, value) VALUES (?1, ?2)",
             params![key, value],
         )?;
-
         Ok(())
     }
 
@@ -64,6 +76,8 @@ impl Database {
         for (key, value) in DEFAULT_SETTINGS.iter() {
             self.set_setting(key, value)?;
         }
+        self.update_default_shell()?;
+
         Ok(())
     }
 
@@ -111,4 +125,5 @@ impl Database {
             _ => Ok(()),
         }
     }
+
 }

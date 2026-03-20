@@ -165,7 +165,7 @@ impl ProcessManager {
     }
 
     pub fn detect_and_mark_orphans(&self) -> Vec<OrphanedProcess> {
-        let running = match self.db.get_running_commands(None, None) {
+        let running = match self.db.get_running_commands() {
             Ok(rows) => rows,
             Err(e) => {
                 error!(error = %e, "Failed to query running executions on startup");
@@ -429,4 +429,5 @@ impl ProcessManager {
         }
         count
     }
+
 }

@@ -11,7 +11,7 @@ impl Database {
         icon: Option<&str>,
         color: Option<&str>,
     ) -> Result<i64> {
-        self.validate_non_empty("name", &name)?;
+        self.validate_field_length("name", &name, Self::MAX_NAME_LENGTH)?;
 
         self.create(
             CATEGORIES_TABLE,
@@ -47,7 +47,7 @@ impl Database {
         icon: Option<&str>,
         color: Option<&str>,
     ) -> Result<()> {
-        self.validate_non_empty("name", &name)?;
+        self.validate_field_length("name", &name, Self::MAX_NAME_LENGTH)?;
 
         self.execute_db(
             CATEGORIES_TABLE,
@@ -73,6 +73,16 @@ impl Database {
             CATEGORIES_TABLE,
             id,
             "SELECT COUNT(*) FROM commands WHERE category_id = ?",
+            |row| row.get(0),
+        )
+    }
+
+    #[instrument(skip(self))]
+    pub fn get_category_group_count(&self, id: i64) -> Result<i64> {
+        self.query_row(
+            CATEGORIES_TABLE,
+            id,
+            "SELECT COUNT(*) FROM groups WHERE category_id = ?",
             |row| row.get(0),
         )
     }

@@ -6,6 +6,7 @@ mod groups;
 mod integration;
 mod settings;
 mod workflows;
+pub mod helpers;
 
 use tempfile::TempDir;
 
@@ -148,6 +149,7 @@ impl GroupBuilder {
                 category_id: None,
                 is_favorite: false,
                 icon: None,
+                color: None,
                 created_at: String::new(),
                 updated_at: String::new(),
             },

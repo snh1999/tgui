@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS groups (
     category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
     is_favorite BOOLEAN NOT NULL DEFAULT 0 CHECK(is_favorite IN (0,1)),
     icon TEXT,
+    color TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CHECK (parent_group_id IS NULL OR parent_group_id != id),
@@ -83,16 +84,18 @@ CREATE TABLE IF NOT EXISTS workflow_steps (
     position INTEGER NOT NULL,
     condition TEXT NOT NULL DEFAULT 'always',
     timeout_seconds INTEGER,
+    delay_seconds INTEGER,
     auto_retry_count INTEGER DEFAULT 0,
     enabled BOOLEAN NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)),
     continue_on_failure BOOLEAN NOT NULL DEFAULT 0 CHECK(continue_on_failure IN (0,1)),
+    wait_for_completion BOOLEAN NOT NULL DEFAULT 1 CHECK(wait_for_completion IN (0,1)),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CHECK(condition IN ('always', 'on_success', 'on_failure'))
 );
 
 CREATE TABLE IF NOT EXISTS execution_history (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     command_id INTEGER REFERENCES commands(id) ON DELETE CASCADE,
     workflow_id INTEGER REFERENCES workflows(id) ON DELETE CASCADE,
     workflow_step_id INTEGER REFERENCES workflow_steps(id) ON DELETE CASCADE,
@@ -139,15 +142,16 @@ CREATE INDEX IF NOT EXISTS idx_workflow_steps_workflow ON workflow_steps(workflo
 CREATE INDEX IF NOT EXISTS idx_workflow_steps_command ON workflow_steps(command_id);
 CREATE INDEX IF NOT EXISTS idx_workflow_steps_position ON workflow_steps(workflow_id, command_id, position);
 
-CREATE INDEX IF NOT EXISTS idx_execution_history_command ON execution_history(command_id);
-CREATE INDEX IF NOT EXISTS idx_execution_history_workflow ON execution_history(workflow_id);
+-- CREATE INDEX IF NOT EXISTS idx_execution_history_command ON execution_history(command_id);
+-- CREATE INDEX IF NOT EXISTS idx_execution_history_workflow ON execution_history(workflow_id);
 CREATE INDEX IF NOT EXISTS idx_execution_history_workflow_step ON execution_history(command_id, workflow_id, workflow_step_id);
 CREATE INDEX IF NOT EXISTS idx_execution_history_status ON execution_history(status);
 CREATE INDEX IF NOT EXISTS idx_execution_history_command_status ON execution_history(command_id, status);
 CREATE INDEX IF NOT EXISTS idx_execution_history_workflow_status ON execution_history(workflow_id, status);
-CREATE INDEX IF NOT EXISTS idx_execution_history_time ON execution_history(completed_at);
-CREATE INDEX IF NOT EXISTS idx_execution_history_running ON execution_history(status);
-
+-- CREATE INDEX IF NOT EXISTS idx_execution_history_completed ON execution_history(completed_at);
+CREATE INDEX IF NOT EXISTS idx_execution_history_started ON execution_history(started_at);
+CREATE INDEX IF NOT EXISTS idx_execution_history_command_time ON execution_history(command_id, started_at);
+CREATE INDEX IF NOT EXISTS idx_execution_history_workflow_time ON execution_history(workflow_id, started_at);
 
 -- Triggers
 -- Updated At time
@@ -192,7 +196,7 @@ SET
         ELSE started_at
     END,
     completed_at = CASE
-       WHEN NEW.status IN ('success', 'failed', 'timeout', 'cancelled')
+       WHEN NEW.status IN ('success', 'failed', 'timeout', 'cancelled', 'completed')
            AND OLD.status = 'running'
            THEN CURRENT_TIMESTAMP
        ELSE completed_at
