@@ -30,6 +30,16 @@ fn test_group_builder_pattern() {
 }
 
 #[test]
+fn test_get_groups_empty() {
+    let test_db = TestDb::setup_test_db();
+    let groups = test_db
+        .db
+        .get_groups(GroupFilter::All, CategoryFilter::All, false)
+        .unwrap();
+    assert!(groups.is_empty());
+}
+
+#[test]
 fn test_create_group_and_get_group() {
     let test_db = TestDb::setup_test_db();
     let group_name = "TestGroup";
@@ -77,6 +87,61 @@ fn test_create_group_with_all_fields() {
     assert_eq!(retrieved_child.category_id, child_group.category_id);
     assert_eq!(retrieved_child.position, Database::POSITION_GAP);
     assert!(retrieved_child.is_favorite);
+}
+#[test]
+fn test_create_group_name_max_length() {
+    let test_db = TestDb::setup_test_db();
+    let valid_name = "a".repeat(Database::MAX_NAME_LENGTH);
+    let group = GroupBuilder::new(&valid_name).build();
+    assert!(test_db.db.create_group(&group).is_ok());
+
+    let invalid_name = "a".repeat(Database::MAX_NAME_LENGTH + 1);
+    let group = GroupBuilder::new(&invalid_name).build();
+    let result = test_db.db.create_group(&group);
+    assert!(matches!(result, Err(DatabaseError::InvalidData { field: "name", .. })));
+}
+
+#[test]
+fn test_create_group_whitespace_variations_rejected() {
+    let test_db = TestDb::setup_test_db();
+
+    for ws in ["\t", "\n", "  \t  \n  "] {
+        let group = GroupBuilder::new(ws).build();
+        let result = test_db.db.create_group(&group);
+        assert!(matches!(result, Err(DatabaseError::InvalidData { field: "name", .. })),
+            "Failed for whitespace: {:?}", ws);
+    }
+}
+
+#[test]
+fn test_create_group_env_var_edge_cases() {
+    let test_db = TestDb::setup_test_db();
+
+    let group = GroupBuilder::new("Test").with_env("MY-VAR", "value").build();
+    assert!(test_db.db.create_group(&group).is_ok());
+
+    let group = GroupBuilder::new("Test2").with_env("VAR_123", "v").build();
+    assert!(test_db.db.create_group(&group).is_ok());
+
+    let group = GroupBuilder::new("Test3").with_env("BAD KEY", "v").build();
+    assert!(matches!(test_db.db.create_group(&group), Err(DatabaseError::InvalidData { field: "env_vars", .. })));
+}
+
+#[test]
+fn test_create_group_with_nonexistent_parent_fails() {
+    let test_db = TestDb::setup_test_db();
+    let group = GroupBuilder::new("Orphan").with_parent(99).build();
+    let result = test_db.db.create_group(&group);
+    assert!(matches!(result, Err(DatabaseError::ForeignKeyViolation {  .. })));
+}
+
+
+#[test]
+fn test_create_group_with_nonexistent_category_fails() {
+    let test_db = TestDb::setup_test_db();
+    let group = GroupBuilder::new("Test").with_category(999).build();
+    let result = test_db.db.create_group(&group);
+    assert!(matches!(result, Err(DatabaseError::ForeignKeyViolation { .. })));
 }
 
 #[test]
@@ -180,7 +245,7 @@ fn test_get_groups_by_parent() {
 
     test_db.create_test_group("Orphan");
 
-    let children = test_db.db.get_groups(Some(parent_id), None, false).unwrap();
+    let children = test_db.db.get_groups(GroupFilter::Group(parent_id), CategoryFilter::None, false).unwrap();
     assert_eq!(children.len(), 2);
     assert!(children
         .iter()
@@ -197,7 +262,7 @@ fn test_get_root_groups() {
     let child = GroupBuilder::new("Child").with_parent(parent).build();
     test_db.save_group_to_db(&child);
 
-    let roots = test_db.db.get_groups(None, None, false).unwrap();
+    let roots = test_db.db.get_groups(GroupFilter::None, CategoryFilter::None, false).unwrap();
     assert_eq!(roots.len(), 3); // Root1, Root2, Parent
 }
 
@@ -218,7 +283,7 @@ fn test_get_groups_by_category() {
 
     let commands = test_db
         .db
-        .get_groups(Some(group_id), Some(category_id), false)
+        .get_groups(GroupFilter::Group(group_id), CategoryFilter::Category(category_id), false)
         .unwrap();
     assert_eq!(commands.len(), 1);
     assert!(commands.iter().all(|c| c.category_id == Some(category_id)));
@@ -234,8 +299,166 @@ fn test_get_favorite_groups() {
     test_db.db.toggle_group_favorite(id1).unwrap();
     test_db.db.toggle_group_favorite(id2).unwrap();
 
-    let favorites = test_db.db.get_groups(None, None, true).unwrap();
+    let favorites = test_db.db.get_groups(GroupFilter::None, CategoryFilter::None, true).unwrap();
     assert_eq!(favorites.len(), 2);
+}
+
+#[test]
+fn test_get_groups_filter_none_returns_only_root_groups() {
+    let test_db = TestDb::setup_test_db();
+    let root_id = test_db.create_test_group("Root");
+    let child = GroupBuilder::new("Child").with_parent(root_id).build();
+    test_db.db.create_group(&child).unwrap();
+    test_db.db.create_group(&child).unwrap();
+
+    let groups = test_db
+        .db
+        .get_groups(GroupFilter::None, CategoryFilter::All, false)
+        .unwrap();
+
+    assert_eq!(groups.len(), 1);
+    assert_eq!(groups[0].id, root_id);
+}
+
+#[test]
+fn test_get_groups_filter_group_returns_only_children_of_that_parent() {
+    let test_db = TestDb::setup_test_db();
+    let parent_a = test_db.create_test_group("A");
+    let parent_b = test_db.create_test_group("B");
+
+    let child_a = GroupBuilder::new("ChildA").with_parent(parent_a).build();
+    let child_a_id = test_db.db.create_group(&child_a).unwrap();
+
+    let child_b = GroupBuilder::new("ChildB").with_parent(parent_b).build();
+    test_db.db.create_group(&child_b).unwrap();
+
+    let groups = test_db
+        .db
+        .get_groups(GroupFilter::Group(parent_a), CategoryFilter::All, false)
+        .unwrap();
+
+    assert_eq!(groups.len(), 1);
+    assert_eq!(groups[0].id, child_a_id);
+}
+
+#[test]
+fn test_get_groups_filter_all_returns_every_group() {
+    let test_db = TestDb::setup_test_db();
+    let root_id_1 = test_db.create_test_group("Root");
+    let root_id_2 = test_db.create_test_group("Root");
+    let child = GroupBuilder::new("Child").with_parent(root_id_1).build();
+    test_db.db.create_group(&child).unwrap();
+
+    let child = GroupBuilder::new("Child").with_parent(root_id_2).build();
+    test_db.db.create_group(&child).unwrap();
+
+    let groups = test_db
+        .db
+        .get_groups(GroupFilter::All, CategoryFilter::All, false)
+        .unwrap();
+
+    assert_eq!(groups.len(), 4);
+}
+
+#[test]
+fn test_get_groups_category_filter_none_excludes_categorized_groups() {
+    let test_db = TestDb::setup_test_db();
+    let cat_id = test_db.create_test_category("Dev");
+
+    test_db.create_test_group("NoCat");
+    let category = GroupBuilder::new("WithCat").with_category(cat_id).build();
+    test_db.db.create_group(&category).unwrap();
+
+    let groups = test_db
+        .db
+        .get_groups(GroupFilter::All, CategoryFilter::None, false)
+        .unwrap();
+
+    assert_eq!(groups.len(), 1);
+    assert!(groups[0].category_id.is_none());
+}
+
+#[test]
+fn test_get_groups_category_filter_category_returns_matching_only() {
+    let test_db = TestDb::setup_test_db();
+    let cat_id = test_db.create_test_category("Dev");
+
+    test_db.create_test_group("No Category");
+    test_db.create_test_group("Uncategorized");
+    let with_cat = GroupBuilder::new("WithCat").with_category(cat_id).build();
+    let cat_group_id = test_db.db.create_group(&with_cat).unwrap();
+
+    let groups = test_db
+        .db
+        .get_groups(GroupFilter::All, CategoryFilter::Category(cat_id), false)
+        .unwrap();
+
+    assert_eq!(groups.len(), 1);
+    assert_eq!(groups[0].id, cat_group_id);
+}
+
+#[test]
+fn test_get_groups_ordered_by_position() {
+    let test_db = TestDb::setup_test_db();
+    let id_1 = test_db.create_test_group("First");
+    let id_2 = test_db.create_test_group("Second");
+    let id_3 = test_db.create_test_group("First");
+
+    let groups = test_db
+        .db
+        .get_groups(GroupFilter::All, CategoryFilter::All, false)
+        .unwrap();
+
+    assert_eq!(groups[0].id, id_1);
+    assert_eq!(groups[1].id, id_2);
+    assert_eq!(groups[2].id, id_3);
+}
+
+#[test]
+fn test_get_groups_count_zero() {
+    let test_db = TestDb::setup_test_db();
+    let count = test_db.db.get_groups_count(None, None, false).unwrap();
+    assert_eq!(count, 0);
+}
+
+#[test]
+fn test_get_groups_count_root_only() {
+    let test_db = TestDb::setup_test_db();
+    test_db.create_test_group("A");
+    test_db.create_test_group("B");
+    let count = test_db.db.get_groups_count(None, None, false).unwrap();
+    assert_eq!(count, 2);
+}
+
+#[test]
+fn test_get_groups_count_favorites_only() {
+    let test_db = TestDb::setup_test_db();
+    test_db.create_test_group("Regular");
+    test_db.create_test_group("Test");
+    let fav_id = test_db.create_test_group("Favorite");
+    test_db.db.toggle_group_favorite(fav_id).unwrap();
+    let fav_id = test_db.create_test_group("Favorite");
+    test_db.db.toggle_group_favorite(fav_id).unwrap();
+
+    let count = test_db.db.get_groups_count(None, None, true).unwrap();
+    assert_eq!(count, 2);
+}
+
+#[test]
+fn test_get_groups_count_by_category() {
+    let test_db = TestDb::setup_test_db();
+    let cat_id = test_db.create_test_category("Dev");
+
+    test_db.create_test_group("No Category");
+    let with_cat = GroupBuilder::new("With Cat").with_category(cat_id).build();
+    test_db.db.create_group(&with_cat).unwrap();
+    test_db.db.create_group(&with_cat).unwrap();
+
+    let count = test_db
+        .db
+        .get_groups_count(None, Some(cat_id), false)
+        .unwrap();
+    assert_eq!(count, 2);
 }
 
 #[test]
@@ -246,10 +469,10 @@ fn test_toggle_favorite_group() {
     let initial = test_db.db.get_group(group_id).unwrap().is_favorite;
     test_db.db.toggle_group_favorite(group_id).unwrap();
 
-    assert_eq!(
-        !initial,
-        test_db.db.get_group(group_id).unwrap().is_favorite
-    );
+    assert_eq!(!initial, test_db.db.get_group(group_id).unwrap().is_favorite);
+
+    test_db.db.toggle_group_favorite(group_id).unwrap();
+    assert_eq!(initial, test_db.db.get_group(group_id).unwrap().is_favorite);
 }
 
 #[test]
@@ -282,7 +505,7 @@ fn test_get_favorite_group_with_parent() {
     other_parent_group.is_favorite = true;
     test_db.save_group_to_db(&other_parent_group);
 
-    let favorites = test_db.db.get_groups(Some(group_id), None, true).unwrap();
+    let favorites = test_db.db.get_groups(GroupFilter::Group(group_id), CategoryFilter::None, true).unwrap();
 
     assert_eq!(favorites.len(), 1);
     assert_eq!(favorites[0].id, fav_id);
@@ -350,6 +573,41 @@ fn test_update_group_validation() {
 }
 
 #[test]
+fn test_update_group_clears_optional_fields() {
+    let test_db = TestDb::setup_test_db();
+    let mut group = GroupBuilder::new("Dev")
+        .build();
+    group.shell = Some("/bin/bash".to_string());
+    group.description = Some("Test Description".to_string());
+    let id = test_db.db.create_group(&group).unwrap();
+
+    let mut updated = test_db.db.get_group(id).unwrap();
+    updated.description = None;
+    updated.shell = None;
+    test_db.db.update_group(&updated).unwrap();
+
+    let fetched = test_db.db.get_group(id).unwrap();
+    assert_eq!(fetched.description, None);
+    assert_eq!(fetched.shell, None);
+}
+
+#[test]
+fn test_update_group_empty_name_fails() {
+    let test_db = TestDb::setup_test_db();
+    let id = test_db.create_test_group("Valid");
+
+    let mut group = test_db.db.get_group(id).unwrap();
+    group.name = "".to_string();
+
+    let result = test_db.db.update_group(&group);
+    assert!(matches!(
+        result,
+        Err(DatabaseError::InvalidData { field: "name", .. })
+    ));
+}
+
+
+#[test]
 fn test_delete_group_cascades_to_commands() {
     let test_db = TestDb::setup_test_db();
     let group_id = test_db.create_test_group("Deletable");
@@ -382,9 +640,11 @@ fn test_delete_group_cascades_to_child_groups() {
 
     test_db.db.delete_group(group_id).unwrap();
 
-    let commands = test_db.db.get_groups(Some(group_id), None, false).unwrap();
+    let commands = test_db.db.get_groups(GroupFilter::Group(group_id), CategoryFilter::None, false).unwrap();
     assert_eq!(commands.len(), 0);
 }
+
+
 
 #[test]
 fn test_delete_group_not_found() {
@@ -397,6 +657,17 @@ fn test_delete_group_not_found() {
             id: 99999
         })
     ));
+}
+
+#[test]
+fn test_get_group_tree_root_only() {
+    let test_db = TestDb::setup_test_db();
+    let root_id = test_db.create_test_group("Root");
+
+    let tree = test_db.db.get_group_tree(root_id).unwrap();
+
+    assert_eq!(tree.len(), 1);
+    assert_eq!(tree[0].id, root_id);
 }
 
 #[test]
@@ -658,16 +929,10 @@ fn test_get_group_path_root_level() {
 }
 
 #[test]
-fn test_get_group_command_count() {
+fn test_group_path_nonexistent_id() {
     let test_db = TestDb::setup_test_db();
-    let group_id = test_db.create_test_group("Test");
-
-    test_db.create_test_command("Cmd1", "echo 1", Some(group_id));
-    test_db.create_test_command("Cmd2", "echo 2", Some(group_id));
-    test_db.create_test_command("Standalone", "echo 3", None);
-
-    let count = test_db.db.get_group_command_count(group_id).unwrap();
-    assert_eq!(count, 2);
+    let result = test_db.db.get_group_path(99999).unwrap();
+    assert!(result.is_empty());
 }
 
 #[test]
@@ -681,7 +946,7 @@ fn test_move_group_to_end() {
 
     test_db.db.move_group_between(id3, Some(id2), None).unwrap();
 
-    let children = test_db.db.get_groups(Some(parent_id), None, false).unwrap();
+    let children = test_db.db.get_groups(GroupFilter::Group(parent_id), CategoryFilter::None, false).unwrap();
     assert_eq!(children[0].id, id1);
     assert_eq!(children[1].id, id2);
     assert_eq!(children[2].id, id3);
@@ -698,7 +963,7 @@ fn test_move_group_to_top() {
 
     test_db.db.move_group_between(id1, None, Some(id3)).unwrap();
 
-    let children = test_db.db.get_groups(Some(parent_id), None, false).unwrap();
+    let children = test_db.db.get_groups(GroupFilter::Group(parent_id), CategoryFilter::None, false).unwrap();
     assert_eq!(children[0].id, id1);
     assert_eq!(children[1].id, id3);
     assert_eq!(children[2].id, id2);
@@ -719,10 +984,53 @@ fn test_move_group_to_middle() {
         .move_group_between(id3, Some(id1), Some(id2))
         .unwrap();
 
-    let children = test_db.db.get_groups(Some(parent_id), None, false).unwrap();
+    let children = test_db.db.get_groups(GroupFilter::Group(parent_id), CategoryFilter::None, false).unwrap();
     assert_eq!(children[0].id, id1);
     assert_eq!(children[1].id, id3);
     assert_eq!(children[2].id, id2);
+}
+
+#[test]
+fn test_move_group_between_both_none_returns_error() {
+    let test_db = TestDb::setup_test_db();
+    let id = test_db.create_test_group("G");
+
+    let result = test_db.db.move_group_between(id, None, None);
+    assert!(matches!(
+        result,
+        Err(DatabaseError::InvalidData { field: "item_id", .. })
+    ));
+}
+
+#[test]
+fn test_move_group_between_cross_parent_returns_error() {
+    let test_db = TestDb::setup_test_db();
+    let parent_a = test_db.create_test_group("ParentA");
+    let parent_b = test_db.create_test_group("ParentB");
+
+    let g = GroupBuilder::new("G").with_parent(parent_a).build();
+    let g_id = test_db.db.create_group(&g).unwrap();
+    let prev = GroupBuilder::new("Prev").with_parent(parent_a).build();
+    let prev_id = test_db.db.create_group(&prev).unwrap();
+    let next = GroupBuilder::new("Next").with_parent(parent_b).build();
+    let next_id = test_db.db.create_group(&next).unwrap();
+
+    let result = test_db.db.move_group_between(g_id, Some(prev_id), Some(next_id));
+    assert!(matches!(
+        result,
+        Err(DatabaseError::InvalidData { field: "parent_id", .. })
+    ));
+}
+
+#[test]
+fn test_move_group_between_invalid_prev_id() {
+    let test_db = TestDb::setup_test_db();
+    let parent_id = test_db.create_test_group("Parent");
+    let group_id = test_db.save_group_to_db(&GroupBuilder::new("G").with_parent(parent_id).build());
+    let real_sibling = test_db.save_group_to_db(&GroupBuilder::new("S").with_parent(parent_id).build());
+
+    let result = test_db.db.move_group_between(group_id, Some(999), Some(real_sibling));
+    assert!(matches!(result, Err(DatabaseError::NotFound { .. })));
 }
 
 #[test]
@@ -741,3 +1049,205 @@ fn test_updated_at_changes_on_update() {
     assert_ne!(group.updated_at, retrieved_group.updated_at);
     assert_eq!(group.created_at, retrieved_group.created_at);
 }
+
+#[test]
+fn test_update_group_self_reference_is_circular() {
+    let test_db = TestDb::setup_test_db();
+    let id = test_db.create_test_group("Lone");
+
+    let mut group = test_db.db.get_group(id).unwrap();
+    group.parent_group_id = Some(id);
+
+    let result = test_db.db.update_group(&group);
+    assert!(matches!(result, Err(DatabaseError::CircularReference { .. })));
+}
+
+#[test]
+fn test_update_group_cycle_detected() {
+    let test_db = TestDb::setup_test_db();
+    let a_id = test_db.create_test_group("A");
+    let b = GroupBuilder::new("B").with_parent(a_id).build();
+    let b_id = test_db.db.create_group(&b).unwrap();
+    let c = GroupBuilder::new("C").with_parent(b_id).build();
+    let c_id = test_db.db.create_group(&c).unwrap();
+
+    let mut group_a = test_db.db.get_group(a_id).unwrap();
+    group_a.parent_group_id = Some(c_id);
+
+    let result = test_db.db.update_group(&group_a);
+    assert!(matches!(result, Err(DatabaseError::CircularReference { .. })));
+}
+
+#[test]
+fn test_update_group_valid_reparenting_succeeds() {
+    let test_db = TestDb::setup_test_db();
+    let old_parent = test_db.create_test_group("OldParent");
+    let new_parent = test_db.create_test_group("NewParent");
+    let child = GroupBuilder::new("Child").with_parent(old_parent).build();
+    let child_id = test_db.db.create_group(&child).unwrap();
+
+    let mut group = test_db.db.get_group(child_id).unwrap();
+    group.parent_group_id = Some(new_parent);
+    test_db.db.update_group(&group).unwrap();
+
+    let fetched = test_db.db.get_group(child_id).unwrap();
+    assert_eq!(fetched.parent_group_id, Some(new_parent));
+}
+
+#[test]
+fn test_deep_hierarchy_circular_reference() {
+    let test_db = TestDb::setup_test_db();
+    let mut current_id = test_db.create_test_group("Level0");
+
+    // Create a 50-level deep hierarchy
+    for i in 1..=50 {
+        current_id = test_db.save_group_to_db(
+            &GroupBuilder::new(&format!("Level{}", i)).with_parent(current_id).build()
+        );
+    }
+
+    // Try to make Level0 a child of Level50 (should fail)
+    let mut root = test_db.db.get_group(test_db.db.get_group(current_id).unwrap().parent_group_id.unwrap()).unwrap();
+    root.parent_group_id = Some(current_id);
+
+    let result = test_db.db.update_group(&root);
+    assert!(matches!(result, Err(DatabaseError::CircularReference { .. })));
+}
+
+#[test]
+fn test_update_group_with_empty_description() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test");
+
+    let mut group = test_db.db.get_group(group_id).unwrap();
+    group.description = Some("Has description".to_string());
+    test_db.db.update_group(&group).unwrap();
+
+    let mut group = test_db.db.get_group(group_id).unwrap();
+    group.description = None;
+    test_db.db.update_group(&group).unwrap();
+
+    let retrieved = test_db.db.get_group(group_id).unwrap();
+    assert_eq!(retrieved.description, None);
+}
+
+#[test]
+fn test_update_group_clear_working_directory() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test");
+
+    let mut group = test_db.db.get_group(group_id).unwrap();
+    group.working_directory = Some("/tmp".to_string());
+    test_db.db.update_group(&group).unwrap();
+
+    let mut group = test_db.db.get_group(group_id).unwrap();
+    group.working_directory = None;
+    test_db.db.update_group(&group).unwrap();
+
+    let retrieved = test_db.db.get_group(group_id).unwrap();
+    assert_eq!(retrieved.working_directory, None);
+}
+
+#[test]
+fn test_search_groups_by_name() {
+    let test_db = TestDb::setup_test_db();
+    test_db.create_test_group("Frontend App");
+    test_db.create_test_group("Backend API");
+    test_db.create_test_group("Frontend Admin");
+    test_db.create_test_group("Database");
+
+    let results = test_db.db.search_groups("frontend").unwrap();
+    assert_eq!(results.len(), 2);
+}
+
+#[test]
+fn test_search_groups_matches_description() {
+    let test_db = TestDb::setup_test_db();
+    let mut group = GroupBuilder::new("Misc")
+        .build();
+    group.description = Some("all the related tasks".to_string());
+    test_db.db.create_group(&group).unwrap();
+
+    group.description = Some("related".to_string());
+    test_db.db.create_group(&group).unwrap();
+
+    group.description = Some("no relation".to_string());
+    test_db.db.create_group(&group).unwrap();
+
+    test_db.create_test_group("Other");
+
+    let results = test_db.db.search_groups("related").unwrap();
+    assert_eq!(results.len(), 2);
+}
+
+#[test]
+fn test_search_groups_empty_term_returns_all() {
+    let test_db = TestDb::setup_test_db();
+    test_db.create_test_group("Alpha");
+    test_db.create_test_group("Beta");
+
+    let results = test_db.db.search_groups("").unwrap();
+    assert_eq!(results.len(), 2);
+}
+
+#[test]
+fn test_search_groups_sql_wildcard_behavior() {
+    let test_db = TestDb::setup_test_db();
+
+    test_db.create_test_group("Test_Group");
+    test_db.create_test_group("Test%2");
+    test_db.create_test_group("TestXGroup");
+
+    // % matches any sequence in SQLite LIKE
+    let results = test_db.db.search_groups("Test%").unwrap();
+    assert_eq!(results.len(), 3);
+
+    let results = test_db.db.search_groups("Test_").unwrap();
+    assert_eq!(results.len(), 3);
+
+    // _ matches single char
+    let results = test_db.db.search_groups("Test_Group").unwrap();
+    assert!(results.len() >= 2);
+}
+
+#[test]
+fn test_search_groups_by_description() {
+    let test_db = TestDb::setup_test_db();
+    let mut g1 = GroupBuilder::new("Proj1").build();
+    g1.description = Some("Web application project".to_string());
+    test_db.save_group_to_db(&g1);
+
+    let mut g2 = GroupBuilder::new("Proj2").build();
+    g2.description = Some("Mobile app project".to_string());
+    test_db.save_group_to_db(&g2);
+
+    let results = test_db.db.search_groups("project").unwrap();
+    assert_eq!(results.len(), 2);
+}
+
+#[test]
+fn test_search_groups_none_found() {
+    let test_db = TestDb::setup_test_db();
+    test_db.create_test_group("Alpha");
+    test_db.create_test_group("Beta");
+
+    let results = test_db.db.search_groups("nonexistent").unwrap();
+    assert!(results.is_empty());
+}
+
+
+#[test]
+fn test_update_group_icon_and_color() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test");
+
+    let mut group = test_db.db.get_group(group_id).unwrap();
+    group.icon = Some("🚀".to_string());
+    group.color = Some("#FF5733".to_string());
+    test_db.db.update_group(&group).unwrap();
+
+    let retrieved = test_db.db.get_group(group_id).unwrap();
+    assert_eq!(retrieved.icon, Some("🚀".to_string()));
+    assert_eq!(retrieved.color, Some("#FF5733".to_string()));
+}
+

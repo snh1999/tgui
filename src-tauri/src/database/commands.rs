@@ -299,7 +299,6 @@ impl Database {
             prev_id,
             next_id,
             Some(COMMAND_GROUP_COLUMN),
-            cmd.group_id,
             |id, default| self.get_position_parent_command(id, default),
         )
     }
