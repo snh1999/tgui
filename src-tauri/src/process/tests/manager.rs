@@ -4,7 +4,7 @@ use std::time::Duration;
 use tokio::time::{sleep, timeout};
 
 use crate::database::tests::{CommandBuilder, GroupBuilder, TestDb};
-use crate::database::{Database, ExecutionHistory, ExecutionStatus, TriggeredBy};
+use crate::database::{Database, ExecutionHistory, ExecutionStatus, StatsTarget, TriggeredBy};
 use crate::process::errors::{ProcessKillError, ProcessManagerError};
 use crate::process::manager::ProcessManager;
 use crate::process::models::{ProcessStatus, SpawnContext};
@@ -94,6 +94,7 @@ async fn spawn_writes_pid_to_execution_history() {
 async fn consecutive_spawns_get_different_execution_ids() {
     let (pm, _, cmd_id) = make_manager_with_db();
 
+
     let id1 = pm
         .spawn_command(
             spawn_context(cmd_id, "echo", vec!["a"]),
@@ -101,6 +102,9 @@ async fn consecutive_spawns_get_different_execution_ids() {
         )
         .await
         .expect("spawn 1 failed");
+
+    sleep(Duration::from_millis(100)).await;
+
     let id2 = pm
         .spawn_command(
             spawn_context(cmd_id, "echo", vec!["b"]),
@@ -149,7 +153,7 @@ async fn spawn_invalid_shell_returns_error_before_creating_db_row() {
     ));
 
     // No orphaned DB row should exist — invalid shell is rejected before DB write
-    let running = db.get_running_commands(Some(1), None).unwrap_or_default();
+    let running = db.get_running_commands().unwrap_or_default();
     assert!(
         running.is_empty(),
         "Orphaned DB row created for rejected shell"
@@ -171,7 +175,7 @@ async fn spawn_failure_marks_db_row_as_failed_not_running() {
 
     // The db entry must not be stuck as 'running'
     let running = db
-        .get_running_commands(Some(cmd_id), None)
+        .get_running_commands()
         .unwrap_or_default();
     assert!(
         running.is_empty(),
@@ -281,7 +285,7 @@ async fn stop_all_graceful_sends_sigterm() {
 #[tokio::test]
 #[cfg(unix)]
 async fn stop_all_skips_already_exited_processes_in_count() {
-    let (pm, _, cmd_id) = make_manager_with_db();
+    let (pm, db, cmd_id) = make_manager_with_db();
 
     pm.spawn_command(
         spawn_context(cmd_id, "echo", vec!["bye"]),
@@ -290,6 +294,8 @@ async fn stop_all_skips_already_exited_processes_in_count() {
     .await
     .expect("spawn failed");
 
+    let cmd_id = create_test_command(&db);
+
     pm.spawn_command(
         spawn_context(cmd_id, "echo", vec!["bye"]),
         TriggeredBy::Manual,
@@ -297,12 +303,7 @@ async fn stop_all_skips_already_exited_processes_in_count() {
     .await
     .expect("spawn failed");
 
-    pm.spawn_command(
-        spawn_context(cmd_id, "sleep", vec!["60"]),
-        TriggeredBy::Manual,
-    )
-    .await
-    .expect("spawn failed");
+    let cmd_id = create_test_command(&db);
 
     pm.spawn_command(
         spawn_context(cmd_id, "sleep", vec!["60"]),
@@ -310,6 +311,17 @@ async fn stop_all_skips_already_exited_processes_in_count() {
     )
     .await
     .expect("spawn failed");
+
+    let cmd_id = create_test_command(&db);
+
+    pm.spawn_command(
+        spawn_context(cmd_id, "sleep", vec!["60"]),
+        TriggeredBy::Manual,
+    )
+    .await
+    .expect("spawn failed");
+
+    let cmd_id = create_test_command(&db);
 
     pm.spawn_command(
         spawn_context(cmd_id, "sleep", vec!["60"]),
@@ -368,6 +380,8 @@ async fn stop_all_kills_all_running_processes() {
         )
         .await
         .expect("spawn 1 failed");
+
+    let cmd_id = create_test_command(&db);
     let id2 = pm
         .spawn_command(
             spawn_context(cmd_id, "sleep", vec!["60"]),
@@ -375,6 +389,8 @@ async fn stop_all_kills_all_running_processes() {
         )
         .await
         .expect("spawn 2 failed");
+
+    let cmd_id = create_test_command(&db);
     let id3 = pm
         .spawn_command(
             spawn_context(cmd_id, "sleep", vec!["60"]),
@@ -435,7 +451,7 @@ async fn running_count_zero_on_fresh_manager() {
 #[tokio::test]
 #[cfg(unix)]
 async fn running_count_tracks_spawned_processes() {
-    let (pm, _, cmd_id) = make_manager_with_db();
+    let (pm, db, cmd_id) = make_manager_with_db();
 
     pm.spawn_command(
         spawn_context(cmd_id, "sleep", vec!["60"]),
@@ -443,6 +459,8 @@ async fn running_count_tracks_spawned_processes() {
     )
     .await
     .expect("spawn 1 failed");
+
+    let cmd_id = create_test_command(&db);
     pm.spawn_command(
         spawn_context(cmd_id, "sleep", vec!["60"]),
         TriggeredBy::Manual,
@@ -498,7 +516,7 @@ async fn get_process_info_returns_correct_fields_for_running_process() {
 #[tokio::test]
 #[cfg(unix)]
 async fn get_running_processes_excludes_stopped_processes() {
-    let (pm, _, cmd_id) = make_manager_with_db();
+    let (pm, db, cmd_id) = make_manager_with_db();
 
     pm.spawn_command(
         spawn_context(cmd_id, "echo", vec!["done"]),
@@ -507,6 +525,7 @@ async fn get_running_processes_excludes_stopped_processes() {
     .await
     .expect("spawn echo failed");
 
+    sleep(Duration::from_millis(100)).await;
     let sleep_id = pm
         .spawn_command(
             spawn_context(cmd_id, "sleep", vec!["60"]),
@@ -515,6 +534,7 @@ async fn get_running_processes_excludes_stopped_processes() {
         .await
         .expect("spawn sleep failed");
 
+    let cmd_id = create_test_command(&db);
     pm.spawn_command(
         spawn_context(cmd_id, "sleep", vec!["60"]),
         TriggeredBy::Manual,
@@ -821,7 +841,7 @@ async fn detect_orphans_null_pid_row_marked_failed_not_in_result() {
     );
 
     // DB row must be marked failed
-    let rows = test_db.get_running_commands(Some(cmd_id), None).unwrap();
+    let rows = test_db.get_running_commands().unwrap();
     assert!(
         rows.is_empty(),
         "Null-PID row still marked running after detect_and_mark_orphans"
@@ -939,7 +959,8 @@ async fn detect_orphans_alive_pid_in_result_with_still_running_true() {
 #[cfg(unix)]
 async fn detect_orphans_mixed_dead_and_alive_handled_independently() {
     let db = create_test_db();
-    let cmd_id = create_test_command(&db);
+    let cmd_id_1 = create_test_command(&db);
+    let cmd_id_2 = create_test_command(&db);
 
     // Spawn two processes directly
     let mut child1 = tokio::process::Command::new("sleep")
@@ -956,24 +977,25 @@ async fn detect_orphans_mixed_dead_and_alive_handled_independently() {
 
     let exec_id1 = db
         .create_execution_history(&ExecutionHistory::new_with_command(
-            cmd_id,
+            cmd_id_1,
             TriggeredBy::Manual,
         ))
         .expect("history 1");
     db.update_execution_pid(exec_id1, pid1).expect("pid1 write");
 
+    nix_kill(Pid::from_raw(pid1 as i32), Signal::SIGKILL).expect("kill pid1");
+    let _ = child1.wait().await;
+
+
     let exec_id2 = db
         .create_execution_history(&ExecutionHistory::new_with_command(
-            cmd_id,
+            cmd_id_2,
             TriggeredBy::Manual,
         ))
         .expect("history 2");
     db.update_execution_pid(exec_id2, pid2).expect("pid2 write");
 
-    // Kill only pid1 — pid2 stays alive
-    nix_kill(Pid::from_raw(pid1 as i32), Signal::SIGKILL).expect("kill pid1");
-    let _ = child1.wait().await;
-    sleep(Duration::from_millis(100)).await;
+
 
     let pm = ProcessManager::new(db.clone(), None);
     let orphans = pm.detect_and_mark_orphans();
@@ -982,6 +1004,7 @@ async fn detect_orphans_mixed_dead_and_alive_handled_independently() {
         .iter()
         .find(|o| o.execution_id == exec_id1)
         .expect("dead orphan missing");
+
     let orphan2 = orphans
         .iter()
         .find(|o| o.execution_id == exec_id2)
@@ -1008,7 +1031,10 @@ async fn detect_orphans_mixed_dead_and_alive_handled_independently() {
 async fn one_spawn_produces_exactly_one_execution_history_row() {
     let (pm, db, cmd_id) = make_manager_with_db();
 
-    let before = db.get_command_execution_stats(cmd_id, None).unwrap_or(0);
+    let before = db
+        .get_execution_stats(StatsTarget::Command(cmd_id), None)
+        .unwrap()
+        .total_count;
 
     let id = pm
         .spawn_command(
@@ -1025,8 +1051,9 @@ async fn one_spawn_produces_exactly_one_execution_history_row() {
     });
 
     let after = db
-        .get_command_execution_stats(cmd_id, None)
-        .expect("stats failed");
+        .get_execution_stats(StatsTarget::Command(cmd_id), None)
+        .expect("stats failed")
+        .total_count;
     assert_eq!(
         after - before,
         1,
@@ -1052,12 +1079,11 @@ async fn successful_run_increments_success_count_not_failed_count() {
             .unwrap_or(false)
     });
 
-    let success = db
-        .get_command_execution_stats(cmd_id, Some(ExecutionStatus::Success))
+    let stats = db
+        .get_execution_stats(StatsTarget::Command(cmd_id), None)
         .expect("stats");
-    let failed = db
-        .get_command_execution_stats(cmd_id, Some(ExecutionStatus::Failed))
-        .unwrap_or(0);
+    let success = stats.success_count;
+    let failed = stats.failed_count;
 
     assert!(success >= 1);
     assert_eq!(failed, 0);
@@ -1186,7 +1212,7 @@ async fn resolve_spawn_context_nonexistent_working_dir_returns_error() {
 async fn resolve_spawn_context_shell_command_uses_command_shell() {
     let db = create_test_db();
 
-    db.set_setting("default_shell", "sh").ok();
+    db.set_settings("default_shell", "sh").ok();
 
     let mut group = GroupBuilder::new("group").build();
     group.working_directory = Some("/tmp".to_string());
@@ -1212,7 +1238,7 @@ async fn resolve_spawn_context_shell_command_uses_command_shell() {
 #[cfg(unix)]
 async fn resolve_spawn_context_shell_falls_back_to_group() {
     let db = create_test_db();
-    db.set_setting("default_shell", "sh").ok();
+    db.set_settings("default_shell", "sh").ok();
 
     let mut group = GroupBuilder::new("group").build();
     group.working_directory = Some("/tmp".to_string());
@@ -1236,7 +1262,7 @@ async fn resolve_spawn_context_shell_falls_back_to_group() {
 #[cfg(unix)]
 async fn resolve_spawn_context_shell_no_group_falls_back_to_default_setting() {
     let db = create_test_db();
-    db.set_setting("default_shell", "sh").ok();
+    db.set_settings("default_shell", "sh").ok();
 
     let cmd_id = db
         .create_command(&CommandBuilder::new("test", "echo test").build())
@@ -1251,7 +1277,7 @@ async fn resolve_spawn_context_shell_no_group_falls_back_to_default_setting() {
 #[cfg(unix)]
 async fn resolve_spawn_context_shell_falls_back_to_default_setting() {
     let db = create_test_db();
-    db.set_setting("default_shell", "sh").ok();
+    db.set_settings("default_shell", "sh").ok();
 
     let mut group = GroupBuilder::new("group").build();
     group.working_directory = Some("/tmp".to_string());

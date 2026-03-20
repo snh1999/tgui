@@ -69,7 +69,7 @@ impl ProcessManager {
 
         let kill_tree = self
             .db
-            .get_setting("kill_process_tree_by_default")
+            .get_settings("kill_process_tree_by_default")
             .map(|v| v == "true")
             .unwrap_or(false);
 
@@ -165,7 +165,7 @@ impl ProcessManager {
     }
 
     pub fn detect_and_mark_orphans(&self) -> Vec<OrphanedProcess> {
-        let running = match self.db.get_running_commands(None, None) {
+        let running = match self.db.get_running_commands() {
             Ok(rows) => rows,
             Err(e) => {
                 error!(error = %e, "Failed to query running executions on startup");
@@ -278,7 +278,7 @@ impl ProcessManager {
             .shell
             .clone()
             .or_else(|| ancestors.iter().find_map(|g| g.shell.clone()))
-            .or_else(|| self.db.get_setting("default_shell").ok());
+            .or_else(|| self.db.get_settings("default_shell").ok());
 
         let mut env_map: HashMap<String, String> = HashMap::new();
         let mut update_env_map = |env_vars: &Option<HashMap<String, String>>| {
@@ -429,4 +429,5 @@ impl ProcessManager {
         }
         count
     }
+
 }
