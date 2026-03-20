@@ -1,10 +1,11 @@
 <script setup lang="ts">
-  import { Button } from "@/components/ui/button";
+  import { Button, type ButtonVariants } from "@/components/ui/button";
   import { Field } from "@/components/ui/field";
   import OpenDialog from "@/components/ui/tgui/OpenDialog.vue";
 
   const props = defineProps<{
     title: string;
+    triggerVariant?: ButtonVariants["variant"];
   }>();
 
   const open = defineModel<boolean>("open", { default: false });
@@ -17,7 +18,13 @@
 </script>
 
 <template>
-  <Button v-if="$slots.trigger" @click="openDialog" size="sm" class="gap-1">
+  <Button
+    v-if="$slots.trigger"
+    @click="openDialog"
+    :variant="triggerVariant"
+    size="xs"
+    class="gap-1"
+  >
     <slot name="trigger" />
   </Button>
 
