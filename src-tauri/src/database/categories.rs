@@ -79,6 +79,16 @@ impl Database {
         )
     }
 
+    #[instrument(skip(self))]
+    pub fn get_category_group_count(&self, id: i64) -> Result<i64> {
+        self.query_row(
+            CATEGORIES_TABLE,
+            id,
+            "SELECT COUNT(*) FROM groups WHERE category_id = ?",
+            |row| row.get(0),
+        )
+    }
+
     fn row_to_category(row: &rusqlite::Row) -> rusqlite::Result<Category> {
         Ok(Category {
             id: row.get("id")?,

@@ -1,17 +1,57 @@
-#[cfg(target_os = "windows")]
-pub const ALLOWED_SHELLS: &[&str] = &["cmd", "powershell", "pwsh"];
+// TODO: allow shell configuring TGUI-33
+
+use std::collections::HashSet;
+use std::path::Path;
+use std::process::Command;
+use std::sync::{LazyLock, Mutex};
+use std::time::{Duration, SystemTime};
+use tracing::{debug, info};
+
+#[derive(Debug, Clone)]
+pub struct ShellInfo {
+    pub name: String,
+    pub path: String,
+}
+
+pub struct Shell;
+
+impl Shell {
+    #[cfg(not(target_os = "windows"))]
+    const COMMON_SHELLS: &[&str] = &["sh", "bash", "zsh", "fish", "nu", "dash", "ksh", "tcsh"];
+
+    #[cfg(target_os = "windows")]
+    const COMMON_SHELLS: &[&str] = &["cmd", "powershell", "pwsh"];
+
+    /// Detect all available shells on the system
+    pub fn detect_available_shells() -> Vec<ShellInfo> {
+        debug!("Detecting available shells on the system");
+        let mut shells = Vec::new();
+
+        for shell_name in Self::COMMON_SHELLS {
+            if let Some(shell_info) = Self::check_shell(shell_name) {
+                debug!("Found shell: {} at {}", shell_info.name, shell_info.path);
+                shells.push(shell_info);
+            }
+        }
+
+        // Also check for shells in common paths that might not be in PATH
+        Self::check_common_paths(&mut shells);
+
+        debug!("Detected {} available shells", shells.len());
+        shells
+    }
+
+    /// Check if a specific shell is available
+    fn check_shell(name: &str) -> Option<ShellInfo> {
+        let path = Self::find_in_path(name)?;
+        Some(ShellInfo {
+            name: name.to_string(),
+            path: path.to_string_lossy().into_owned(),
+        })
+    }
 
 #[cfg(not(target_os = "windows"))]
 pub const ALLOWED_SHELLS: &[&str] = &["sh", "bash", "zsh", "fish", "nu"];
-
-#[cfg(not(target_os = "windows"))]
-const ALLOWED_SHELL_PATHS: &[&str] = &[
-    "/bin/sh", "/bin/bash", "/bin/zsh", "/bin/fish", "/bin/dash", "/bin/ksh",
-    "/usr/bin/sh", "/usr/bin/bash", "/usr/bin/zsh", "/usr/bin/fish",
-    "/usr/bin/dash", "/usr/bin/ksh", "/usr/bin/nu",
-    "/usr/local/bin/bash", "/usr/local/bin/zsh", "/usr/local/bin/fish",
-    "/usr/local/bin/nu", "/usr/local/bin/pwsh",
-];
 
 #[cfg(target_os = "windows")]
 const ALLOWED_SHELL_PATHS: &[&str] = &[
@@ -21,7 +61,7 @@ const ALLOWED_SHELL_PATHS: &[&str] = &[
 
 /// Returns `true` if the shell name is in `ALLOWED_SHELLS` for this platform.
 pub fn is_valid_shell(shell: &str) -> bool {
-    ALLOWED_SHELLS.contains(&shell) || ALLOWED_SHELL_PATHS.contains(&shell)
+    ALLOWED_SHELLS.contains(&shell)
 }
 
 pub fn get_allowed_shells() -> Vec<&'static str> {

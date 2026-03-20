@@ -34,7 +34,14 @@ and Vue frontend.
 
 **TriggeredBy Deserialization**:
 
-- Unknown trigger strings default to `TriggeredBy::Manual`
+- If `workflow_id` is present → `TriggeredBy::Workflow`
+- Otherwise → `TriggeredBy::Manual`
+
+
+**Status Deserialization**: Unknown status strings in DB default to `ExecutionStatus::Completed`
+with a warning log. This is a safety fallback, not a valid state to set intentionally.
+
+
 
 ## Command Management
 
@@ -1657,6 +1664,10 @@ set automatically by the execution_history_timestamps DB trigger.
 deleted. Implements the ADR-007 retention strategy.
 - Only standalone executions (`workflow_id IS NULL`) are considered for deletion; workflow-step history for the same command is never removed by this function.
 - **Default**: `keep_last = 100` (matches `EXECUTION_HISTORY_LIMIT`).
+
+**Edge Case**: 
+- When `days = 0`, deletes all non-running history regardless of timestamp
+- except running entries which are always preserved
 
 **TODO**: Add equivalent cleanup for workflow and workflow-step history.
 

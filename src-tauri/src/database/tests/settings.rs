@@ -8,7 +8,7 @@ fn test_initialize_settings_creates_defaults() {
     assert_eq!(theme, "system");
 
     let shell = test_db.db.get_setting("default_shell").unwrap();
-    assert_eq!(shell, "/bin/bash");
+    assert_eq!(shell, "sh");
 }
 
 #[test]
@@ -125,4 +125,104 @@ fn test_setting_updated_at_changes() {
 
     // The value should have changed
     assert_ne!(initial_theme, test_db.db.get_setting("theme").unwrap());
+}
+
+
+#[test]
+fn test_initialize_settings_is_idempotent() {
+    let test_db = TestDb::setup_test_db();
+    test_db.db.set_setting("theme", "dark").unwrap();
+
+    test_db.db.initialize_settings().unwrap();
+
+    assert_eq!(test_db.db.get_setting("theme").unwrap(), "dark");
+}
+
+#[test]
+fn test_set_setting_max_concurrent_processes_validates_number() {
+    let test_db = TestDb::setup_test_db();
+
+    let result = test_db.db.set_setting("max_concurrent_processes", "not_a_number");
+    assert!(matches!(
+        result,
+        Err(DatabaseError::InvalidData { field: "value", .. })
+    ));
+
+    test_db.db.set_setting("max_concurrent_processes", "10").unwrap();
+    assert_eq!(test_db.db.get_setting("max_concurrent_processes").unwrap(), "10");
+}
+
+#[test]
+fn test_set_setting_rejects_float_for_numeric_fields() {
+    let test_db = TestDb::setup_test_db();
+
+    let result = test_db.db.set_setting("log_buffer_size", "1.5");
+    assert!(matches!(
+        result,
+        Err(DatabaseError::InvalidData { field: "value", .. })
+    ));
+
+    let result = test_db.db.set_setting("max_concurrent_processes", "4.0");
+    assert!(matches!(
+        result,
+        Err(DatabaseError::InvalidData { field: "value", .. })
+    ));
+}
+
+#[test]
+fn test_set_setting_warn_before_kill_validates_boolean() {
+    let test_db = TestDb::setup_test_db();
+
+    let result = test_db.db.set_setting("warn_before_kill", "yes");
+    assert!(matches!(
+        result,
+        Err(DatabaseError::InvalidData { field: "value", .. })
+    ));
+
+    test_db.db.set_setting("warn_before_kill", "false").unwrap();
+    assert_eq!(test_db.db.get_setting("warn_before_kill").unwrap(), "false");
+}
+
+#[test]
+fn test_set_setting_kill_process_tree_validates_boolean() {
+    let test_db = TestDb::setup_test_db();
+
+    let result = test_db.db.set_setting("kill_process_tree_by_default", "1");
+    assert!(matches!(
+        result,
+        Err(DatabaseError::InvalidData { field: "value", .. })
+    ));
+
+    test_db.db.set_setting("kill_process_tree_by_default", "true").unwrap();
+    assert_eq!(test_db.db.get_setting("kill_process_tree_by_default").unwrap(), "true");
+}
+
+#[test]
+fn test_set_setting_available_shells_accepts_any_string() {
+    let test_db = TestDb::setup_test_db();
+    // falls through to _ => Ok(()), no validation on this key
+    test_db.db.set_setting("available_shells", r#"["/bin/bash","/bin/zsh"]"#).unwrap();
+    assert_eq!(
+        test_db.db.get_setting("available_shells").unwrap(),
+        r#"["/bin/bash","/bin/zsh"]"#
+    );
+}
+
+#[test]
+fn test_get_all_settings_returns_all_default_keys() {
+    let test_db = TestDb::setup_test_db();
+    let all = test_db.db.get_all_settings().unwrap();
+
+    for key in &[
+        "theme",
+        "log_buffer_size",
+        "max_concurrent_processes",
+        "auto_scroll_logs",
+        "warn_before_kill",
+        "kill_process_tree_by_default",
+        "available_shells",
+        "default_shell",
+    ] {
+        assert!(all.contains_key(*key), "missing key: {key}");
+    }
 }
