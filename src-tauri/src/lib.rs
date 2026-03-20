@@ -103,7 +103,7 @@ pub fn run() {
             execution_history::get_running_commands,
             execution_history::cleanup_command_history,
             execution_history::cleanup_history_older_than,
-            execution_history::get_command_execution_stats,
+            execution_history::get_execution_stats,
             process_handler::spawn_command,
             process_handler::kill_process,
             process_handler::get_running_processes,
