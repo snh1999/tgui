@@ -132,7 +132,6 @@ impl Database {
             prev_id,
             next_id,
             None,
-            None,
             |id, default| self.get_position_parent_workflow(id, default),
         )
     }
@@ -356,7 +355,6 @@ impl Database {
             prev_id,
             next_id,
             Some("workflow_id"),
-            Some(step.workflow_id),
             |id, default| self.get_position_parent_step(id, default),
         )
     }

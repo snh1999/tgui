@@ -111,7 +111,7 @@ fn test_unicode_names() {
 fn test_concurrent_transactions_isolated() {
     let test_db = TestDb::setup_test_db();
 
-    let count_before = test_db.db.get_groups(None, None, false).unwrap().len();
+    let count_before = test_db.db.get_groups(GroupFilter::None, CategoryFilter::None, false).unwrap().len();
 
     {
         let mut connection = test_db.db.conn().unwrap();
@@ -124,7 +124,7 @@ fn test_concurrent_transactions_isolated() {
         tx.commit().unwrap();
     }
 
-    let groups = test_db.db.get_groups(None, None, false).unwrap();
+    let groups = test_db.db.get_groups(GroupFilter::None, CategoryFilter::None, false).unwrap();
     assert_eq!(groups.len(), count_before + 1);
 }
 
@@ -310,7 +310,7 @@ fn test_multiple_concurrent_commands() {
         .unwrap();
     test_db.db.update_execution_pid(exec_c, 102).unwrap();
 
-    let running = test_db.db.get_running_commands(None, None).unwrap();
+    let running = test_db.db.get_running_commands().unwrap();
     assert_eq!(running.len(), 3);
 
     // Stop one
@@ -319,7 +319,7 @@ fn test_multiple_concurrent_commands() {
         .update_execution_history_status(exec_b, ExecutionStatus::Success, Some(0))
         .unwrap();
 
-    let running = test_db.db.get_running_commands(None, None).unwrap();
+    let running = test_db.db.get_running_commands().unwrap();
     assert_eq!(running.len(), 2);
 
     let running_ids: Vec<i64> = running.iter().map(|r| r.id).collect();
@@ -357,7 +357,7 @@ fn test_same_command_run_multiple_times_only_current_is_running() {
         .unwrap();
     test_db.db.update_execution_pid(exec2, 201).unwrap();
 
-    let running = test_db.db.get_running_commands(Some(cmd_id), None).unwrap();
+    let running = test_db.db.get_running_commands().unwrap();
     assert_eq!(running.len(), 1);
     assert_eq!(running[0].id, exec2);
     assert_eq!(running[0].pid, Some(201));

@@ -169,7 +169,7 @@ impl Database {
         parent_column: Option<&'static str>,
         parent_id: Option<i64>,
     ) -> Result<i64> {
-        let mut query = format!("SELECT COALESCE(MAX(position), -1) + 1 FROM {table} ");
+        let mut query = format!("SELECT COALESCE(MAX(position), 0) FROM {table} ");
 
         if let Some(parent_column) = parent_column {
             query.push_str(&format!(" WHERE {parent_column} IS ?1"));
@@ -239,7 +239,6 @@ impl Database {
         prev_id: Option<i64>,
         next_id: Option<i64>,
         parent_column: Option<&'static str>,
-        parent_id: Option<i64>,
         mut get_position_parent: F,
     ) -> Result<()>
     where
@@ -255,6 +254,7 @@ impl Database {
 
         let (prev_pos, prev_parent) = get_position_parent(prev_id, 0)?;
         let (next_pos, next_parent) = get_position_parent(next_id, prev_pos + Self::POSITION_GAP)?;
+        let (current_pos, parent_id) = get_position_parent(Some(item_id), 0)?;
 
         if (next_id.is_some() && next_parent != parent_id)
             || (prev_id.is_some() && prev_parent != parent_id)
@@ -264,6 +264,11 @@ impl Database {
                 field: "parent_id",
                 reason: "Invalid data, all groups must be from same parent".to_string(),
             });
+        }
+
+        if prev_pos == current_pos || next_pos == current_pos {
+            debug!("Item already at target position, skipping");
+            return Ok(());
         }
 
         let mut new_pos = (prev_pos + next_pos) / 2;
