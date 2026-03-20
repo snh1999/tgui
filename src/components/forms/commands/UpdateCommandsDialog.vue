@@ -7,7 +7,7 @@
   import { useGetCommand } from "@/lib/api/composables/commands.ts";
   import FormDialog from "@/components/forms/common/FormDialog.vue";
   import { Button } from "@/components/ui/button";
-  import { EditIcon } from "@/assets/Icons";
+  import { Pencil } from "lucide-vue-next";
 
   const props = defineProps<{
     id: number;
@@ -29,8 +29,12 @@
 
 <template>
   <FormDialog title="Update command">
-    <template v-if="viewTrigger" #trigger>
-      <EditIcon /> Edit
+    <template v-if="$slots.default" #trigger>
+      <slot />
+    </template>
+    <template v-else-if="viewTrigger" #trigger>
+      <Pencil class="h-3.5 w-3.5" />
+      Edit
     </template>
 
     <template #default="{ closeDialog }">
@@ -62,10 +66,7 @@
         type="submit"
         :form="COMMAND_FORM_ID"
         :is-pending="updateCommandFormRef?.isPending"
-        :disabled="
-                    !updateCommandFormRef?.isValid ||
-                    !updateCommandFormRef?.isDirty
-                "
+        :disabled="!updateCommandFormRef?.isValid || !updateCommandFormRef?.isDirty"
       >
         Update
       </Button>

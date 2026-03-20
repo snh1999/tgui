@@ -21,12 +21,19 @@ export const commandFormSchema = groupCommandFormSchema.extend({
 
 export interface IUpsertCommandForm {
   command?: ICommand;
+  isCreate?: boolean;
 }
 
 export function useCommandForm(
   props: IUpsertCommandForm,
   onSuccess: () => void
 ) {
+  console.log(
+    "upsert command form",
+    props.command?.name,
+    props.command && !props.isCreate
+  );
+
   const { handleSubmit, resetForm, meta } = useForm({
     validationSchema: toTypedSchema(commandFormSchema),
     initialValues: props.command
@@ -59,7 +66,7 @@ export function useCommandForm(
 
   const onSubmit = handleSubmit((rawData) => {
     const data = transformEnvVars(rawData);
-    if (props.command) {
+    if (props.command && !props.isCreate) {
       updateCommand(
         { id: props.command.id, payload: data },
         { onSuccess: () => onSuccess() }
