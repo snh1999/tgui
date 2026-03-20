@@ -1,7 +1,7 @@
 // TODO: allow shell configuring TGUI-33
 
 use std::collections::HashSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, SystemTime};
@@ -69,7 +69,6 @@ impl Shell {
         }
         None
     }
-
     #[cfg(target_os = "windows")]
     fn find_in_path(command: &str) -> Option<PathBuf> {
         let path_var = std::env::var_os("PATH")?;
