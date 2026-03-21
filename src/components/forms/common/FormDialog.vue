@@ -6,6 +6,7 @@
   const props = defineProps<{
     title: string;
     triggerVariant?: ButtonVariants["variant"];
+    triggerSize?: ButtonVariants["size"];
   }>();
 
   const open = defineModel<boolean>("open", { default: false });
@@ -22,7 +23,7 @@
     v-if="$slots.trigger"
     @click="openDialog"
     :variant="triggerVariant"
-    size="xs"
+    :size="triggerSize ?? 'xs'"
     class="gap-1"
   >
     <slot name="trigger" />
