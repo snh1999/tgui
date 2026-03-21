@@ -26,13 +26,13 @@ export function useGetGroup(id: MaybeRef<number>) {
   });
 }
 
-// export function useGetGroupTree(id: MaybeRef<number>) {
-//   return useQuery({
-//     queryKey: [queryKeys.groups.detail(unref(id)), "tree"],
-//     queryFn: () => groupsApi.getGroupTree(unref(id)),
-//     enabled: () => unref(id) > 0,
-//   });
-// }
+export function useGetGroupCommandCount(id: MaybeRef<number>) {
+  return useQuery({
+    queryKey: [...queryKeys.groups.detail(unref(id)), "count"],
+    queryFn: () => groupsApi.getGroupCommandCount(unref(id)),
+    enabled: () => unref(id) > 0,
+  });
+}
 
 export function useGetGroupPath(id: MaybeRef<number>) {
   return useQuery({

@@ -3,11 +3,16 @@ import type {
   ICategory,
   ICommand,
   ICommandGroupFilter,
+  ICommandWithHistory,
+  IExecutionHistory,
+  IExecutionStats,
   IGroup,
   IMovePosition,
+  ITrayStatus,
   IWorkflow,
   IWorkflowStep,
   IWorkflowStepFilter,
+  StatsTarget,
   TUpsertCategoryPayload,
   TUpsertCommandPayload,
   TUpsertGroupPayload,
@@ -34,10 +39,15 @@ export const categoriesApi = {
 
 export const commandsApi = {
   getAll: (filters?: ICommandGroupFilter) =>
-    invoke<ICommand[]>("get_commands", {
-      groupId: filters?.parentId,
-      categoryId: filters?.categoryId,
+    invoke<ICommandWithHistory[]>("get_commands", {
+      parentId: filters?.parentId ?? "All",
+      categoryId: filters?.categoryId ?? "All",
       favoritesOnly: filters?.favoritesOnly ?? false,
+    }),
+
+  getRecent: (limit: number) =>
+    invoke<ICommandWithHistory[]>("get_recent_commands", {
+      limit,
     }),
 
   getById: (id: number) => invoke<ICommand>("get_command", { id }),
@@ -70,8 +80,8 @@ export const commandsApi = {
 export const groupsApi = {
   getAll: (filters?: ICommandGroupFilter) =>
     invoke<IGroup[]>("get_groups", {
-      parentGroupId: filters?.parentId,
-      categoryId: filters?.categoryId,
+      parentId: filters?.parentId ?? "All",
+      categoryId: filters?.categoryId ?? "All",
       favoritesOnly: filters?.favoritesOnly ?? false,
     }),
 
@@ -97,6 +107,8 @@ export const groupsApi = {
 
   getGroupPath: (rootId: number) =>
     invoke<string[]>("get_group_path", { rootId }),
+
+  getGroupCommandCount: (id: number) => invoke<number>(" ", { id }),
 };
 
 export const workflowsApi = {
@@ -153,4 +165,25 @@ export const workflowStepApi = {
     invoke<void>("toggle_workflow_step_enabled", { id }),
   getWorkflowStepCount: (id: number) =>
     invoke<number>("get_workflow_step_count", { id }),
+};
+
+export const processHandlerApi = {
+  getTrayStatus: () => invoke<ITrayStatus>("get_tray_status"),
+  getValidShells: () => invoke<string[]>("get_valid_shells"),
+};
+
+export const executionHistoryApi = {
+  getCommandExecutionHistory: (commandId: number) =>
+    invoke<IExecutionHistory[]>("get_command_execution_history", { commandId }),
+  getRunningCommands: () => invoke<IExecutionHistory[]>("get_running_commands"),
+  getStats: (target: StatsTarget, days?: number) =>
+    invoke<IExecutionStats>("get_execution_stats", { target, days }),
+};
+
+export const settingsApi = {
+  getSettings: (key: string) => invoke<string>("get_settings", { key }),
+  setSettings: (key: string, value: string) =>
+    invoke<void>("set_settings", { key, value }),
+  resetSettings: () => invoke<string>("reset_settings"),
+  getAllSettings: () => invoke<Record<string, string>>("get_all_settings"),
 };
