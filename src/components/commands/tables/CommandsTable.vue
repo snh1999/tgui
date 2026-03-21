@@ -1,0 +1,30 @@
+<script setup lang="ts">
+  import { columns } from "@/components/commands/tables/columns.ts";
+  import { Badge } from "@/components/ui/badge";
+  import DataTable from "@/components/ui/table/DataTable.vue";
+  import { ICommand } from "@/lib/api/api.types.ts";
+
+  defineProps<{ commands: ICommand[] }>();
+</script>
+
+<template>
+  <section
+    class="flex flex-col rounded-md border border-muted bg-card text-card-foreground mt-5"
+  >
+    <div
+      class="flex items-center justify-between px-6 py-4 border-b border-b-muted"
+    >
+      <div class="flex items-center gap-3">
+        <h2 class="text-lg font-semibold tracking-tight">Command Registry</h2>
+        <Badge>8 active</Badge>
+      </div>
+    </div>
+    <div class="relative w-full overflow-auto">
+      <DataTable
+        :data="commands ?? []"
+        :columns="columns"
+        footer-content="test"
+      />
+    </div>
+  </section>
+</template>

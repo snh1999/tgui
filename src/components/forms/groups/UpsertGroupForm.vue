@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { COMMAND_FORM_ID, GROUP_FORM_ID } from "@/app.constants.ts";
+  import { COMMAND_FORM_ID, GROUP_FORM_ID } from "@/app.constants.ts";
   import {
     IUpsertGroupForm,
     useGroupForm,
@@ -17,9 +17,9 @@ import { COMMAND_FORM_ID, GROUP_FORM_ID } from "@/app.constants.ts";
   } from "@/components/ui/input-group";
   import DirectoryPicker from "@/components/ui/tgui/inputs/DirectoryPicker.vue";
   import IconPicker from "@/components/ui/tgui/inputs/IconPicker.vue";
-import ShellSelect from "@/components/forms/common/ShellSelect.vue";
-import GroupSelect from "@/components/forms/common/GroupSelect.vue";
-import CategorySelect from "@/components/forms/common/CategorySelect.vue";
+  import ShellSelect from "@/components/forms/common/ShellSelect.vue";
+  import GroupSelect from "@/components/forms/common/GroupSelect.vue";
+  import CategorySelect from "@/components/forms/common/CategorySelect.vue";
 
   const props = defineProps<IUpsertGroupForm>();
   const emit = defineEmits<{ success: [] }>();
@@ -60,21 +60,25 @@ import CategorySelect from "@/components/forms/common/CategorySelect.vue";
           </template>
         </FormField>
 
-	      <FormField name="parentGroupId" :form-id="COMMAND_FORM_ID" label="Group">
-		      <template #default="{ bindings }">
-			      <GroupSelect v-bind="bindings" placeholder="Select a group" />
-		      </template>
-	      </FormField>
+        <FormField
+          name="parentGroupId"
+          :form-id="COMMAND_FORM_ID"
+          label="Group"
+        >
+          <template #default="{ bindings }">
+            <GroupSelect v-bind="bindings" placeholder="Select a group" />
+          </template>
+        </FormField>
 
-	      <FormField
-			      name="categoryId"
-			      :form-id="COMMAND_FORM_ID"
-			      label="Category"
-	      >
-		      <template #default="{ bindings }">
-			      <CategorySelect v-bind="bindings" placeholder="Select a Category" />
-		      </template>
-	      </FormField>
+        <FormField
+          name="categoryId"
+          :form-id="COMMAND_FORM_ID"
+          label="Category"
+        >
+          <template #default="{ bindings }">
+            <CategorySelect v-bind="bindings" placeholder="Select a Category" />
+          </template>
+        </FormField>
 
         <FormField name="icon" :form-id="GROUP_FORM_ID" label="Icon">
           <template #default="{ bindings }">
@@ -85,16 +89,14 @@ import CategorySelect from "@/components/forms/common/CategorySelect.vue";
           </template>
         </FormField>
 
-
-
-	      <FormField name="shell" :form-id="COMMAND_FORM_ID" label="Shell">
-		      <template #default="{ bindings }">
-			      <ShellSelect
-					      v-bind="bindings"
-					      placeholder="Select preferred shell"
-			      />
-		      </template>
-	      </FormField>
+        <FormField name="shell" :form-id="COMMAND_FORM_ID" label="Shell">
+          <template #default="{ bindings }">
+            <ShellSelect
+              v-bind="bindings"
+              placeholder="Select preferred shell"
+            />
+          </template>
+        </FormField>
 
         <MapInput
           fieldName="envVars"

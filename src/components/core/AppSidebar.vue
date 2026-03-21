@@ -1,10 +1,9 @@
 <script setup lang="ts">
   import { ChevronRight, ListPlus, Plus, Settings } from "lucide-vue-next";
   import { useRoute } from "vue-router";
-  import { DashboardIcon, GroupIcon } from "@/assets/Icons.ts";
+  import { GroupIcon } from "@/assets/Icons.ts";
   import logo from "@/assets/logo.svg";
   import CreateCategoryDialog from "@/components/forms/categories/CreateCategoryDialog.vue";
-  import TitleBar from "@/components/core/title-bar/TitleBar.vue";
   import { Collapsible } from "@/components/ui/collapsible";
   import {
     Sidebar,
@@ -17,11 +16,9 @@
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-    SidebarTrigger,
     useSidebar,
   } from "@/components/ui/sidebar";
   import { useGetCategories } from "@/lib/api/composables/categories.ts";
-  import { appStateStore } from "@/stores/app.store.ts";
 
   const sidebarState = useSidebar();
   const route = useRoute();
@@ -29,18 +26,8 @@
 
   const items = [
     {
-      title: "Dashboard",
-      url: "/",
-      icon: DashboardIcon,
-    },
-    {
       title: "Commands",
       url: "/commands",
-      icon: ListPlus,
-    },
-    {
-      title: "Browse",
-      url: "/browse",
       icon: ListPlus,
     },
     {
