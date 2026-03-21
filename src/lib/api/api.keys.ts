@@ -9,7 +9,8 @@ type TQueryKeys =
   | "groups"
   | "categories"
   | "workflows"
-  | "workflowSteps";
+  | "workflowSteps"
+  | "executionHistories";
 
 export const queryKeys: Record<TQueryKeys, IQueryKeyTypes> = {
   commands: {
@@ -67,6 +68,15 @@ export const queryKeys: Record<TQueryKeys, IQueryKeyTypes> = {
     //   [...queryKeys.workflowSteps.lists(), filter] as const,
     detail: (id: number) =>
       [...queryKeys.workflowSteps.all, "detail", id] as const,
+  },
+
+  executionHistories: {
+    all: ["executionHistories"] as const,
+    lists: () => [...queryKeys.executionHistories.all, "list"] as const,
+    filteredList: (filter: ICommandGroupFilter) =>
+      [...queryKeys.executionHistories.lists(), filter] as const,
+    detail: (id: number) =>
+      [...queryKeys.executionHistories.all, "detail", id] as const,
   },
 };
 

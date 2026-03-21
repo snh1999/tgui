@@ -1,26 +1,26 @@
 <script setup lang="ts">
   import { onUnmounted, ref, watch } from "vue";
-  import {
-    IInputEmits,
-    IInputProps,
-  } from "@/components/ui/tgui/inputs/tgui-input.types.ts";
-  import {
-    clamp,
-    sanitizeHexInput,
-    useColorPicker,
-  } from "@/components/ui/tgui/inputs/color-picker/color.helpers.ts";
-  import {
-    Tabs,
-    TabsContent,
-    TabsList,
-    TabsTrigger,
-  } from "@/components/ui/tabs";
   import { Input } from "@/components/ui/input";
   import {
     InputGroup,
     InputGroupAddon,
     InputGroupInput,
   } from "@/components/ui/input-group";
+  import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+  } from "@/components/ui/tabs";
+  import {
+    clamp,
+    sanitizeHexInput,
+    useColorPicker,
+  } from "@/components/ui/tgui/inputs/color-picker/color.helpers.ts";
+  import {
+    IInputEmits,
+    IInputProps,
+  } from "@/components/ui/tgui/inputs/tgui-input.types.ts";
 
   const props = defineProps<IInputProps>();
   const emit = defineEmits<IInputEmits>();
@@ -86,7 +86,9 @@
   }
 
   onUnmounted(() => {
-    if (dragging) stopDrag();
+    if (dragging) {
+      stopDrag();
+    }
   });
 
   const presets = [
