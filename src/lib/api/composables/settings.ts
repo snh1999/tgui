@@ -1,0 +1,40 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
+import { type MaybeRef, unref } from "vue";
+import { settingsApi } from "@/lib/api/api.tauri.ts";
+
+export function useGetSettings(key: MaybeRef<string>) {
+  return useQuery({
+    queryKey: ["settings", key],
+    queryFn: () => settingsApi.getSettings(unref(key)),
+    enabled: () => unref(key).length > 0,
+  });
+}
+
+export function useGetAllSettings() {
+  return useQuery({
+    queryKey: ["settings"],
+    queryFn: () => settingsApi.getAllSettings(),
+  });
+}
+
+export function useResetSettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => settingsApi.resetSettings(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+    },
+  });
+}
+
+export function useSetSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, value }: { key: string; value: string }) =>
+      settingsApi.setSettings(key, value),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["settings", variables.key] });
+    },
+  });
+}
