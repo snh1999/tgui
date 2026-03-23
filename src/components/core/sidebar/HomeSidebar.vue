@@ -2,8 +2,6 @@
   import { ChevronRight, ListPlus, Plus, Settings } from "lucide-vue-next";
   import { useRoute } from "vue-router";
   import { GroupIcon } from "@/assets/Icons.ts";
-  import logo from "@/assets/logo.svg";
-  import AppLogo from "@/components/core/AppLogo.vue";
   import CreateCategoryDialog from "@/components/forms/categories/CreateCategoryDialog.vue";
   import { Collapsible } from "@/components/ui/collapsible";
   import {
@@ -13,15 +11,12 @@
     SidebarGroupAction,
     SidebarGroupContent,
     SidebarGroupLabel,
-    SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-    useSidebar,
   } from "@/components/ui/sidebar";
   import { useGetCategories } from "@/lib/api/composables/categories.ts";
 
-  const sidebarState = useSidebar();
   const route = useRoute();
   const isMenuActive = (path: string) => path === route.path;
 
