@@ -3,6 +3,7 @@
   import { useRoute } from "vue-router";
   import { GroupIcon } from "@/assets/Icons.ts";
   import logo from "@/assets/logo.svg";
+  import AppLogo from "@/components/core/AppLogo.vue";
   import CreateCategoryDialog from "@/components/forms/categories/CreateCategoryDialog.vue";
   import { Collapsible } from "@/components/ui/collapsible";
   import {
@@ -47,15 +48,6 @@
 
 <template>
   <Sidebar collapsible="icon" side="left" variant="sidebar" :top-offset="40">
-    <SidebarHeader>
-      <div
-        v-show="sidebarState.open.value"
-        class="mb-3 mt-2 flex items-center justify-center gap-3"
-      >
-        <img class="h-8 w-8" alt="logo" :src="logo">
-        <div class="text-xl font-semibold tracking-tighter">TGUI</div>
-      </div>
-    </SidebarHeader>
     <SidebarContent>
       <SidebarGroup>
         <SidebarGroupContent>

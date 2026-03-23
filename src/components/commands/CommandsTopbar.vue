@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, ref } from "vue";
-  import SearchButton from "@/components/core/title-bar/SearchButton.vue";
+  import SearchButton from "@/components/core/titlebar/SearchButton.vue";
   import CreateCommandsDialog from "@/components/forms/commands/CreateCommandsDialog.vue";
   import {
     Select,

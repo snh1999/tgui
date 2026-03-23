@@ -1,12 +1,13 @@
 <script setup lang="ts">
+  import { Play } from "lucide-vue-next";
   import { computed, ref } from "vue";
+  import { useRouter } from "vue-router";
   import {
     CopyIcon,
     DeleteIcon,
     EditIcon,
     ExternalIcon,
     MenuDotsIcon,
-    PlayIcon,
     ShutdownIcon,
     StopIcon,
   } from "@/assets/Icons.ts";
@@ -19,11 +20,9 @@
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu";
   import ConfirmDialog from "@/components/ui/tgui/ConfirmDialog.vue";
-  import { useDeleteCommand } from "@/lib/api/composables/commands.ts";
-  import { useRouter } from "vue-router";
-  import { routePaths } from "@/router";
-  import { Play } from "lucide-vue-next";
   import { TExecutionStatus } from "@/lib/api/api.types.ts";
+  import { useDeleteCommand } from "@/lib/api/composables/commands.ts";
+  import { routePaths } from "@/router";
 
   const props = defineProps<{
     id: number;
@@ -123,7 +122,7 @@
     <ConfirmDialog
       v-model:open="deleteDialogOpen"
       description="Are you sure you want to delete the command"
-      :action="onDeleteClick"
+      @confirm="onDeleteClick"
     />
   </div>
 </template>
