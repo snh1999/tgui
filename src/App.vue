@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import AppSidebar from "@/components/core/AppSidebar.vue";
-  import TitleBar from "@/components/core/title-bar/TitleBar.vue";
+  import AppSidebar from "@/components/core/sidebar/AppSidebar.vue";
+  import TitleBar from "@/components/core/titlebar/TitleBar.vue";
   import { SidebarProvider } from "@/components/ui/sidebar";
   import { Toaster } from "@/components/ui/sonner";
 </script>

@@ -16,6 +16,3 @@
 <template>
   <SelectInput :data="shellSelectInputs" />
 </template>
-
-<style scoped>
-</style>
