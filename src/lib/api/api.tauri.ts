@@ -108,7 +108,7 @@ export const groupsApi = {
   getGroupPath: (rootId: number) =>
     invoke<string[]>("get_group_path", { rootId }),
 
-  getGroupCommandCount: (id: number) => invoke<number>(" ", { id }),
+  getGroupCommandCount: (id: number) => invoke<number>("get_groups_count", { id }),
 };
 
 export const workflowsApi = {
@@ -181,9 +181,9 @@ export const executionHistoryApi = {
 };
 
 export const settingsApi = {
-  getSettings: (key: string) => invoke<string>("get_settings", { key }),
-  setSettings: (key: string, value: string) =>
-    invoke<void>("set_settings", { key, value }),
+  getSetting: (key: string) => invoke<string>("get_setting", { key }),
+  setSetting: (key: string, value: string) =>
+    invoke<void>("set_setting", { key, value }),
   resetSettings: () => invoke<string>("reset_settings"),
   getAllSettings: () => invoke<Record<string, string>>("get_all_settings"),
 };

@@ -7,7 +7,7 @@ use tracing::{info, instrument};
 
 static DEFAULT_SETTINGS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
     HashMap::from([
-        // TODO: remove theme
+        // TODO: remove them
         ("theme", "system"),
         ("log_buffer_size", "10000"),
         ("max_concurrent_processes", "20"),

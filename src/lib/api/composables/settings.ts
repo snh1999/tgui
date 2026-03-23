@@ -5,7 +5,7 @@ import { settingsApi } from "@/lib/api/api.tauri.ts";
 export function useGetSettings(key: MaybeRef<string>) {
   return useQuery({
     queryKey: ["settings", key],
-    queryFn: () => settingsApi.getSettings(unref(key)),
+    queryFn: () => settingsApi.getSetting(unref(key)),
     enabled: () => unref(key).length > 0,
   });
 }
@@ -32,7 +32,7 @@ export function useSetSettings() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ key, value }: { key: string; value: string }) =>
-      settingsApi.setSettings(key, value),
+      settingsApi.setSetting(key, value),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["settings", variables.key] });
     },
