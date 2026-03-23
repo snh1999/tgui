@@ -20,10 +20,10 @@
   >
     <span v-if="command.shell" class="italic">({{ command.shell }})</span>
     <BashIcon v-if="command.shell === 'bash'" />
-    <ZshIcon v-if="command.shell === 'zsh'" />
-    <FishShellIcon v-if="command.shell === 'fish'" />
-    <NuShellIcon v-if="command.shell === 'nu'" />
-    <PowershellIcon v-if="command.shell === 'powershell'" />
+    <ZshIcon v-else-if="command.shell === 'zsh'" />
+    <FishShellIcon v-else-if="command.shell === 'fish'" />
+    <NuShellIcon v-else-if="command.shell === 'nu'" />
+    <PowershellIcon v-else-if="command.shell === 'powershell'" />
     <Terminal v-else class="h-3 w-3 shrink-0" />
 
     <span class="truncate"

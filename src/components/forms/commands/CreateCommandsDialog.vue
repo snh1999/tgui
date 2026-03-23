@@ -15,8 +15,6 @@
   const createCommandFormRef = ref<InstanceType<
     typeof UpsertCommandForm
   > | null>(null);
-
-  console.log(props.command);
 </script>
 
 <template>
