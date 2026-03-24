@@ -2,7 +2,6 @@
   import { onMounted, ref, watch } from "vue";
   import { useDebounceFn } from "@vueuse/core";
   import { toast } from "vue-sonner";
-  import SettingsRow from "@/pages/components/settings/SettingsRow.vue";
   import { Switch } from "@/components/ui/switch";
   import { NumberField, NumberFieldInput } from "@/components/ui/number-field";
   import {
@@ -10,6 +9,7 @@
     useSetSetting,
   } from "@/lib/api/composables/settings.ts";
   import SettingsSectionWrapper from "@/components/settings/SettingsSectionWrapper.vue";
+  import SettingsRow from "@/components/settings/SettingsRow.vue";
 
   const { data: rawSettings } = useGetAllSettings();
   const { mutate: setSetting } = useSetSetting();

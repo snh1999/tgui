@@ -1,11 +1,13 @@
 // TODO: allow shell configuring TGUI-33
 
-use std::collections::HashSet;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(target_os = "windows")]
+use std::path::PathBuf;
+
 use std::process::Command;
 use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, SystemTime};
-use tracing::{debug, info};
+use tracing::debug;
 
 #[derive(Debug, Clone)]
 pub struct ShellInfo {
@@ -54,7 +56,6 @@ impl Shell {
     fn find_in_path(command: &str) -> Option<std::path::PathBuf> {
         let path_var = std::env::var_os("PATH")?;
         for dir in std::env::split_paths(&path_var) {
-
             let candidate = dir.join(command);
 
             if candidate.is_file() {
@@ -72,8 +73,8 @@ impl Shell {
     #[cfg(target_os = "windows")]
     fn find_in_path(command: &str) -> Option<PathBuf> {
         let path_var = std::env::var_os("PATH")?;
-        let pathext = std::env::var("PATHEXT")
-            .unwrap_or_else(|_| ".EXE;.CMD;.BAT;.COM".to_string());
+        let pathext =
+            std::env::var("PATHEXT").unwrap_or_else(|_| ".EXE;.CMD;.BAT;.COM".to_string());
         let extensions: Vec<&str> = pathext.split(';').collect();
 
         for dir in std::env::split_paths(&path_var) {
@@ -97,7 +98,7 @@ impl Shell {
             "/usr/bin",
             "/usr/local/bin",
             "/opt/homebrew/bin",
-            "/usr/pkg/bin",  // NetBSD pkgsrc
+            "/usr/pkg/bin",   // NetBSD pkgsrc
             "/opt/local/bin", // MacPorts
         ];
 
@@ -111,7 +112,9 @@ impl Shell {
                 }
 
                 let path = format!("{}/{}", dir, shell_name);
-                if !Path::new(&path).exists() { continue; }
+                if !Path::new(&path).exists() {
+                    continue;
+                }
 
                 let Ok(metadata) = std::fs::metadata(&path) else {
                     continue;
@@ -157,9 +160,9 @@ impl Shell {
                 // Bind the formatted string first to avoid a dangling reference
                 let formatted_exe;
                 let exe_name: &str = match *shell_name {
-                    "cmd"        => "cmd.exe",
+                    "cmd" => "cmd.exe",
                     "powershell" => "powershell.exe",
-                    "pwsh"       => "pwsh.exe",
+                    "pwsh" => "pwsh.exe",
                     other => {
                         formatted_exe = format!("{}.exe", other);
                         &formatted_exe
@@ -206,7 +209,6 @@ impl Shell {
 
         #[cfg(not(target_os = "windows"))]
         {
-
             if let Ok(shell) = std::env::var("SHELL") {
                 if let Some(name) = Path::new(&shell).file_name().and_then(|n| n.to_str()) {
                     if Self::check_shell(name).is_some() {
@@ -228,7 +230,6 @@ impl Shell {
                     }
                 }
             }
-
 
             for shell in Self::COMMON_SHELLS {
                 if Self::check_shell(shell).is_some() {

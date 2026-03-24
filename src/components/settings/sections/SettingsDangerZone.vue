@@ -4,7 +4,7 @@
   import { useResetSettings } from "@/lib/api/composables/settings.ts";
   import ConfirmDialog from "@/components/ui/tgui/ConfirmDialog.vue";
   import SettingsSectionWrapper from "@/components/settings/SettingsSectionWrapper.vue";
-  import SettingsRow from "@/pages/components/settings/SettingsRow.vue";
+  import SettingsRow from "@/components/settings/SettingsRow.vue";
 
   const { mutate: resetSettings } = useResetSettings();
 

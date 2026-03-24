@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import { ref, watch } from "vue";
-  import SettingsRow from "@/pages/components/settings/SettingsRow.vue";
   import {
     Select,
     SelectContent,
@@ -9,6 +8,7 @@
     SelectValue,
   } from "@/components/ui/select";
   import SettingsSectionWrapper from "@/components/settings/SettingsSectionWrapper.vue";
+  import SettingsRow from "@/components/settings/SettingsRow.vue";
 
   const STORAGE_KEY = "appearance:theme";
 

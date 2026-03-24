@@ -10,7 +10,7 @@ export const SETTINGS_SECTION = [
 
 export type TSettingsSection = (typeof SETTINGS_SECTION)[number];
 
-export const useSettingsStateStore = defineStore("appState", () => {
+export const useSettingsStateStore = defineStore("settingsState", () => {
   const selectedSection = ref<TSettingsSection | null>();
   function setSelectedSection(newSelection: TSettingsSection | null) {
     selectedSection.value = newSelection;

@@ -1,9 +1,9 @@
 use super::{CategoryFilter, Database, DatabaseError, Group, GroupFilter, Result};
-use crate::constants::{COMMANDS_TABLE, COMMAND_GROUP_COLUMN, GROUPS_TABLE, GROUP_PARENT_GROUP_COLUMN};
+use crate::constants::{GROUPS_TABLE, GROUP_PARENT_GROUP_COLUMN};
+use crate::database::helpers::QueryBuilder;
 use rusqlite::{named_params, params};
 use std::collections::HashSet;
 use tracing::{debug, instrument, warn};
-use crate::database::helpers::QueryBuilder;
 
 impl Database {
     #[instrument(skip(self, group), fields(name = %group.name))]
@@ -111,7 +111,6 @@ impl Database {
         )
     }
 
-
     #[instrument(skip(self))]
     pub fn update_group(&self, group: &Group) -> Result<()> {
         self.validate_group(group)?;
@@ -121,7 +120,12 @@ impl Database {
             if let Some(parent_id) = group.parent_group_id {
                 self.validate_no_circular_reference(group.id, parent_id)?;
             }
-            self.update_parent_group(GROUPS_TABLE, GROUP_PARENT_GROUP_COLUMN, group.id, group.parent_group_id)?;
+            self.update_parent_group(
+                GROUPS_TABLE,
+                GROUP_PARENT_GROUP_COLUMN,
+                group.id,
+                group.parent_group_id,
+            )?;
         }
 
         let env_vars = Self::hashmap_to_string(&group.env_vars)?;
@@ -167,8 +171,6 @@ impl Database {
         prev_id: Option<i64>,
         next_id: Option<i64>,
     ) -> Result<()> {
-        let group = self.get_group(group_id)?;
-
         self.move_item_between(
             "groups",
             group_id,
@@ -325,7 +327,6 @@ impl Database {
                 });
             }
         }
-
 
         Ok(())
     }

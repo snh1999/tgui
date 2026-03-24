@@ -3,10 +3,10 @@ mod categories;
 mod commands;
 mod execution_history;
 mod groups;
+pub mod helpers;
 mod integration;
 mod settings;
 mod workflows;
-pub mod helpers;
 
 use tempfile::TempDir;
 

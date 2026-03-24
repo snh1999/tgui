@@ -98,7 +98,10 @@ fn test_create_group_name_max_length() {
     let invalid_name = "a".repeat(Database::MAX_NAME_LENGTH + 1);
     let group = GroupBuilder::new(&invalid_name).build();
     let result = test_db.db.create_group(&group);
-    assert!(matches!(result, Err(DatabaseError::InvalidData { field: "name", .. })));
+    assert!(matches!(
+        result,
+        Err(DatabaseError::InvalidData { field: "name", .. })
+    ));
 }
 
 #[test]
@@ -108,8 +111,14 @@ fn test_create_group_whitespace_variations_rejected() {
     for ws in ["\t", "\n", "  \t  \n  "] {
         let group = GroupBuilder::new(ws).build();
         let result = test_db.db.create_group(&group);
-        assert!(matches!(result, Err(DatabaseError::InvalidData { field: "name", .. })),
-            "Failed for whitespace: {:?}", ws);
+        assert!(
+            matches!(
+                result,
+                Err(DatabaseError::InvalidData { field: "name", .. })
+            ),
+            "Failed for whitespace: {:?}",
+            ws
+        );
     }
 }
 
@@ -117,14 +126,22 @@ fn test_create_group_whitespace_variations_rejected() {
 fn test_create_group_env_var_edge_cases() {
     let test_db = TestDb::setup_test_db();
 
-    let group = GroupBuilder::new("Test").with_env("MY-VAR", "value").build();
+    let group = GroupBuilder::new("Test")
+        .with_env("MY-VAR", "value")
+        .build();
     assert!(test_db.db.create_group(&group).is_ok());
 
     let group = GroupBuilder::new("Test2").with_env("VAR_123", "v").build();
     assert!(test_db.db.create_group(&group).is_ok());
 
     let group = GroupBuilder::new("Test3").with_env("BAD KEY", "v").build();
-    assert!(matches!(test_db.db.create_group(&group), Err(DatabaseError::InvalidData { field: "env_vars", .. })));
+    assert!(matches!(
+        test_db.db.create_group(&group),
+        Err(DatabaseError::InvalidData {
+            field: "env_vars",
+            ..
+        })
+    ));
 }
 
 #[test]
@@ -132,16 +149,21 @@ fn test_create_group_with_nonexistent_parent_fails() {
     let test_db = TestDb::setup_test_db();
     let group = GroupBuilder::new("Orphan").with_parent(99).build();
     let result = test_db.db.create_group(&group);
-    assert!(matches!(result, Err(DatabaseError::ForeignKeyViolation {  .. })));
+    assert!(matches!(
+        result,
+        Err(DatabaseError::ForeignKeyViolation { .. })
+    ));
 }
-
 
 #[test]
 fn test_create_group_with_nonexistent_category_fails() {
     let test_db = TestDb::setup_test_db();
     let group = GroupBuilder::new("Test").with_category(999).build();
     let result = test_db.db.create_group(&group);
-    assert!(matches!(result, Err(DatabaseError::ForeignKeyViolation { .. })));
+    assert!(matches!(
+        result,
+        Err(DatabaseError::ForeignKeyViolation { .. })
+    ));
 }
 
 #[test]
@@ -245,7 +267,10 @@ fn test_get_groups_by_parent() {
 
     test_db.create_test_group("Orphan");
 
-    let children = test_db.db.get_groups(GroupFilter::Group(parent_id), CategoryFilter::None, false).unwrap();
+    let children = test_db
+        .db
+        .get_groups(GroupFilter::Group(parent_id), CategoryFilter::None, false)
+        .unwrap();
     assert_eq!(children.len(), 2);
     assert!(children
         .iter()
@@ -262,7 +287,10 @@ fn test_get_root_groups() {
     let child = GroupBuilder::new("Child").with_parent(parent).build();
     test_db.save_group_to_db(&child);
 
-    let roots = test_db.db.get_groups(GroupFilter::None, CategoryFilter::None, false).unwrap();
+    let roots = test_db
+        .db
+        .get_groups(GroupFilter::None, CategoryFilter::None, false)
+        .unwrap();
     assert_eq!(roots.len(), 3); // Root1, Root2, Parent
 }
 
@@ -283,7 +311,11 @@ fn test_get_groups_by_category() {
 
     let commands = test_db
         .db
-        .get_groups(GroupFilter::Group(group_id), CategoryFilter::Category(category_id), false)
+        .get_groups(
+            GroupFilter::Group(group_id),
+            CategoryFilter::Category(category_id),
+            false,
+        )
         .unwrap();
     assert_eq!(commands.len(), 1);
     assert!(commands.iter().all(|c| c.category_id == Some(category_id)));
@@ -299,7 +331,10 @@ fn test_get_favorite_groups() {
     test_db.db.toggle_group_favorite(id1).unwrap();
     test_db.db.toggle_group_favorite(id2).unwrap();
 
-    let favorites = test_db.db.get_groups(GroupFilter::None, CategoryFilter::None, true).unwrap();
+    let favorites = test_db
+        .db
+        .get_groups(GroupFilter::None, CategoryFilter::None, true)
+        .unwrap();
     assert_eq!(favorites.len(), 2);
 }
 
@@ -469,7 +504,10 @@ fn test_toggle_favorite_group() {
     let initial = test_db.db.get_group(group_id).unwrap().is_favorite;
     test_db.db.toggle_group_favorite(group_id).unwrap();
 
-    assert_eq!(!initial, test_db.db.get_group(group_id).unwrap().is_favorite);
+    assert_eq!(
+        !initial,
+        test_db.db.get_group(group_id).unwrap().is_favorite
+    );
 
     test_db.db.toggle_group_favorite(group_id).unwrap();
     assert_eq!(initial, test_db.db.get_group(group_id).unwrap().is_favorite);
@@ -505,7 +543,10 @@ fn test_get_favorite_group_with_parent() {
     other_parent_group.is_favorite = true;
     test_db.save_group_to_db(&other_parent_group);
 
-    let favorites = test_db.db.get_groups(GroupFilter::Group(group_id), CategoryFilter::None, true).unwrap();
+    let favorites = test_db
+        .db
+        .get_groups(GroupFilter::Group(group_id), CategoryFilter::None, true)
+        .unwrap();
 
     assert_eq!(favorites.len(), 1);
     assert_eq!(favorites[0].id, fav_id);
@@ -575,8 +616,7 @@ fn test_update_group_validation() {
 #[test]
 fn test_update_group_clears_optional_fields() {
     let test_db = TestDb::setup_test_db();
-    let mut group = GroupBuilder::new("Dev")
-        .build();
+    let mut group = GroupBuilder::new("Dev").build();
     group.shell = Some("/bin/bash".to_string());
     group.description = Some("Test Description".to_string());
     let id = test_db.db.create_group(&group).unwrap();
@@ -606,7 +646,6 @@ fn test_update_group_empty_name_fails() {
     ));
 }
 
-
 #[test]
 fn test_delete_group_cascades_to_commands() {
     let test_db = TestDb::setup_test_db();
@@ -618,7 +657,13 @@ fn test_delete_group_cascades_to_commands() {
 
     let commands = test_db
         .db
-        .get_commands(GroupFilter::Group(group_id), CategoryFilter::None, false, None, None)
+        .get_commands(
+            GroupFilter::Group(group_id),
+            CategoryFilter::None,
+            false,
+            None,
+            None,
+        )
         .unwrap();
     assert_eq!(commands.len(), 0);
 }
@@ -640,11 +685,12 @@ fn test_delete_group_cascades_to_child_groups() {
 
     test_db.db.delete_group(group_id).unwrap();
 
-    let commands = test_db.db.get_groups(GroupFilter::Group(group_id), CategoryFilter::None, false).unwrap();
+    let commands = test_db
+        .db
+        .get_groups(GroupFilter::Group(group_id), CategoryFilter::None, false)
+        .unwrap();
     assert_eq!(commands.len(), 0);
 }
-
-
 
 #[test]
 fn test_delete_group_not_found() {
@@ -946,7 +992,10 @@ fn test_move_group_to_end() {
 
     test_db.db.move_group_between(id3, Some(id2), None).unwrap();
 
-    let children = test_db.db.get_groups(GroupFilter::Group(parent_id), CategoryFilter::None, false).unwrap();
+    let children = test_db
+        .db
+        .get_groups(GroupFilter::Group(parent_id), CategoryFilter::None, false)
+        .unwrap();
     assert_eq!(children[0].id, id1);
     assert_eq!(children[1].id, id2);
     assert_eq!(children[2].id, id3);
@@ -963,7 +1012,10 @@ fn test_move_group_to_top() {
 
     test_db.db.move_group_between(id1, None, Some(id3)).unwrap();
 
-    let children = test_db.db.get_groups(GroupFilter::Group(parent_id), CategoryFilter::None, false).unwrap();
+    let children = test_db
+        .db
+        .get_groups(GroupFilter::Group(parent_id), CategoryFilter::None, false)
+        .unwrap();
     assert_eq!(children[0].id, id1);
     assert_eq!(children[1].id, id3);
     assert_eq!(children[2].id, id2);
@@ -984,7 +1036,10 @@ fn test_move_group_to_middle() {
         .move_group_between(id3, Some(id1), Some(id2))
         .unwrap();
 
-    let children = test_db.db.get_groups(GroupFilter::Group(parent_id), CategoryFilter::None, false).unwrap();
+    let children = test_db
+        .db
+        .get_groups(GroupFilter::Group(parent_id), CategoryFilter::None, false)
+        .unwrap();
     assert_eq!(children[0].id, id1);
     assert_eq!(children[1].id, id3);
     assert_eq!(children[2].id, id2);
@@ -998,7 +1053,10 @@ fn test_move_group_between_both_none_returns_error() {
     let result = test_db.db.move_group_between(id, None, None);
     assert!(matches!(
         result,
-        Err(DatabaseError::InvalidData { field: "item_id", .. })
+        Err(DatabaseError::InvalidData {
+            field: "item_id",
+            ..
+        })
     ));
 }
 
@@ -1015,10 +1073,15 @@ fn test_move_group_between_cross_parent_returns_error() {
     let next = GroupBuilder::new("Next").with_parent(parent_b).build();
     let next_id = test_db.db.create_group(&next).unwrap();
 
-    let result = test_db.db.move_group_between(g_id, Some(prev_id), Some(next_id));
+    let result = test_db
+        .db
+        .move_group_between(g_id, Some(prev_id), Some(next_id));
     assert!(matches!(
         result,
-        Err(DatabaseError::InvalidData { field: "parent_id", .. })
+        Err(DatabaseError::InvalidData {
+            field: "parent_id",
+            ..
+        })
     ));
 }
 
@@ -1027,9 +1090,12 @@ fn test_move_group_between_invalid_prev_id() {
     let test_db = TestDb::setup_test_db();
     let parent_id = test_db.create_test_group("Parent");
     let group_id = test_db.save_group_to_db(&GroupBuilder::new("G").with_parent(parent_id).build());
-    let real_sibling = test_db.save_group_to_db(&GroupBuilder::new("S").with_parent(parent_id).build());
+    let real_sibling =
+        test_db.save_group_to_db(&GroupBuilder::new("S").with_parent(parent_id).build());
 
-    let result = test_db.db.move_group_between(group_id, Some(999), Some(real_sibling));
+    let result = test_db
+        .db
+        .move_group_between(group_id, Some(999), Some(real_sibling));
     assert!(matches!(result, Err(DatabaseError::NotFound { .. })));
 }
 
@@ -1059,7 +1125,10 @@ fn test_update_group_self_reference_is_circular() {
     group.parent_group_id = Some(id);
 
     let result = test_db.db.update_group(&group);
-    assert!(matches!(result, Err(DatabaseError::CircularReference { .. })));
+    assert!(matches!(
+        result,
+        Err(DatabaseError::CircularReference { .. })
+    ));
 }
 
 #[test]
@@ -1075,7 +1144,10 @@ fn test_update_group_cycle_detected() {
     group_a.parent_group_id = Some(c_id);
 
     let result = test_db.db.update_group(&group_a);
-    assert!(matches!(result, Err(DatabaseError::CircularReference { .. })));
+    assert!(matches!(
+        result,
+        Err(DatabaseError::CircularReference { .. })
+    ));
 }
 
 #[test]
@@ -1102,16 +1174,31 @@ fn test_deep_hierarchy_circular_reference() {
     // Create a 50-level deep hierarchy
     for i in 1..=50 {
         current_id = test_db.save_group_to_db(
-            &GroupBuilder::new(&format!("Level{}", i)).with_parent(current_id).build()
+            &GroupBuilder::new(&format!("Level{}", i))
+                .with_parent(current_id)
+                .build(),
         );
     }
 
     // Try to make Level0 a child of Level50 (should fail)
-    let mut root = test_db.db.get_group(test_db.db.get_group(current_id).unwrap().parent_group_id.unwrap()).unwrap();
+    let mut root = test_db
+        .db
+        .get_group(
+            test_db
+                .db
+                .get_group(current_id)
+                .unwrap()
+                .parent_group_id
+                .unwrap(),
+        )
+        .unwrap();
     root.parent_group_id = Some(current_id);
 
     let result = test_db.db.update_group(&root);
-    assert!(matches!(result, Err(DatabaseError::CircularReference { .. })));
+    assert!(matches!(
+        result,
+        Err(DatabaseError::CircularReference { .. })
+    ));
 }
 
 #[test]
@@ -1163,8 +1250,7 @@ fn test_search_groups_by_name() {
 #[test]
 fn test_search_groups_matches_description() {
     let test_db = TestDb::setup_test_db();
-    let mut group = GroupBuilder::new("Misc")
-        .build();
+    let mut group = GroupBuilder::new("Misc").build();
     group.description = Some("all the related tasks".to_string());
     test_db.db.create_group(&group).unwrap();
 
@@ -1235,7 +1321,6 @@ fn test_search_groups_none_found() {
     assert!(results.is_empty());
 }
 
-
 #[test]
 fn test_update_group_icon_and_color() {
     let test_db = TestDb::setup_test_db();
@@ -1250,4 +1335,3 @@ fn test_update_group_icon_and_color() {
     assert_eq!(retrieved.icon, Some("🚀".to_string()));
     assert_eq!(retrieved.color, Some("#FF5733".to_string()));
 }
-

@@ -111,7 +111,11 @@ fn test_unicode_names() {
 fn test_concurrent_transactions_isolated() {
     let test_db = TestDb::setup_test_db();
 
-    let count_before = test_db.db.get_groups(GroupFilter::None, CategoryFilter::None, false).unwrap().len();
+    let count_before = test_db
+        .db
+        .get_groups(GroupFilter::None, CategoryFilter::None, false)
+        .unwrap()
+        .len();
 
     {
         let mut connection = test_db.db.conn().unwrap();
@@ -124,7 +128,10 @@ fn test_concurrent_transactions_isolated() {
         tx.commit().unwrap();
     }
 
-    let groups = test_db.db.get_groups(GroupFilter::None, CategoryFilter::None, false).unwrap();
+    let groups = test_db
+        .db
+        .get_groups(GroupFilter::None, CategoryFilter::None, false)
+        .unwrap();
     assert_eq!(groups.len(), count_before + 1);
 }
 

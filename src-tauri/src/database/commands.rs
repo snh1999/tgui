@@ -1,6 +1,6 @@
 use super::{
     CategoryFilter, Command, Database, ExecutionHistory, ExecutionStatus, GroupFilter, Result,
-    StatsTarget, TriggeredBy, WithHistory,
+    TriggeredBy, WithHistory,
 };
 use crate::constants::{COMMANDS_TABLE, COMMAND_GROUP_COLUMN};
 use crate::database::helpers::QueryBuilder;
@@ -132,19 +132,21 @@ impl Database {
 
         self.conn()?
             .prepare(&query)?
-            .query_map(param_refs.as_slice(), |row| {
-                let command = Self::row_to_command(row)?;
-                let history = match row.get::<_, Option<i64>>("h_id")? {
-                    Some(_) => Some(Self::row_to_execution_history_with_prefix(row)?),
-                    None => None,
-                };
-                Ok(WithHistory {
-                    item: command,
-                    history,
-                })
-            })?
+            .query_map(param_refs.as_slice(), Self::row_to_command_with_history)?
             .collect::<rusqlite::Result<Vec<_>>>()
             .map_err(Into::into)
+    }
+
+    fn row_to_command_with_history(row: &rusqlite::Row) -> rusqlite::Result<WithHistory<Command>> {
+        let command = Self::row_to_command(row)?;
+        let history = match row.get::<_, Option<i64>>("h_id")? {
+            Some(_) => Some(Self::row_to_execution_history_with_prefix(row)?),
+            None => None,
+        };
+        Ok(WithHistory {
+            item: command,
+            history,
+        })
     }
 
     fn row_to_execution_history_with_prefix(
@@ -195,17 +197,10 @@ impl Database {
 
         self.conn()?
             .prepare(&query)?
-            .query_map(named_params! { ":limit": limit }, |row| {
-                let command = Self::row_to_command(row)?;
-                let history = match row.get::<_, Option<i64>>("h_id")? {
-                    Some(_) => Some(Self::row_to_execution_history_with_prefix(row)?),
-                    None => None,
-                };
-                Ok(WithHistory {
-                    item: command,
-                    history,
-                })
-            })?
+            .query_map(
+                named_params! { ":limit": limit },
+                Self::row_to_command_with_history,
+            )?
             .collect::<rusqlite::Result<Vec<_>>>()
             .map_err(Into::into)
     }
@@ -291,8 +286,6 @@ impl Database {
         prev_id: Option<i64>,
         next_id: Option<i64>,
     ) -> Result<()> {
-        let cmd = self.get_command(cmd_id)?;
-
         self.move_item_between(
             COMMANDS_TABLE,
             cmd_id,

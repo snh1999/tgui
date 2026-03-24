@@ -1482,23 +1482,23 @@ fn test_move_command_prev_next_different_groups() {
     assert!(result.is_err());
 }
 
-    #[test]
-    fn test_move_command_to_same_position_no_op() {
-        let test_db = TestDb::setup_test_db();
-        let group_id = test_db.create_test_group("Test");
-        let id1 = test_db.create_test_command("A", "echo 1", Some(group_id));
-        let id2 = test_db.create_test_command("B", "echo 2", Some(group_id));
+#[test]
+fn test_move_command_to_same_position_no_op() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test");
+    let id1 = test_db.create_test_command("A", "echo 1", Some(group_id));
+    let id2 = test_db.create_test_command("B", "echo 2", Some(group_id));
 
-        let pos_before = test_db.db.get_command(id2).unwrap().position;
+    let pos_before = test_db.db.get_command(id2).unwrap().position;
 
-        test_db
-            .db
-            .move_command_between(id2, Some(id1), None)
-            .unwrap();
-        let pos_after = test_db.db.get_command(id2).unwrap().position;
+    test_db
+        .db
+        .move_command_between(id2, Some(id1), None)
+        .unwrap();
+    let pos_after = test_db.db.get_command(id2).unwrap().position;
 
-        assert_eq!(pos_before, pos_after);
-    }
+    assert_eq!(pos_before, pos_after);
+}
 
 #[test]
 fn test_move_command_renumber_preserves_order() {
@@ -1524,7 +1524,7 @@ fn test_move_command_renumber_preserves_order() {
         .unwrap()
         .execute(
             "UPDATE commands SET position = 1001 WHERE id = ?",
-            params![ id2],
+            params![id2],
         )
         .unwrap();
     test_db
