@@ -61,6 +61,11 @@ export interface IGroup extends IGroupCommandCommon {
   icon?: string | null;
 }
 
+export interface IWorkflowFilter {
+  categoryId?: number;
+  favoritesOnly: boolean;
+}
+
 export interface IWorkflow extends ICommonPositionFields {
   categoryId?: number;
   executionMode: "sequential" | "parallel" | "conditional";

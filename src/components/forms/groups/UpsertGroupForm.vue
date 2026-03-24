@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { COMMAND_FORM_ID, GROUP_FORM_ID } from "@/app.constants.ts";
+  import { GROUP_FORM_ID } from "@/app.constants.ts";
   import {
     IUpsertGroupForm,
     useGroupForm,
@@ -60,21 +60,13 @@
           </template>
         </FormField>
 
-        <FormField
-          name="parentGroupId"
-          :form-id="COMMAND_FORM_ID"
-          label="Group"
-        >
+        <FormField name="parentGroupId" :form-id="GROUP_FORM_ID" label="Group">
           <template #default="{ bindings }">
             <GroupSelect v-bind="bindings" placeholder="Select a group" />
           </template>
         </FormField>
 
-        <FormField
-          name="categoryId"
-          :form-id="COMMAND_FORM_ID"
-          label="Category"
-        >
+        <FormField name="categoryId" :form-id="GROUP_FORM_ID" label="Category">
           <template #default="{ bindings }">
             <CategorySelect v-bind="bindings" placeholder="Select a Category" />
           </template>
@@ -89,7 +81,7 @@
           </template>
         </FormField>
 
-        <FormField name="shell" :form-id="COMMAND_FORM_ID" label="Shell">
+        <FormField name="shell" :form-id="GROUP_FORM_ID" label="Shell">
           <template #default="{ bindings }">
             <ShellSelect
               v-bind="bindings"

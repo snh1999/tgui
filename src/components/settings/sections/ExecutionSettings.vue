@@ -6,14 +6,14 @@
   import { Switch } from "@/components/ui/switch";
   import {
     useGetAllSettings,
-    useSetSettings,
+    useSetSetting,
   } from "@/lib/api/composables/settings.ts";
   import SettingsSectionWrapper from "@/components/settings/SettingsSectionWrapper.vue";
   import ShellSelect from "@/components/forms/common/ShellSelect.vue";
   import { NumberField, NumberFieldInput } from "@/components/ui/number-field";
 
   const { data: rawSettings } = useGetAllSettings();
-  const { mutate: setSetting } = useSetSettings();
+  const { mutate: setSetting } = useSetSetting();
 
   const defaultShell = ref("");
   const maxConcurrentProcesses = ref(20);

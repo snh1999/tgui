@@ -7,12 +7,12 @@
   import { NumberField, NumberFieldInput } from "@/components/ui/number-field";
   import {
     useGetAllSettings,
-    useSetSettings,
+    useSetSetting,
   } from "@/lib/api/composables/settings.ts";
   import SettingsSectionWrapper from "@/components/settings/SettingsSectionWrapper.vue";
 
   const { data: rawSettings } = useGetAllSettings();
-  const { mutate: setSetting } = useSetSettings();
+  const { mutate: setSetting } = useSetSetting();
 
   const logBufferSize = ref(10_000);
   const autoScrollLogs = ref(true);
