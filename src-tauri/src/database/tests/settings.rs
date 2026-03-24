@@ -127,7 +127,6 @@ fn test_setting_updated_at_changes() {
     assert_ne!(initial_theme, test_db.db.get_setting("theme").unwrap());
 }
 
-
 #[test]
 fn test_initialize_settings_is_idempotent() {
     let test_db = TestDb::setup_test_db();
@@ -142,14 +141,22 @@ fn test_initialize_settings_is_idempotent() {
 fn test_set_setting_max_concurrent_processes_validates_number() {
     let test_db = TestDb::setup_test_db();
 
-    let result = test_db.db.set_setting("max_concurrent_processes", "not_a_number");
+    let result = test_db
+        .db
+        .set_setting("max_concurrent_processes", "not_a_number");
     assert!(matches!(
         result,
         Err(DatabaseError::InvalidData { field: "value", .. })
     ));
 
-    test_db.db.set_setting("max_concurrent_processes", "10").unwrap();
-    assert_eq!(test_db.db.get_setting("max_concurrent_processes").unwrap(), "10");
+    test_db
+        .db
+        .set_setting("max_concurrent_processes", "10")
+        .unwrap();
+    assert_eq!(
+        test_db.db.get_setting("max_concurrent_processes").unwrap(),
+        "10"
+    );
 }
 
 #[test]
@@ -193,15 +200,27 @@ fn test_set_setting_kill_process_tree_validates_boolean() {
         Err(DatabaseError::InvalidData { field: "value", .. })
     ));
 
-    test_db.db.set_setting("kill_process_tree_by_default", "true").unwrap();
-    assert_eq!(test_db.db.get_setting("kill_process_tree_by_default").unwrap(), "true");
+    test_db
+        .db
+        .set_setting("kill_process_tree_by_default", "true")
+        .unwrap();
+    assert_eq!(
+        test_db
+            .db
+            .get_setting("kill_process_tree_by_default")
+            .unwrap(),
+        "true"
+    );
 }
 
 #[test]
 fn test_set_setting_available_shells_accepts_any_string() {
     let test_db = TestDb::setup_test_db();
     // falls through to _ => Ok(()), no validation on this key
-    test_db.db.set_setting("available_shells", r#"["/bin/bash","/bin/zsh"]"#).unwrap();
+    test_db
+        .db
+        .set_setting("available_shells", r#"["/bin/bash","/bin/zsh"]"#)
+        .unwrap();
     assert_eq!(
         test_db.db.get_setting("available_shells").unwrap(),
         r#"["/bin/bash","/bin/zsh"]"#

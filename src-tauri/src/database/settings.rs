@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 use tracing::{info, instrument};
 
-
 static DEFAULT_SETTINGS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
     HashMap::from([
         // TODO: remove theme
@@ -34,7 +33,7 @@ impl Database {
         self.update_default_shell()?;
         Ok(())
     }
-    
+
     pub fn update_default_shell(&self) -> Result<()> {
         let default_shell = crate::process::shell::Shell::get_system_default_shell();
         self.conn()?.execute(
@@ -127,5 +126,4 @@ impl Database {
             _ => Ok(()),
         }
     }
-
 }

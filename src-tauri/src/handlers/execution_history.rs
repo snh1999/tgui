@@ -1,4 +1,4 @@
-use crate::database::{Database, ExecutionHistory, ExecutionStats, ExecutionStatus, StatsTarget};
+use crate::database::{Database, ExecutionHistory, ExecutionStats, StatsTarget};
 use crate::handlers::serialize_errors::SerializableError;
 use tauri::State;
 
@@ -34,8 +34,7 @@ pub fn get_workflow_execution_history(
 pub fn get_running_commands(
     db: State<'_, Database>,
 ) -> Result<Vec<ExecutionHistory>, SerializableError> {
-    db.get_running_commands()
-        .map_err(|err| err.into())
+    db.get_running_commands().map_err(|err| err.into())
 }
 
 #[tauri::command]

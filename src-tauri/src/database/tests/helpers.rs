@@ -1,14 +1,18 @@
 use super::*;
 use crate::database::errors::DatabaseError;
-use std::collections::HashMap;
 use crate::database::helpers::QueryBuilder;
+use std::collections::HashMap;
 
 #[test]
 fn query_builder_empty_produces_no_where_clause() {
     let qb = QueryBuilder::new();
     let (where_clause, params) = qb.build();
 
-    assert!(where_clause.is_empty(), "expected empty string, got: {:?}", where_clause);
+    assert!(
+        where_clause.is_empty(),
+        "expected empty string, got: {:?}",
+        where_clause
+    );
     assert!(params.is_empty());
 }
 
@@ -45,7 +49,6 @@ fn query_builder_paramless_condition_does_not_add_to_params() {
     assert!(params.is_empty());
 }
 
-
 #[test]
 fn validate_env_var_keys_dash_is_valid() {
     let test_db = TestDb::setup_test_db();
@@ -77,7 +80,13 @@ fn validate_env_var_keys_space_is_invalid() {
     let vars = Some(HashMap::from([("MY VAR".to_string(), "v".to_string())]));
 
     let err = test_db.db.validate_env_var_keys(&vars).unwrap_err();
-    assert!(matches!(err, DatabaseError::InvalidData { field: "env_vars", .. }));
+    assert!(matches!(
+        err,
+        DatabaseError::InvalidData {
+            field: "env_vars",
+            ..
+        }
+    ));
 }
 
 #[test]
@@ -87,7 +96,13 @@ fn validate_env_var_keys_dot_is_invalid() {
     let vars = Some(HashMap::from([("MY.VAR".to_string(), "v".to_string())]));
 
     let err = test_db.db.validate_env_var_keys(&vars).unwrap_err();
-    assert!(matches!(err, DatabaseError::InvalidData { field: "env_vars", .. }));
+    assert!(matches!(
+        err,
+        DatabaseError::InvalidData {
+            field: "env_vars",
+            ..
+        }
+    ));
 }
 
 #[test]
@@ -95,8 +110,14 @@ fn validate_env_var_keys_unicode_is_invalid() {
     let test_db = TestDb::setup_test_db();
     let vars = Some(HashMap::from([("VAR_🚀".to_string(), "v".to_string())]));
 
-    let err =test_db.db.validate_env_var_keys(&vars).unwrap_err();
-    assert!(matches!(err, DatabaseError::InvalidData { field: "env_vars", .. }));
+    let err = test_db.db.validate_env_var_keys(&vars).unwrap_err();
+    assert!(matches!(
+        err,
+        DatabaseError::InvalidData {
+            field: "env_vars",
+            ..
+        }
+    ));
 }
 
 #[test]
@@ -112,14 +133,12 @@ fn validate_env_var_keys_empty_map_is_ok() {
     assert!(test_db.db.validate_env_var_keys(&vars).is_ok());
 }
 
-
 #[test]
 fn hashmap_to_string_none_returns_ok_none() {
     let result = Database::hashmap_to_string(&None);
     assert!(result.is_ok());
     assert!(result.unwrap().is_none());
 }
-
 
 #[test]
 fn hashmap_to_string_some_map_returns_json_string() {
@@ -137,13 +156,11 @@ fn string_to_hashmap_none_returns_none() {
     assert!(result.is_none());
 }
 
-
 #[test]
 fn string_to_hashmap_invalid_json_returns_none() {
     let result = Database::string_to_hashmap(Some("not { valid json".to_string()));
     assert!(result.is_none());
 }
-
 
 #[test]
 fn string_to_hashmap_valid_json_round_trips() {
@@ -154,12 +171,12 @@ fn string_to_hashmap_valid_json_round_trips() {
     assert_eq!(result.get("PORT").unwrap(), "3000");
 }
 
-
 #[test]
 fn get_position_first_item_gets_position_gap() {
     let test_db = TestDb::setup_test_db();
     // "commands" table is empty for root (group_id IS NULL)
-    let pos = test_db.db
+    let pos = test_db
+        .db
         .get_position("commands", Some("group_id"), None)
         .unwrap();
 
@@ -167,13 +184,13 @@ fn get_position_first_item_gets_position_gap() {
     assert_eq!(pos, Database::POSITION_GAP);
 }
 
-
 #[test]
 fn get_position_subsequent_items_increment() {
     let test_db = TestDb::setup_test_db();
     test_db.create_test_command("Test", "echo", None);
 
-    let pos = test_db.db
+    let pos = test_db
+        .db
         .get_position("commands", Some("group_id"), None)
         .unwrap();
 
@@ -181,42 +198,50 @@ fn get_position_subsequent_items_increment() {
     assert!(pos > Database::POSITION_GAP);
 }
 
-
 #[test]
 fn validate_field_length_whitespace_only_is_empty() {
     let test_db = TestDb::setup_test_db();
-    let err = test_db.db
+    let err = test_db
+        .db
         .validate_field_length("name", "   ", Database::MAX_NAME_LENGTH)
         .unwrap_err();
 
-    assert!(matches!(err, DatabaseError::InvalidData { field: "name", .. }));
+    assert!(matches!(
+        err,
+        DatabaseError::InvalidData { field: "name", .. }
+    ));
 }
-
 
 #[test]
 fn validate_field_length_at_max_is_ok() {
     let test_db = TestDb::setup_test_db();
     let value = "a".repeat(Database::MAX_NAME_LENGTH);
-    assert!(test_db.db.validate_field_length("name", &value, Database::MAX_NAME_LENGTH).is_ok());
+    assert!(test_db
+        .db
+        .validate_field_length("name", &value, Database::MAX_NAME_LENGTH)
+        .is_ok());
 }
-
 
 #[test]
 fn validate_field_length_over_max_fails() {
     let test_db = TestDb::setup_test_db();
     let value = "a".repeat(Database::MAX_NAME_LENGTH + 1);
-    let err = test_db.db
+    let err = test_db
+        .db
         .validate_field_length("name", &value, Database::MAX_NAME_LENGTH)
         .unwrap_err();
 
-    assert!(matches!(err, DatabaseError::InvalidData { field: "name", .. }));
+    assert!(matches!(
+        err,
+        DatabaseError::InvalidData { field: "name", .. }
+    ));
 }
-
 
 #[test]
 fn execute_db_not_found_when_id_missing() {
     let test_db = TestDb::setup_test_db();
-    let err = test_db.db
+    let err = test_db
+        .db
         .execute_db(
             "commands",
             9999,
@@ -225,9 +250,14 @@ fn execute_db_not_found_when_id_missing() {
         )
         .unwrap_err();
 
-    assert!(matches!(err, DatabaseError::NotFound { entity: "commands", id: 9999 }));
+    assert!(matches!(
+        err,
+        DatabaseError::NotFound {
+            entity: "commands",
+            id: 9999
+        }
+    ));
 }
-
 
 #[test]
 fn renumber_produces_gap_spaced_positions_after_exhaustion() {
@@ -235,26 +265,21 @@ fn renumber_produces_gap_spaced_positions_after_exhaustion() {
     let a = test_db.create_test_command("Test", "echo", None);
     let b = test_db.create_test_command("Test", "echo", None);
     let c_id = test_db.create_test_command("Test", "echo", None);
-    
+
     // Exhaust the midpoint gap
     for _ in 0..15 {
-        let _ =test_db.db.move_command_between(c_id, Some(a), Some(b));
+        let _ = test_db.db.move_command_between(c_id, Some(a), Some(b));
     }
 
-    let commands = test_db.db
-        .get_commands(
-            GroupFilter::None,
-            CategoryFilter::All,
-            false,
-            None,
-            None,
-        )
+    let commands = test_db
+        .db
+        .get_commands(GroupFilter::None, CategoryFilter::All, false, None, None)
         .unwrap();
 
     let mut positions: Vec<i64> = commands.iter().map(|w| w.item.position).collect();
     positions.sort_unstable();
 
     for pair in positions.windows(2) {
-        assert!(pair[1] - pair[0] >= Database::POSITION_GAP/2);
+        assert!(pair[1] - pair[0] >= Database::POSITION_GAP / 2);
     }
 }

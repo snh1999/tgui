@@ -18,7 +18,11 @@ impl QueryBuilder {
         }
     }
 
-    pub fn add_condition(&mut self, condition: &str, param: impl rusqlite::ToSql + 'static) -> &mut Self {
+    pub fn add_condition(
+        &mut self,
+        condition: &str,
+        param: impl rusqlite::ToSql + 'static,
+    ) -> &mut Self {
         self.conditions.push(condition.to_string());
         self.params.push(Box::new(param));
         self
@@ -35,11 +39,11 @@ impl QueryBuilder {
         } else {
             format!("WHERE {}", self.conditions.join(" AND "))
         };
-        let param_refs: Vec<&dyn rusqlite::ToSql> = self.params.iter().map(|p| p.as_ref()).collect();
+        let param_refs: Vec<&dyn rusqlite::ToSql> =
+            self.params.iter().map(|p| p.as_ref()).collect();
         (where_clause, param_refs)
     }
 }
-
 
 impl Database {
     pub(crate) const POSITION_GAP: i64 = 1000;
@@ -47,7 +51,12 @@ impl Database {
     pub(crate) const MAX_COMMAND_LENGTH: usize = 10000;
     pub(crate) const MAX_DESCRIPTION_LENGTH: usize = 2000;
 
-    pub(crate) fn validate_field_length(&self, field: &'static str, value: &str, max: usize) -> Result<()> {
+    pub(crate) fn validate_field_length(
+        &self,
+        field: &'static str,
+        value: &str,
+        max: usize,
+    ) -> Result<()> {
         if value.trim().is_empty() {
             error!("Empty field: {field}");
             return Err(DatabaseError::InvalidData {
@@ -203,7 +212,8 @@ impl Database {
         parent_id: Option<i64>,
     ) -> Result<()> {
         let position = self.get_position(table, Some(parent_column), parent_id)?;
-        let query = format!("UPDATE {table} SET {parent_column} = ?1, position = ?2 WHERE id = {id}");
+        let query =
+            format!("UPDATE {table} SET {parent_column} = ?1, position = ?2 WHERE id = {id}");
         self.execute_db(table, id, &query, params![parent_id, position])?;
         Ok(())
     }

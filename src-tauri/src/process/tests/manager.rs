@@ -94,7 +94,6 @@ async fn spawn_writes_pid_to_execution_history() {
 async fn consecutive_spawns_get_different_execution_ids() {
     let (pm, _, cmd_id) = make_manager_with_db();
 
-
     let id1 = pm
         .spawn_command(
             spawn_context(cmd_id, "echo", vec!["a"]),
@@ -174,9 +173,7 @@ async fn spawn_failure_marks_db_row_as_failed_not_running() {
     assert!(result.is_err(), "Expected spawn to fail");
 
     // The db entry must not be stuck as 'running'
-    let running = db
-        .get_running_commands()
-        .unwrap_or_default();
+    let running = db.get_running_commands().unwrap_or_default();
     assert!(
         running.is_empty(),
         "DB row left as 'running' after spawn failure — cancel_execution not called"
@@ -986,7 +983,6 @@ async fn detect_orphans_mixed_dead_and_alive_handled_independently() {
     nix_kill(Pid::from_raw(pid1 as i32), Signal::SIGKILL).expect("kill pid1");
     let _ = child1.wait().await;
 
-
     let exec_id2 = db
         .create_execution_history(&ExecutionHistory::new_with_command(
             cmd_id_2,
@@ -994,8 +990,6 @@ async fn detect_orphans_mixed_dead_and_alive_handled_independently() {
         ))
         .expect("history 2");
     db.update_execution_pid(exec_id2, pid2).expect("pid2 write");
-
-
 
     let pm = ProcessManager::new(db.clone(), None);
     let orphans = pm.detect_and_mark_orphans();
