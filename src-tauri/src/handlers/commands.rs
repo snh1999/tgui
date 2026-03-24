@@ -73,7 +73,7 @@ pub fn toggle_command_favorite(db: State<'_, Database>, id: i64) -> Result<(), S
 #[tauri::command]
 pub fn search_commands(
     db: State<'_, Database>,
-    term: String,
+    search_term: String,
 ) -> Result<Vec<Command>, SerializableError> {
-    db.search_commands(&term).map_err(|e| e.into())
+    db.search_commands(&search_term).map_err(|e| e.into())
 }
