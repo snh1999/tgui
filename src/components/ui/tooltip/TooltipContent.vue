@@ -18,6 +18,17 @@
     defineProps<TooltipContentProps & { class?: HTMLAttributes["class"] }>(),
     {
       sideOffset: 4,
+      side: "top",
+      align: "center",
+      alignOffset: 0,
+      collisionPadding: 8,
+      avoidCollisions: true,
+      hideWhenDetached: false,
+      collisionBoundary: undefined,
+      updatePositionStrategy: "optimized",
+      positionStrategy: "absolute",
+      arrowPadding: 8,
+      sticky: "partial",
     }
   );
 

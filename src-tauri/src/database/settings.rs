@@ -4,9 +4,9 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 use tracing::{info, instrument};
 
-
 static DEFAULT_SETTINGS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
     HashMap::from([
+        // TODO: remove theme
         ("theme", "system"),
         ("log_buffer_size", "10000"),
         ("max_concurrent_processes", "20"),
@@ -15,6 +15,7 @@ static DEFAULT_SETTINGS: LazyLock<HashMap<&'static str, &'static str>> = LazyLoc
         ("warn_before_kill", "true"),
         ("kill_process_tree_by_default", "false"),
         ("available_shells", "[]"),
+        // TODO add log_retention_days
     ])
 });
 
@@ -32,7 +33,7 @@ impl Database {
         self.update_default_shell()?;
         Ok(())
     }
-    
+
     pub fn update_default_shell(&self) -> Result<()> {
         let default_shell = crate::process::shell::Shell::get_system_default_shell();
         self.conn()?.execute(
@@ -125,5 +126,4 @@ impl Database {
             _ => Ok(()),
         }
     }
-
 }

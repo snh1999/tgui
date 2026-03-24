@@ -4,6 +4,9 @@
     IUpsertCommandForm,
     useCommandForm,
   } from "@/components/forms/commands/commands.helpers.ts";
+  import CategorySelect from "@/components/forms/common/CategorySelect.vue";
+  import GroupSelect from "@/components/forms/common/GroupSelect.vue";
+  import ShellSelect from "@/components/forms/common/ShellSelect.vue";
   import { FieldGroup } from "@/components/ui/field";
   import { Input } from "@/components/ui/input";
   import {
@@ -13,10 +16,10 @@
     InputGroupTextarea,
   } from "@/components/ui/input-group";
   import ArrayInput from "@/components/ui/tgui/inputs/ArrayInput.vue";
-  import FormField from "@/components/ui/tgui/inputs/FormField.vue";
-  import Loading from "@/components/ui/tgui/Loading.vue";
-  import MapInput from "@/components/ui/tgui/inputs/MapInput.vue";
   import DirectoryPicker from "@/components/ui/tgui/inputs/DirectoryPicker.vue";
+  import FormField from "@/components/ui/tgui/inputs/FormField.vue";
+  import MapInput from "@/components/ui/tgui/inputs/MapInput.vue";
+  import Loading from "@/components/ui/tgui/Loading.vue";
 
   const props = defineProps<IUpsertCommandForm>();
   const emit = defineEmits<{ success: [] }>();
@@ -57,9 +60,6 @@
           addButtonText="Add Argument"
         />
 
-        <!--      TODO add groupid, category id-->
-
-        <!--      TODO: add file picker-->
         <FormField
           name="workingDirectory"
           :form-id="COMMAND_FORM_ID"
@@ -73,8 +73,29 @@
           </template>
         </FormField>
 
+        <FormField name="groupId" :form-id="COMMAND_FORM_ID" label="Group">
+          <template #default="{ bindings }">
+            <GroupSelect v-bind="bindings" placeholder="Select a group" />
+          </template>
+        </FormField>
+
+        <FormField
+          name="categoryId"
+          :form-id="COMMAND_FORM_ID"
+          label="Category"
+        >
+          <template #default="{ bindings }">
+            <CategorySelect v-bind="bindings" placeholder="Select a Category" />
+          </template>
+        </FormField>
+
         <FormField name="shell" :form-id="COMMAND_FORM_ID" label="Shell">
-          <Input placeholder="Choose default shell" />
+          <template #default="{ bindings }">
+            <ShellSelect
+              v-bind="bindings"
+              placeholder="Select preferred shell"
+            />
+          </template>
         </FormField>
 
         <MapInput

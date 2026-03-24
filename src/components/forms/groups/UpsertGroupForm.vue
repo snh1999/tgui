@@ -17,6 +17,9 @@
   } from "@/components/ui/input-group";
   import DirectoryPicker from "@/components/ui/tgui/inputs/DirectoryPicker.vue";
   import IconPicker from "@/components/ui/tgui/inputs/IconPicker.vue";
+  import ShellSelect from "@/components/forms/common/ShellSelect.vue";
+  import GroupSelect from "@/components/forms/common/GroupSelect.vue";
+  import CategorySelect from "@/components/forms/common/CategorySelect.vue";
 
   const props = defineProps<IUpsertGroupForm>();
   const emit = defineEmits<{ success: [] }>();
@@ -44,7 +47,6 @@
           <Input placeholder="Group Name" />
         </FormField>
 
-        <!--      TODO add parent groupid, category id-->
         <FormField
           name="workingDirectory"
           :form-id="GROUP_FORM_ID"
@@ -58,6 +60,18 @@
           </template>
         </FormField>
 
+        <FormField name="parentGroupId" :form-id="GROUP_FORM_ID" label="Group">
+          <template #default="{ bindings }">
+            <GroupSelect v-bind="bindings" placeholder="Select a group" />
+          </template>
+        </FormField>
+
+        <FormField name="categoryId" :form-id="GROUP_FORM_ID" label="Category">
+          <template #default="{ bindings }">
+            <CategorySelect v-bind="bindings" placeholder="Select a Category" />
+          </template>
+        </FormField>
+
         <FormField name="icon" :form-id="GROUP_FORM_ID" label="Icon">
           <template #default="{ bindings }">
             <IconPicker
@@ -68,7 +82,12 @@
         </FormField>
 
         <FormField name="shell" :form-id="GROUP_FORM_ID" label="Shell">
-          <Input placeholder="Choose default shell" />
+          <template #default="{ bindings }">
+            <ShellSelect
+              v-bind="bindings"
+              placeholder="Select preferred shell"
+            />
+          </template>
         </FormField>
 
         <MapInput

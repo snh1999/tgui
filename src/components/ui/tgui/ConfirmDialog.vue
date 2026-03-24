@@ -8,13 +8,18 @@
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
+    AlertDialogTrigger,
   } from "@/components/ui/alert-dialog";
+  import { Button } from "@/components/ui/button";
 
   defineProps<{
     title?: string;
     description: string;
     actionText?: string;
-    action: () => void;
+  }>();
+
+  const emit = defineEmits<{
+    confirm: [];
   }>();
 
   const open = defineModel<boolean>("open");
@@ -22,6 +27,9 @@
 
 <template>
   <AlertDialog v-model:open="open">
+    <AlertDialogTrigger as-child v-if="$slots.default">
+      <slot />
+    </AlertDialogTrigger>
     <AlertDialogContent>
       <AlertDialogHeader>
         <AlertDialogTitle v-if="title">{{ title }}</AlertDialogTitle>
@@ -29,9 +37,14 @@
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel>Cancel</AlertDialogCancel>
-        <AlertDialogAction @click="action">
-          {{ actionText ?? "Ok" }}
-        </AlertDialogAction>
+        <Button
+          asChild
+          variant="destructive"
+          class="border hover:text-destructive"
+          @click="emit('confirm')"
+        >
+          <AlertDialogAction>{{ actionText ?? "Ok" }}</AlertDialogAction>
+        </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>

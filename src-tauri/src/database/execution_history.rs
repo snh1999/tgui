@@ -3,10 +3,9 @@ use super::{
     StatsTarget, TriggeredBy,
 };
 use crate::constants::{EXECUTION_HISTORY_LIMIT, EXECUTION_HISTORY_TABLE};
-use rusqlite::{named_params, params};
-use std::ops::Deref;
-use tracing::{debug, error, instrument, warn};
 use crate::database::helpers::QueryBuilder;
+use rusqlite::{named_params, params};
+use tracing::{debug, instrument, warn};
 
 impl Database {
     #[instrument(skip(self, history))]
@@ -276,7 +275,8 @@ impl Database {
         }
 
         if let Some(days) = days {
-            query_builder.add_condition("started_at >= datetime('now', ?)", format!("-{days} days"));
+            query_builder
+                .add_condition("started_at >= datetime('now', ?)", format!("-{days} days"));
         }
 
         let (where_clause, param_refs) = query_builder.build();
@@ -303,7 +303,6 @@ impl Database {
         FROM execution_history
         {where_clause}"
         );
-
 
         let connection = self.conn()?;
         let mut stmt = connection.prepare(&query)?;

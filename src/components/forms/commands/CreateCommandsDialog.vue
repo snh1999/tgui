@@ -5,9 +5,11 @@
   import UpsertCommandForm from "@/components/forms/commands/UpsertCommandForm.vue";
   import FormDialog from "@/components/forms/common/FormDialog.vue";
   import { Button } from "@/components/ui/button";
+  import { ICommand } from "@/lib/api/api.types.ts";
 
   const props = defineProps<{
     viewTrigger?: boolean;
+    command?: ICommand;
   }>();
 
   const createCommandFormRef = ref<InstanceType<
@@ -17,13 +19,21 @@
 
 <template>
   <FormDialog title="Create New Command">
-    <template v-if="viewTrigger" #trigger>
+    <template v-if="$slots.default" #trigger>
+      <slot />
+    </template>
+    <template v-else-if="viewTrigger" #trigger>
       <AddIcon />
       New Command
     </template>
 
     <template #default="{closeDialog}">
-      <UpsertCommandForm @success="closeDialog" ref="createCommandFormRef" />
+      <UpsertCommandForm
+        @success="closeDialog"
+        ref="createCommandFormRef"
+        :command="command"
+        isCreate
+      />
     </template>
 
     <template #reset>

@@ -18,6 +18,13 @@ export function useGetCommands(filters?: MaybeRef<ICommandGroupFilter>) {
   });
 }
 
+export function useGetRecentCommands(limit: MaybeRef<number>) {
+  return useQuery({
+    queryKey: [...queryKeys.commands.lists(), "recent"],
+    queryFn: () => commandsApi.getRecent(unref(limit)),
+  });
+}
+
 export function useGetCommand(id: MaybeRef<number>) {
   return useQuery({
     queryKey: queryKeys.commands.detail(unref(id)),

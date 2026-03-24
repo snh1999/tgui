@@ -2,9 +2,9 @@ use super::{
     Command, Database, DatabaseError, ExecutionMode, Result, StepCondition, Workflow, WorkflowStep,
 };
 use crate::constants::{WORKFLOWS_TABLE, WORKFLOW_STEPS_TABLE};
+use crate::database::helpers::QueryBuilder;
 use rusqlite::{named_params, params};
 use tracing::{debug, info, instrument, warn};
-use crate::database::helpers::QueryBuilder;
 
 impl Database {
     #[instrument(skip(self, workflow), fields(name = %workflow.name))]
@@ -68,7 +68,7 @@ impl Database {
     #[instrument(skip(self, workflow))]
     pub fn update_workflow(&self, workflow: &Workflow) -> Result<()> {
         self.validate_field_length("name", &workflow.name, Self::MAX_NAME_LENGTH)?;
-        
+
         self.execute_db(
             WORKFLOWS_TABLE,
             workflow.id,
@@ -193,7 +193,7 @@ impl Database {
         enabled_only: bool,
     ) -> Result<Vec<WorkflowStep>> {
         let mut query_builder = QueryBuilder::new();
-        
+
         if let Some(workflow_id) = workflow_id {
             query_builder.add_condition(" workflow_id = ?", workflow_id);
         }
@@ -347,8 +347,6 @@ impl Database {
         prev_id: Option<i64>,
         next_id: Option<i64>,
     ) -> Result<()> {
-        let step = self.get_workflow_step(step_id)?;
-
         self.move_item_between(
             WORKFLOW_STEPS_TABLE,
             step_id,

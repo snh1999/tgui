@@ -28,8 +28,7 @@ pub fn get_recent_commands(
     db: State<'_, Database>,
     limit: i64,
 ) -> Result<Vec<WithHistory<Command>>, SerializableError> {
-    db.get_recent_commands(limit)
-        .map_err(|e| e.into())
+    db.get_recent_commands(limit).map_err(|e| e.into())
 }
 
 #[tauri::command]
@@ -42,7 +41,6 @@ pub fn get_command_count(
     db.get_commands_count(parent_id, category_id, favorites_only)
         .map_err(|e| e.into())
 }
-
 
 #[tauri::command]
 pub fn update_command(db: State<'_, Database>, cmd: Command) -> Result<(), SerializableError> {
@@ -73,7 +71,7 @@ pub fn toggle_command_favorite(db: State<'_, Database>, id: i64) -> Result<(), S
 #[tauri::command]
 pub fn search_commands(
     db: State<'_, Database>,
-    term: String,
+    search_term: String,
 ) -> Result<Vec<Command>, SerializableError> {
-    db.search_commands(&term).map_err(|e| e.into())
+    db.search_commands(&search_term).map_err(|e| e.into())
 }

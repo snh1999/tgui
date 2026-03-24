@@ -37,9 +37,16 @@ export interface ICommand extends IGroupCommandCommon {
   groupId?: number | null;
 }
 
+export interface ICommandWithHistory extends ICommand {
+  history?: IExecutionHistory;
+}
+
+export type TGroupFilter = { Group: number } | "None" | "All";
+export type TCategoryFilter = { Category: number } | "None" | "All";
+
 export interface ICommandGroupFilter {
-  parentId?: number;
-  categoryId?: number;
+  parentId: TGroupFilter;
+  categoryId: TCategoryFilter;
   favoritesOnly: boolean;
 }
 
@@ -52,6 +59,11 @@ export interface IMovePosition {
 export interface IGroup extends IGroupCommandCommon {
   parentGroupId?: number | null;
   icon?: string | null;
+}
+
+export interface IWorkflowFilter {
+  categoryId?: number;
+  favoritesOnly: boolean;
 }
 
 export interface IWorkflow extends ICommonPositionFields {
@@ -75,6 +87,33 @@ export interface IWorkflowStepFilter {
   enabledOnly?: boolean;
 }
 
+export type TExecutionStatus =
+  | "running"
+  | "success"
+  | "paused"
+  | "failed"
+  | "timeout"
+  | "cancelled"
+  | "skipped"
+  | "completed"
+  | "stopping";
+
+export type TTriggeredBy = "manual" | "workflow" | "schedule";
+
+export interface IExecutionHistory {
+  id: number;
+  commandId?: number;
+  workflowId?: number;
+  workflowStepId?: number;
+  pid?: number;
+  status: TExecutionStatus;
+  exitCode?: number;
+  startedAt?: string;
+  completedAt?: string;
+  triggeredBy: TTriggeredBy;
+  context?: string;
+}
+
 type TUpsertPayload<T> = Omit<T, "id" | "position" | "createdAt" | "updatedAt">;
 
 export type TUpsertCategoryPayload = TUpsertPayload<ICategory>;
@@ -89,4 +128,27 @@ export interface IQueryKeyTypes {
   filteredList: (filter: any) => readonly unknown[];
   lists: () => readonly string[];
   detail: (id: number) => readonly (string | number)[];
+}
+
+export interface ITrayStatus {
+  runningCount: number;
+  errorCount: number;
+  totalCommands: number;
+}
+
+export type StatsTarget = { Command: number } | { Workflow: number } | "Global";
+
+export interface IExecutionStats {
+  totalCounts: number;
+  successCount: number;
+  failedCount: number;
+  cancelledCount: number;
+  timeoutCount: number;
+  pausedCount: number;
+  skippedCount: number;
+  successRate: number;
+  runningCount: number;
+  averageDurationMs?: number;
+  lastExecutedAt?: Date;
+  firstExecutedAt?: Date;
 }

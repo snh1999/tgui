@@ -2,10 +2,10 @@
   import type { PrimitiveProps } from "reka-ui";
   import { Primitive } from "reka-ui";
   import type { HTMLAttributes } from "vue";
+  import { Spinner } from "@/components/ui/spinner";
   import { cn } from "@/lib/utils";
   import type { ButtonVariants } from ".";
   import { buttonVariants } from ".";
-  import { Spinner } from "@/components/ui/spinner";
 
   interface Props extends PrimitiveProps {
     variant?: ButtonVariants["variant"];

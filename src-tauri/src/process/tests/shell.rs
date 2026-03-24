@@ -109,8 +109,6 @@ fn build_exec_pwsh_uses_pwsh_executable() {
     assert_eq!(result.executable, "pwsh.exe");
 }
 
-
-
 #[cfg(target_os = "windows")]
 #[test]
 fn is_valid_shell_accepts_all_windows_allowed_shells() {

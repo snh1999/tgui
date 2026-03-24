@@ -13,16 +13,16 @@ import {
   WORKFLOW_STEP_COUNT,
 } from "@/lib/api/api.keys.ts";
 import { workflowsApi, workflowStepApi } from "@/lib/api/api.tauri.ts";
-import type {
-  ICommandGroupFilter,
+import {
   IMovePosition,
+  IWorkflowFilter,
   IWorkflowStepFilter,
   TUpsertWorkflowPayload,
   TUpsertWorkflowStepsPayload,
 } from "@/lib/api/api.types.ts";
 import { useOptimisticUpdate } from "@/lib/api/composables/helpers.ts";
 
-export function useGetWorkflows(filter: MaybeRef<ICommandGroupFilter>) {
+export function useGetWorkflows(filter?: MaybeRef<IWorkflowFilter>) {
   return useQuery({
     queryKey: queryKeys.workflows.filteredList(unref(filter)),
     queryFn: () => workflowsApi.getAll(unref(filter)),
@@ -99,7 +99,7 @@ export function useMoveWorkflow() {
   });
 }
 
-export function useCategoryWorkflowCount(id: MaybeRef<number>) {
+export function useGetCategoryWorkflowCount(id: MaybeRef<number>) {
   return useQuery({
     queryKey: [
       ...queryKeys.categories.detail(unref(id)),
@@ -146,9 +146,7 @@ function workflowStepMutationOnSuccess(
   commandId: number,
   workflowId: number
 ) {
-  queryClient.invalidateQueries({
-    queryKey: queryKeys.workflowSteps.lists(),
-  });
+  queryClient.invalidateQueries({ queryKey: queryKeys.workflowSteps.lists() });
   queryClient.invalidateQueries({
     queryKey: queryKeys.workflowSteps.filteredList({ workflowId }),
   });
@@ -231,7 +229,7 @@ export function useToggleEnabledWorkflowStep() {
   );
 }
 
-export function getWorkflowStepCount(workflowId: number) {
+export function useGetWorkflowStepCount(workflowId: number) {
   return useQuery({
     queryKey: [...queryKeys.workflows.detail(workflowId), WORKFLOW_STEP_COUNT],
     queryFn: () => workflowStepApi.getWorkflowStepCount(workflowId),

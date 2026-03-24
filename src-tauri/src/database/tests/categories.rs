@@ -230,7 +230,10 @@ fn test_get_category_command_count() {
     let cat_id = test_db.create_test_category("Development");
     let group_id = test_db.create_test_group("Test Group");
 
-    let cmd = CommandBuilder::new("Build", "cargo build").with_category(cat_id).with_group(group_id).build();
+    let cmd = CommandBuilder::new("Build", "cargo build")
+        .with_category(cat_id)
+        .with_group(group_id)
+        .build();
 
     test_db.db.create_command(&cmd).unwrap();
     test_db.db.create_command(&cmd).unwrap();
@@ -246,7 +249,10 @@ fn test_get_category_command_count_excludes_other_categories() {
     let cat_b = test_db.create_test_category("B");
     let group_id = test_db.create_test_group("Group");
 
-    let cmd = CommandBuilder::new("Build", "cargo build").with_category(cat_b).with_group(group_id).build();
+    let cmd = CommandBuilder::new("Build", "cargo build")
+        .with_category(cat_b)
+        .with_group(group_id)
+        .build();
     test_db.db.create_command(&cmd).unwrap();
 
     let count = test_db.db.get_category_command_count(cat_a).unwrap();
@@ -265,7 +271,9 @@ fn test_get_category_group_count() {
     let test_db = TestDb::setup_test_db();
     let cat_id = test_db.create_test_category("Development");
 
-    let group = GroupBuilder::new("Test Group").with_category(cat_id).build();
+    let group = GroupBuilder::new("Test Group")
+        .with_category(cat_id)
+        .build();
     test_db.db.create_group(&group).unwrap();
     test_db.db.create_group(&group).unwrap();
 
@@ -279,9 +287,8 @@ fn test_get_category_group_count_excludes_other_categories() {
     let cat_a = test_db.create_test_category("A");
     let cat_b = test_db.create_test_category("B");
 
-    let group =   GroupBuilder::new("Test Group").with_category(cat_a).build();
+    let group = GroupBuilder::new("Test Group").with_category(cat_a).build();
     test_db.db.create_group(&group).unwrap();
-
 
     let count = test_db.db.get_category_group_count(cat_b).unwrap();
     assert_eq!(count, 0);
@@ -293,7 +300,6 @@ fn test_get_category_group_count_nonexistent_id_returns_zero() {
     let result = test_db.db.get_category_group_count(99999);
     assert!(matches!(result, Ok(0)));
 }
-
 
 #[test]
 fn test_delete_category_only_nulls_its_own_commands() {

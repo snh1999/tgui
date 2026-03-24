@@ -1,6 +1,7 @@
-import type {
+import {
   ICommandGroupFilter,
   IQueryKeyTypes,
+  IWorkflowFilter,
   IWorkflowStepFilter,
 } from "@/lib/api/api.types.ts";
 
@@ -9,7 +10,8 @@ type TQueryKeys =
   | "groups"
   | "categories"
   | "workflows"
-  | "workflowSteps";
+  | "workflowSteps"
+  | "executionHistories";
 
 export const queryKeys: Record<TQueryKeys, IQueryKeyTypes> = {
   commands: {
@@ -23,7 +25,7 @@ export const queryKeys: Record<TQueryKeys, IQueryKeyTypes> = {
   groups: {
     all: ["groups"] as const,
     lists: () => [...queryKeys.groups.all, "list"] as const,
-    filteredList: (filters: ICommandGroupFilter) =>
+    filteredList: (filters?: ICommandGroupFilter) =>
       [...queryKeys.groups.lists(), filters] as const,
     detail: (id: number) => [...queryKeys.groups.all, "detail", id] as const,
   },
@@ -39,7 +41,7 @@ export const queryKeys: Record<TQueryKeys, IQueryKeyTypes> = {
   workflows: {
     all: ["workflows"] as const,
     lists: () => [...queryKeys.workflows.all, "list"] as const,
-    filteredList: (filter: ICommandGroupFilter) =>
+    filteredList: (filter?: IWorkflowFilter) =>
       [...queryKeys.workflows.lists(), filter] as const,
     detail: (id: number) => [...queryKeys.workflows.all, "detail", id] as const,
   },
@@ -67,6 +69,15 @@ export const queryKeys: Record<TQueryKeys, IQueryKeyTypes> = {
     //   [...queryKeys.workflowSteps.lists(), filter] as const,
     detail: (id: number) =>
       [...queryKeys.workflowSteps.all, "detail", id] as const,
+  },
+
+  executionHistories: {
+    all: ["executionHistories"] as const,
+    lists: () => [...queryKeys.executionHistories.all, "list"] as const,
+    filteredList: (filter: ICommandGroupFilter) =>
+      [...queryKeys.executionHistories.lists(), filter] as const,
+    detail: (id: number) =>
+      [...queryKeys.executionHistories.all, "detail", id] as const,
   },
 };
 

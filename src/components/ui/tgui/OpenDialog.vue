@@ -29,7 +29,9 @@
       class="w-full max-w-lg xs:max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl xl:max-w-4xl"
     >
       <DialogHeader>
-        <DialogTitle>{{ title || 'Dialog Title' }}</DialogTitle>
+        <DialogTitle class="text-muted-foreground">
+          {{ title || 'Dialog Title' }}
+        </DialogTitle>
 
         <DialogDescription v-if="$slots.description">
           <slot name="description" />
