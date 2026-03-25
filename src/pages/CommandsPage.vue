@@ -1,13 +1,11 @@
 <script setup lang="ts">
-  import CommandCard from "@/components/commands/CommandCard.vue";
   import CommandsTopbar from "@/components/commands/CommandsTopbar.vue";
   import EmptyCommandsPage from "@/components/commands/EmptyCommandsPage.vue";
-  import CommandsTable from "@/components/commands/tables/CommandsTable.vue";
   import ErrorDisplay from "@/components/ui/tgui/ErrorDisplay.vue";
   import Loading from "@/components/ui/tgui/Loading.vue";
-  import DataDisplay from "@/components/views/DataDisplay.vue";
   import { useGetCommands } from "@/lib/api/composables/commands.ts";
-  import { useCommandsViewStore } from "@/stores/commands.store.ts";
+  import { useCommandsStore } from "@/stores/commands.store.ts";
+  import CommandsDisplay from "@/components/commands/CommandsDisplay.vue";
 
   const {
     data: commands,
@@ -17,7 +15,7 @@
     refetch,
   } = useGetCommands();
 
-  const commandsView = useCommandsViewStore();
+  const commandsView = useCommandsStore();
 </script>
 
 <template>
@@ -31,23 +29,6 @@
     />
     <Loading v-else-if="isPending || !commands" />
     <EmptyCommandsPage v-else-if="commands.length === 0" />
-    <DataDisplay v-else :view="commandsView.view">
-      <template #list>
-        <CommandCard v-for="cmd in commands" :key="cmd.id" :command="cmd" />
-      </template>
-
-      <template #grid>
-        <CommandCard
-          v-for="cmd in commands"
-          :key="cmd.id"
-          :command="cmd"
-          isCard
-        />
-      </template>
-
-      <template #table>
-        <CommandsTable :commands="commands" />
-      </template>
-    </DataDisplay>
+    <CommandsDisplay v-else :commands="commands" :view="commandsView.view" />
   </div>
 </template>
