@@ -23,14 +23,14 @@ import {
 import { useOptimisticUpdate } from "@/lib/api/composables/helpers.ts";
 
 export function useGetWorkflows(filter?: MaybeRef<IWorkflowFilter>) {
-  return useQuery(()=>({
+  return useQuery(() => ({
     queryKey: queryKeys.workflows.filteredList(unref(filter)),
     queryFn: () => workflowsApi.getAll(unref(filter)),
   }));
 }
 
 export function useGetWorkflow(id: MaybeRef<number>) {
-  return useQuery(()=>({
+  return useQuery(() => ({
     queryKey: queryKeys.workflows.detail(unref(id)),
     queryFn: () => workflowsApi.getById(unref(id)),
     enabled: () => unref(id) > 0,
@@ -40,7 +40,7 @@ export function useGetWorkflow(id: MaybeRef<number>) {
 export function useCreateWorkflow() {
   const queryClient = useQueryClient();
 
-  return useMutation(()=>({
+  return useMutation(() => ({
     mutationFn: (payload: TUpsertWorkflowPayload) =>
       workflowsApi.create(payload),
     onSuccess: () => {

@@ -28,12 +28,6 @@ export function useCommandForm(
   props: IUpsertCommandForm,
   onSuccess: () => void
 ) {
-  console.log(
-    "upsert command form",
-    props.command?.name,
-    props.command && !props.isCreate
-  );
-
   const { handleSubmit, resetForm, meta } = useForm({
     validationSchema: toTypedSchema(commandFormSchema),
     initialValues: props.command

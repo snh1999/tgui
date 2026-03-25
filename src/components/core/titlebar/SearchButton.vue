@@ -7,10 +7,10 @@
     InputGroupAddon,
     InputGroupInput,
   } from "@/components/ui/input-group";
-  import { useCommandsViewStore } from "@/stores/commands.store.ts";
+  import { useCommandsStore } from "@/stores/commands.store.ts";
 
   const resultCount = ref("");
-  const commandsView = useCommandsViewStore();
+  const commandsView = useCommandsStore();
 </script>
 
 <template>

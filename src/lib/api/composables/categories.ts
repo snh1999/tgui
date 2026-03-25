@@ -39,12 +39,12 @@ export function useCreateCategory() {
     mutationFn: (payload: TUpsertCategoryPayload) =>
       categoriesApi.create(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: queryKeys.categories.lists()});
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories.lists() });
       toast.success("Category created");
     },
     onError: (error) => {
       toast.error(error.message);
-    }
+    },
   });
 }
 
@@ -53,9 +53,9 @@ export function useUpdateCategory() {
 
   return useMutation({
     mutationFn: ({
-                   id,
-                   payload,
-                 }: {
+      id,
+      payload,
+    }: {
       id: number;
       payload: TUpsertCategoryPayload;
     }) => categoriesApi.update(id, payload),
@@ -63,12 +63,12 @@ export function useUpdateCategory() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.categories.detail(variables.id),
       });
-      queryClient.invalidateQueries({queryKey: queryKeys.categories.lists()});
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories.lists() });
       toast.success("Updated Successfully");
     },
     onError: (error) => {
       toast.error(error.message);
-    }
+    },
   });
 }
 
@@ -77,8 +77,8 @@ export function useDeleteCategory() {
   return useMutation({
     mutationFn: (id: number) => categoriesApi.delete(id),
     onSuccess: (_, id) => {
-      queryClient.removeQueries({queryKey: queryKeys.categories.detail(id)});
-      queryClient.invalidateQueries({queryKey: queryKeys.categories.lists()});
+      queryClient.removeQueries({ queryKey: queryKeys.categories.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories.lists() });
       //   // Invalidate commands/groups that might reference this category
       // queryClient.invalidateQueries({ queryKey: queryKeys.commands.lists() });
       // queryClient.invalidateQueries({ queryKey: queryKeys.groups.lists() });
