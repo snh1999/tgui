@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 
-import type { MaybeRef } from "vue";
+import type { ComputedRef, MaybeRef } from "vue";
 import { unref } from "vue";
 import { queryKeys } from "@/lib/api/api.keys.ts";
 import { groupsApi } from "@/lib/api/api.tauri.ts";
@@ -11,35 +11,35 @@ import type {
 } from "@/lib/api/api.types.ts";
 import { useOptimisticUpdate } from "@/lib/api/composables/helpers.ts";
 
-export function useGetGroups(filters?: MaybeRef<ICommandGroupFilter>) {
-  return useQuery({
+export function useGetGroups(filters?: MaybeRef<ICommandGroupFilter> | ComputedRef<ICommandGroupFilter> ) {
+  return useQuery(()=>({
     queryKey: queryKeys.groups.filteredList(unref(filters)),
     queryFn: () => groupsApi.getAll(unref(filters)),
-  });
+  }));
 }
 
 export function useGetGroup(id: MaybeRef<number>) {
-  return useQuery({
+  return useQuery(()=>({
     queryKey: queryKeys.groups.detail(unref(id)),
     queryFn: () => groupsApi.getById(unref(id)),
     enabled: () => unref(id) > 0,
-  });
+  }));
 }
 
 export function useGetGroupCommandCount(id: MaybeRef<number>) {
-  return useQuery({
+  return useQuery(()=>({
     queryKey: [...queryKeys.groups.detail(unref(id)), "count"],
     queryFn: () => groupsApi.getGroupCommandCount(unref(id)),
     enabled: () => unref(id) > 0,
-  });
+  }));
 }
 
 export function useGetGroupPath(id: MaybeRef<number>) {
-  return useQuery({
+  return useQuery(()=>({
     queryKey: [queryKeys.groups.detail(unref(id)), "path"],
     queryFn: () => groupsApi.getGroupPath(unref(id)),
     enabled: () => unref(id) > 0,
-  });
+  }));
 }
 
 export function useCreateGroup() {
