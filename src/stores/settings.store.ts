@@ -14,7 +14,6 @@ export const useSettingsStateStore = defineStore("settingsState", () => {
   const selectedSection = ref<TSettingsSection | null>();
   function setSelectedSection(newSelection: TSettingsSection | null) {
     selectedSection.value = newSelection;
-    console.log(newSelection, selectedSection.value);
   }
   return {
     selectedSection,

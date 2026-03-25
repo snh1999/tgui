@@ -1,11 +1,9 @@
 <script setup lang="ts">
   import { Badge } from "@/components/ui/badge";
   import { useGetCategory } from "@/lib/api/composables/categories.ts";
+  import CategoryLine from "@/components/categories/CategoryLine.vue";
 
-  const props = defineProps<{
-    categoryId: number;
-  }>();
-
+  const props = defineProps<{ categoryId: number }>();
   const { data: category } = useGetCategory(props.categoryId);
 </script>
 
@@ -13,11 +11,9 @@
   <Badge
     v-if="category"
     variant="outline"
-    class="h-6 mx-2 border-none"
-    :style="{backgroundColor: `${category.color}25`}"
+    class="h-6 mx-2 border-none gap-1.5"
+    :style="{ backgroundColor: `${category.color}25` }"
   >
-    <!--	  TODO import from luicide icon -->
-    <component :is="category.icon" />
-    {{ category.name }}
+    <CategoryLine :category="category" compact />
   </Badge>
 </template>

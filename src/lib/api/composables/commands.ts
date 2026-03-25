@@ -12,29 +12,29 @@ import type {
 } from "../api.types";
 
 export function useGetCommands(filters?: MaybeRef<ICommandGroupFilter>) {
-  return useQuery({
+  return useQuery(() => ({
     queryKey: queryKeys.commands.filteredList(unref(filters)),
     queryFn: () => commandsApi.getAll(unref(filters)),
-  });
+  }));
 }
 
 export function useGetRecentCommands(limit: MaybeRef<number>) {
-  return useQuery({
-    queryKey: [...queryKeys.commands.lists(), "recent"],
+  return useQuery(() => ({
+    queryKey: [...queryKeys.commands.lists(), "recent", unref(limit)],
     queryFn: () => commandsApi.getRecent(unref(limit)),
-  });
+  }));
 }
 
 export function useGetCommand(id: MaybeRef<number>) {
-  return useQuery({
+  return useQuery(() => ({
     queryKey: queryKeys.commands.detail(unref(id)),
     queryFn: () => commandsApi.getById(unref(id)),
     enabled: () => unref(id) > 0,
-  });
+  }));
 }
 
 export function useCommandSearch(searchTerm: MaybeRef<string>) {
-  return useQuery({
+  return useQuery(() => ({
     queryKey: [
       ...queryKeys.commands.lists(),
       "search",
@@ -42,7 +42,7 @@ export function useCommandSearch(searchTerm: MaybeRef<string>) {
     ] as const,
     queryFn: () => commandsApi.search(unref(searchTerm)),
     enabled: () => unref(searchTerm).length > 0,
-  });
+  }));
 }
 
 export function useCreateCommand() {

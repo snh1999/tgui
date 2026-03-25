@@ -13,13 +13,13 @@
   import DataViewToggle from "@/components/views/DataViewToggle.vue";
   import { useGetCategories } from "@/lib/api/composables/categories.ts";
   import { useGetCommands } from "@/lib/api/composables/commands.ts";
-  import { useCommandsViewStore } from "@/stores/commands.store.ts";
+  import { useCommandsStore } from "@/stores/commands.store.ts";
 
   const createDialogOpen = ref(false);
 
   const { data: commands } = useGetCommands();
   const { data: categories } = useGetCategories();
-  const commandsView = useCommandsViewStore();
+  const commandsView = useCommandsStore();
 
   const filtered = computed(() => commands.value);
   // const filtered = computed(() => {

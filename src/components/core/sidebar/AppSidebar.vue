@@ -11,11 +11,13 @@
 
   const route = useRoute();
 
-  const routeComponents: Record<TRoutePaths, Component> = {
+  const routeComponents: Record<string, Component> = {
     home: HomeSidebar,
     groups: GroupsSidebar,
     commands: CommandsSidebar,
+    command: CommandsSidebar,
     categories: CategoriesSidebar,
+    category: CategoriesSidebar,
     settings: SettingsSidebar,
   };
 

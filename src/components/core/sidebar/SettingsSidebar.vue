@@ -39,7 +39,7 @@
     >
       <SidebarMenuButton
         @click="scrollToSection(section)"
-        :is-active="section === settingsStore.selectedSection"
+        :isActive="section === settingsStore.selectedSection"
         class="w-full justify-start"
       >
         <span class="text-sm">{{ capitalize(section) }}</span>
