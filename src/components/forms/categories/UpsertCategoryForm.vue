@@ -25,6 +25,7 @@
 <template>
   <div>
     <Loading v-if="isPending" />
+
     <form :id="CATEGORY_FORM_ID" @submit="onSubmit">
       <FieldGroup>
         <FormField

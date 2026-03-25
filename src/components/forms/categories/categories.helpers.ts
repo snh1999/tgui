@@ -20,6 +20,7 @@ export const categoryFormSchema = z.object({
 
 export interface IUpsertCategoryForm {
   category?: ICategory;
+  isCreate?: boolean;
 }
 
 export function useCategoryForm(
@@ -48,7 +49,7 @@ export function useCategoryForm(
   );
 
   const onSubmit = handleSubmit((data) => {
-    if (props.category) {
+    if (props.category && !props.isCreate) {
       updateCategory(
         { id: props.category.id, payload: data },
         { onSuccess: () => onSuccess() }

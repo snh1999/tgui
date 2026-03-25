@@ -5,9 +5,11 @@
   import { AddIcon } from "@/assets/Icons";
   import { CATEGORY_FORM_ID } from "@/app.constants.ts";
   import { Button } from "@/components/ui/button";
+  import { ICategory } from "@/lib/api/api.types.ts";
 
   const props = defineProps<{
     viewTrigger?: boolean;
+    category?: ICategory;
   }>();
 
   const createCategoryFormRef = ref<InstanceType<
@@ -17,13 +19,21 @@
 
 <template>
   <FormDialog title="Create Category">
+    <template v-if="$slots.default" #trigger>
+      <slot />
+    </template>
     <template v-if="viewTrigger" #trigger>
       <AddIcon />
       New Category
     </template>
 
     <template #default="{closeDialog}">
-      <UpsertCategoryForm @success="closeDialog" ref="createCategoryFormRef" />
+      <UpsertCategoryForm
+        @success="closeDialog"
+        ref="createCategoryFormRef"
+        :category="category"
+        isCreate
+      />
     </template>
 
     <template #reset>
