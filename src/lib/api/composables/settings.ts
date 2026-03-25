@@ -3,11 +3,11 @@ import { type MaybeRef, unref } from "vue";
 import { settingsApi } from "@/lib/api/api.tauri.ts";
 
 export function useGetSetting(key: MaybeRef<string>) {
-  return useQuery(() => ({
-    queryKey: ["settings", unref(key)],
+  return useQuery(()=>({
+    queryKey: ["settings", key],
     queryFn: () => settingsApi.getSetting(unref(key)),
     enabled: () => unref(key).length > 0,
-  }));
+  });
 }
 
 export function useGetAllSettings() {
