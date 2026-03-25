@@ -4,7 +4,7 @@ import { settingsApi } from "@/lib/api/api.tauri.ts";
 
 export function useGetSetting(key: MaybeRef<string>) {
   return useQuery(() => ({
-    queryKey: ["settings", key],
+    queryKey: ["settings", unref(key)],
     queryFn: () => settingsApi.getSetting(unref(key)),
     enabled: () => unref(key).length > 0,
   }));
