@@ -12,6 +12,8 @@
   import TitleBreadcrumb from "@/components/core/titlebar/TitleBreadcrumb.vue";
   import { Button } from "@/components/ui/button";
   import { SidebarTrigger } from "@/components/ui/sidebar";
+  import { useAppStore } from "@/stores/app.store.ts";
+  import { Columns2, Rows2, Square } from "lucide-vue-next";
 
   const appWindow = getCurrentWindow();
   const isMaximized = ref(false);
@@ -27,6 +29,8 @@
   const toggleMaximize = () => appWindow.toggleMaximize();
   const close = () => appWindow.close();
   const startDrag = () => appWindow.startDragging();
+
+  const appStore = useAppStore();
 </script>
 
 <template>
@@ -42,6 +46,11 @@
     </div>
     <div class="flex items-center h-full" @mousedown.stop>
       <ThemeSwitcher />
+      <Button variant="ghost" @click="appStore.toggleLayoutState()">
+        <Columns2 v-if="appStore.layoutState === 'horizontal'" />
+        <Rows2 v-else-if="appStore.layoutState === 'vertical'" />
+        <Square v-else />
+      </Button>
       <Button size="icon" variant="ghost" @click="minimize">
         <MinimizeIcon class="scale-105" />
       </Button>
@@ -54,12 +63,7 @@
         <UnMaximizeIcon v-if="isMaximized" class="scale-85" />
         <MaximizeIcon v-else class="scale-85" />
       </Button>
-      <Button
-        size="icon-lg"
-        variant="ghost"
-        class="h-full hover:bg-destructive hover:text-destructive-foreground"
-        @click="close"
-      >
+      <Button size="icon-lg" variant="destructive_hover" @click="close">
         <X />
       </Button>
     </div>

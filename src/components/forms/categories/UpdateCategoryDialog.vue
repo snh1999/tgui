@@ -48,7 +48,7 @@
 
     <template #reset>
       <Button
-        variant="outline"
+        variant="destructive"
         @click="updateCategoryRef?.resetForm()"
         :isPending="updateCategoryRef?.isPending"
       >
