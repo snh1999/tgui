@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  // biome-ignore lint/performance/noNamespaceImport: <only way to show icons>
   import * as Icons from "lucide-vue-next";
   import { capitalize, computed } from "vue";
   import { ICategory } from "@/lib/api/api.types.ts";
@@ -6,7 +7,9 @@
   const props = defineProps<{ category: ICategory; compact?: boolean }>();
 
   const iconComponent = computed(() => {
-    if (!props.category?.icon) return null;
+    if (!props.category?.icon) {
+      return null;
+    }
     return (Icons as Record<string, unknown>)[props.category.icon] ?? null;
   });
 </script>

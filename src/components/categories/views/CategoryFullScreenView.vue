@@ -41,9 +41,9 @@
 
       <DataViewToggle
         v-if="activeTab === 'commands'"
-        v-model="store.commandsView"
+        v-model:view="store.commandsView"
       />
-      <DataViewToggle v-else v-model="store.groupsView" />
+      <DataViewToggle v-else v-model:view="store.groupsView" />
     </div>
 
     <TabsContent value="commands" class="flex-1 overflow-y-auto p-4">
