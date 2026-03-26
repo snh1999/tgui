@@ -1,11 +1,12 @@
 <script setup lang="ts">
+  import CommandsDisplay from "@/components/commands/CommandsDisplay.vue";
   import CommandsTopbar from "@/components/commands/CommandsTopbar.vue";
-  import EmptyCommandsPage from "@/components/commands/EmptyCommandsPage.vue";
+  import EmptyPage from "@/components/core/EmptyPage.vue";
+  import CreateCommandsDialog from "@/components/forms/commands/CreateCommandsDialog.vue";
   import ErrorDisplay from "@/components/ui/tgui/ErrorDisplay.vue";
   import Loading from "@/components/ui/tgui/Loading.vue";
   import { useGetCommands } from "@/lib/api/composables/commands.ts";
   import { useCommandsStore } from "@/stores/commands.store.ts";
-  import CommandsDisplay from "@/components/commands/CommandsDisplay.vue";
 
   const {
     data: commands,
@@ -28,7 +29,19 @@
       :retry="refetch"
     />
     <Loading v-else-if="isPending || !commands" />
-    <EmptyCommandsPage v-else-if="commands.length === 0" />
+    <EmptyPage
+      v-else-if="commands.length === 0"
+      title="No Commands Yet"
+      description="You haven't created any commands yet. Get started by creating your first command."
+    >
+      <div class="flex gap-2">
+        <CreateCommandsDialog
+          viewTrigger
+          triggerSize="lg"
+          triggerVariant="primary"
+        />
+      </div>
+    </EmptyPage>
     <CommandsDisplay v-else :commands="commands" :view="commandsView.view" />
   </div>
 </template>

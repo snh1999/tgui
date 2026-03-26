@@ -6,15 +6,15 @@
   const { data: categories } = useGetCategories();
   const shellSelectInputs = computed(() =>
     categories.value?.map((category) => ({
+      ...category,
       id: category.id,
       value: category.id,
-      name: category.name,
     }))
   );
 </script>
 
 <template>
-  <SelectInput :data="shellSelectInputs" />
+  <SelectInput :data="shellSelectInputs" placeholder="All categories" />
 </template>
 
 <style scoped>
