@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { ChevronDownIcon } from "lucide-vue-next";
-  import { computed } from "vue";
+  import { capitalize, computed } from "vue";
   import { useRoute, useRouter } from "vue-router";
   import AppLogo from "@/components/core/AppLogo.vue";
   import {
@@ -31,7 +31,7 @@
 
   const breadcrumbText = computed(() => {
     const name = route.name as TRoutePaths;
-    return routeLabels[name] || name || "Home";
+    return routeLabels[name] || capitalize(name) || "Home";
   });
 </script>
 

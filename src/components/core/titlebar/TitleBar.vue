@@ -1,7 +1,8 @@
 <script setup lang="ts">
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { X } from "lucide-vue-next";
+  import { Columns2, RotateCcw, Rows2, Square, X } from "lucide-vue-next";
   import { onMounted, ref } from "vue";
+  import { useRouter } from "vue-router";
   import {
     MaximizeIcon,
     MinimizeIcon,
@@ -13,7 +14,6 @@
   import { Button } from "@/components/ui/button";
   import { SidebarTrigger } from "@/components/ui/sidebar";
   import { useAppStore } from "@/stores/app.store.ts";
-  import { Columns2, Rows2, Square } from "lucide-vue-next";
 
   const appWindow = getCurrentWindow();
   const isMaximized = ref(false);
@@ -30,6 +30,8 @@
   const close = () => appWindow.close();
   const startDrag = () => appWindow.startDragging();
 
+  const router = useRouter();
+
   const appStore = useAppStore();
 </script>
 
@@ -41,6 +43,9 @@
   >
     <div class="flex items-center h-full" @mousedown.stop>
       <SidebarTrigger />
+      <Button @click="router.go(0)" variant="ghost" class="w-max border-none">
+        <RotateCcw />
+      </Button>
       <ActionButtons />
       <TitleBreadcrumb />
     </div>
