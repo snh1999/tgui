@@ -3,9 +3,9 @@
   import { ref } from "vue";
   import { useRouter } from "vue-router";
   import { DeleteIcon, EditIcon } from "@/assets/Icons.ts";
-  import CategoryLine from "@/components/categories/CategoryLine.vue";
   import CreateCategoryDialog from "@/components/forms/categories/CreateCategoryDialog.vue";
   import UpdateCategoryDialog from "@/components/forms/categories/UpdateCategoryDialog.vue";
+  import GroupCategoryLine from "@/components/shared/GroupCategoryLine.vue";
   import { Button } from "@/components/ui/button";
   import ConfirmDialog from "@/components/ui/tgui/ConfirmDialog.vue";
   import { ICategory } from "@/lib/api/api.types.ts";
@@ -37,8 +37,8 @@
     class="flex items-center justify-between w-full h-12 px-4 border-b bg-card/50"
   >
     <div class="flex items-center gap-3">
-      <CategoryLine
-        :category="category"
+      <GroupCategoryLine
+        :element="category"
         class="text-lg [&>span]:h-8 [&>span]:text-lg [&_svg]:size-6 [&_.rounded-md]:w-5 [&_.rounded-md]:h-5"
       />
     </div>

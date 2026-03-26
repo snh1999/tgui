@@ -2,14 +2,13 @@
   import { computed } from "vue";
   import { useRoute } from "vue-router";
   import CategoryTopbar from "@/components/categories/CategoryTopbar.vue";
-  import CategoryFullScreenView from "@/components/categories/views/CategoryFullScreenView.vue";
-  import CategorySplitView from "@/components/categories/views/CategorySplitView.vue";
   import ErrorDisplay from "@/components/ui/tgui/ErrorDisplay.vue";
   import Loading from "@/components/ui/tgui/Loading.vue";
+  import { useGetGroupCommand } from "@/components/views/group-command/GroupCommand.helpers.ts";
+  import GroupCommandFullScreenView from "@/components/views/group-command/GroupCommandFullScreenView.vue";
+  import GroupCommandSplitView from "@/components/views/group-command/GroupCommandSplitView.vue";
   import type { ICommandGroupFilter } from "@/lib/api/api.types.ts";
   import { useGetCategory } from "@/lib/api/composables/categories.ts";
-  import { useGetCommands } from "@/lib/api/composables/commands.ts";
-  import { useGetGroups } from "@/lib/api/composables/groups.ts";
   import { useAppStore } from "@/stores/app.store.ts";
 
   const route = useRoute();
@@ -18,7 +17,7 @@
 
   const {
     data: category,
-    isPending: categoryLoading,
+    isLoading: categoryLoading,
     isError: categoryError,
     error: categoryErr,
     refetch: refetchCategory,
@@ -30,34 +29,15 @@
     favoritesOnly: false,
   }));
 
-  const {
-    data: commands,
-    isPending: commandsLoading,
-    isError: commandsError,
-    error: commandsErr,
-    refetch: refetchCommands,
-  } = useGetCommands(filters);
-
-  const {
-    data: groups,
-    isPending: groupsLoading,
-    isError: groupsError,
-    error: groupsErr,
-    refetch: refetchGroups,
-  } = useGetGroups(filters);
+  const { groups, commands, isValuesLoading, isError, error, refetch } =
+    useGetGroupCommand(filters);
 
   const isLoading = computed(
-    () => categoryLoading.value || commandsLoading.value || groupsLoading.value
+    () => categoryLoading.value || isValuesLoading.value
   );
-  const hasError = computed(
-    () => categoryError.value || commandsError.value || groupsError.value
-  );
-  const anyError = computed(
-    () => categoryErr.value || commandsErr.value || groupsErr.value
-  );
-  const anyRefetch = computed(
-    () => refetchCategory || refetchCommands || refetchGroups
-  );
+  const hasError = computed(() => categoryError.value || isError.value);
+  const anyError = computed(() => categoryErr.value || error.value);
+  const anyRefetch = computed(() => refetchCategory || refetch);
 </script>
 
 <template>
@@ -73,13 +53,13 @@
     <template v-else-if="category">
       <CategoryTopbar :category="category" />
 
-      <CategoryFullScreenView
+      <GroupCommandFullScreenView
         v-if="appStore.layoutState === 'full screen'"
         :commands="commands"
         :groups="groups"
       />
 
-      <CategorySplitView
+      <GroupCommandSplitView
         v-else
         :layout="appStore.layoutState"
         :commands="commands"

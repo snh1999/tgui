@@ -8,7 +8,7 @@ export interface ICategory {
   name: string;
   icon?: string | null;
   color?: string | null;
-  createdAt?: Date;
+  createdAt?: string;
 }
 
 interface ICommonFields {
