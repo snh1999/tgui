@@ -12,7 +12,7 @@
   import ConfirmDialog from "@/components/ui/tgui/ConfirmDialog.vue";
   import { Toggle } from "@/components/ui/toggle";
   import { IGroup } from "@/lib/api/api.types.ts";
-  import { useDeleteCategory } from "@/lib/api/composables/categories.ts";
+  import { useDeleteGroup } from "@/lib/api/composables/groups.ts";
   import { useGroupsStore } from "@/stores/groups.store.ts";
 
   const props = defineProps<{
@@ -23,7 +23,7 @@
 
   const deleteDialogOpen = ref(false);
 
-  const { mutate: deleteGroup } = useDeleteCategory();
+  const { mutate: deleteGroup } = useDeleteGroup();
 
   const emit = defineEmits<{
     delete: [id: number];
@@ -40,8 +40,6 @@
     emit("delete", props.group.id);
     router.back();
   }
-
-  console.log(groupsView.favoritesOnly);
 </script>
 
 <template>
@@ -78,7 +76,7 @@
 
       <ConfirmDialog
         v-model:open="deleteDialogOpen"
-        description="Are you sure you want to delete this Group? Commands and child groups will be moved to uncategorized."
+        description="Are you sure you want to delete this Group? Commands and child groups will be updated to null."
         @confirm="onDeleteClick"
       />
     </div>

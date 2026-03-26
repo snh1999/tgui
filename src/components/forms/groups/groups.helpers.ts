@@ -44,7 +44,9 @@ export function useGroupForm(props: IUpsertGroupForm, onSuccess: () => void) {
   const { mutate: updateGroup, isPending: isUpdatePending } = useUpdateGroup();
 
   const isPending = computed(() =>
-    props.group ? isUpdatePending.value : isCreatePending.value
+    props.group && !props.isCreate
+      ? isUpdatePending.value
+      : isCreatePending.value
   );
 
   const onSubmit = handleSubmit((rawData) => {
