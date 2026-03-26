@@ -5,9 +5,11 @@
   import { Button } from "@/components/ui/button";
   import UpsertGroupForm from "@/components/forms/groups/UpsertGroupForm.vue";
   import FormDialog from "@/components/forms/common/FormDialog.vue";
+  import { IGroup } from "@/lib/api/api.types.ts";
 
   const props = defineProps<{
     viewTrigger?: boolean;
+    group?: IGroup;
   }>();
 
   const createGroupFormRef = ref<InstanceType<typeof UpsertGroupForm> | null>(
@@ -17,13 +19,21 @@
 
 <template>
   <FormDialog title="Create New Group">
+    <template v-if="$slots.default" #trigger>
+      <slot />
+    </template>
     <template v-if="viewTrigger" #trigger>
       <AddIcon />
       New Group
     </template>
 
     <template #default="{closeDialog}">
-      <UpsertGroupForm @success="closeDialog" ref="createGroupFormRef" />
+      <UpsertGroupForm
+        @success="closeDialog"
+        ref="createGroupFormRef"
+        :group="group"
+        isCreate
+      />
     </template>
 
     <template #reset>
