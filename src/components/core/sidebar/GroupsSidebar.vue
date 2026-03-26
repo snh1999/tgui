@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ChevronLeft, ChevronRight, Home } from "lucide-vue-next";
+  import { ChevronLeft, ChevronRight } from "lucide-vue-next";
   import { ComputedRef, computed } from "vue";
   import { useRoute, useRouter } from "vue-router";
   import { AddIcon } from "@/assets/Icons.ts";

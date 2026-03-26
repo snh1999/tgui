@@ -55,7 +55,9 @@ export function useCommandForm(
     useUpdateCommand();
 
   const isPending = computed(() =>
-    props.command ? isUpdatePending.value : isCreatePending.value
+    props.command && !props.isCreate
+      ? isUpdatePending.value
+      : isCreatePending.value
   );
 
   const onSubmit = handleSubmit((rawData) => {
