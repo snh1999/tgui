@@ -17,6 +17,7 @@ export const groupFormSchema = groupCommandFormSchema.extend({
 
 export interface IUpsertGroupForm {
   group?: IGroup;
+  isCreate?: boolean;
 }
 
 export function useGroupForm(props: IUpsertGroupForm, onSuccess: () => void) {
@@ -48,7 +49,7 @@ export function useGroupForm(props: IUpsertGroupForm, onSuccess: () => void) {
 
   const onSubmit = handleSubmit((rawData) => {
     const data = transformEnvVars(rawData);
-    if (props.group) {
+    if (props.group && !props.isCreate) {
       updateGroup(
         { id: props.group.id, payload: data },
         { onSuccess: () => onSuccess() }
