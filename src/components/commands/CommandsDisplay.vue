@@ -2,11 +2,11 @@
   import CommandCard from "@/components/commands/CommandCard.vue";
   import CommandsTable from "@/components/commands/tables/CommandsTable.vue";
   import DataDisplay from "@/components/views/DataDisplay.vue";
-  import { ICommand } from "@/lib/api/api.types.ts";
+  import { ICommandWithHistory } from "@/lib/api/api.types.ts";
   import { TViewMode } from "@/stores/commands.store.ts";
 
   defineProps<{
-    commands: ICommand[];
+    commands: ICommandWithHistory[];
     view: TViewMode;
     isCard?: boolean;
   }>();

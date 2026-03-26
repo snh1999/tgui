@@ -14,6 +14,7 @@
   const routeComponents: Record<string, Component> = {
     home: HomeSidebar,
     groups: GroupsSidebar,
+    group: GroupsSidebar,
     commands: CommandsSidebar,
     command: CommandsSidebar,
     categories: CategoriesSidebar,
