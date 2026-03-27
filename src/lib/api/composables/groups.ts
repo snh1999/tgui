@@ -36,9 +36,9 @@ export function useGetGroupCommandCount(id: MaybeRef<number>) {
   }));
 }
 
-export function useGetGroupTree(id: MaybeRef<number>) {
+export function useGetGroupTree(id: ComputedRef<number>) {
   return useQuery(() => ({
-    queryKey: [queryKeys.groups.all, "tree", id],
+    queryKey: [queryKeys.groups.all, "tree", unref(id)],
     queryFn: () => groupsApi.getGroupTree(unref(id)),
     enabled: () => unref(id) > 0,
   }));

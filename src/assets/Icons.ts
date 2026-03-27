@@ -38,4 +38,6 @@ export { default as PlayIcon } from "~icons/solar/play-bold";
 export { default as PlayCircleIcon } from "~icons/solar/play-circle-bold";
 export { default as SunIcon } from "~icons/solar/sun-bold-duotone";
 
+export {default as CategoryIcon} from '~icons/material-symbols/category';
+
 export { default as TickIcon } from "~icons/mdi/tick";
