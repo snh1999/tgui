@@ -1,8 +1,8 @@
-use super::{CategoryFilter, Database, DatabaseError, Group, GroupFilter, Result};
+use super::{CategoryFilter, Database, DatabaseError, Group, GroupFilter, GroupNode, Result};
 use crate::constants::{GROUPS_TABLE, GROUP_PARENT_GROUP_COLUMN};
 use crate::database::helpers::QueryBuilder;
 use rusqlite::{named_params, params};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use tracing::{debug, instrument, warn};
 
 impl Database {
@@ -202,18 +202,49 @@ impl Database {
     }
 
     #[instrument(skip(self))]
-    pub fn get_group_tree(&self, root_id: i64) -> Result<Vec<Group>> {
-        self.query_database(
+    pub fn get_group_tree(&self, root_id: i64) -> Result<GroupNode> {
+        let flat = self.query_database(
             "WITH RECURSIVE tree AS (
-                SELECT *, 0 as depth FROM groups WHERE id = ?1
-                UNION ALL
-                SELECT g.*, t.depth + 1 FROM groups g
-                JOIN tree t ON g.parent_group_id = t.id
-            )
-            SELECT * FROM tree ORDER BY depth, position",
+            SELECT * FROM groups WHERE id = ?1
+            UNION ALL
+            SELECT g.* FROM groups g
+            JOIN tree t ON g.parent_group_id = t.id
+        )
+        SELECT * FROM tree",
             params![root_id],
             Self::row_to_group,
-        )
+        )?;
+        
+        if flat.len() == 0{
+            return Err(DatabaseError::NotFound {
+                id: root_id,
+                entity: GROUPS_TABLE
+            })
+        }
+
+        let mut children_map: HashMap<i64, Vec<i64>> = HashMap::new();
+        for g in &flat {
+            if let Some(pid) = g.parent_group_id {
+                children_map.entry(pid).or_default().push(g.id);
+            }
+        }
+
+        let mut nodes: HashMap<i64, Group> = flat.into_iter().map(|g| (g.id, g)).collect();
+
+        fn build(
+            id: i64,
+            nodes: &mut HashMap<i64, Group>,
+            children_map: &HashMap<i64, Vec<i64>>,
+        ) -> GroupNode {
+            let group = nodes.remove(&id).unwrap();
+            let children = children_map
+                .get(&id)
+                .map(|ids| ids.iter().map(|&cid| build(cid, nodes, children_map)).collect())
+                .unwrap_or_default();
+            GroupNode { group, children }
+        }
+
+        Ok(build(root_id, &mut nodes, &children_map))
     }
 
     /// Walks the parent chain from group_id upward.
