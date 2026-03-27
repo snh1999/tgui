@@ -37,6 +37,12 @@ pub struct Group {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GroupNode {
+    pub group: Group,
+    pub children: Vec<GroupNode>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Command {
     pub id: i64,

@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import {
+import type {
   ICategory,
   ICommand,
   ICommandGroupFilter,
@@ -7,6 +7,7 @@ import {
   IExecutionHistory,
   IExecutionStats,
   IGroup,
+  IGroupNode,
   IMovePosition,
   ITrayStatus,
   IWorkflow,
@@ -106,8 +107,11 @@ export const groupsApi = {
   move: (movePosition: IMovePosition) =>
     invoke<void>("move_group_between", { ...movePosition }),
 
+  getGroupTree: (rootId: number) =>
+    invoke<string[]>("get_group_tree", { rootId }),
+
   getGroupPath: (rootId: number) =>
-    invoke<string[]>("get_group_path", { rootId }),
+    invoke<IGroupNode>("get_group_path", { rootId }),
 
   getGroupCommandCount: (id: number) =>
     invoke<number>("get_groups_count", { id }),

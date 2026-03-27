@@ -70,6 +70,7 @@ pub fn run() {
             groups::move_group_between,
             groups::delete_group,
             groups::get_group_path,
+            groups::get_group_tree,
             groups::toggle_group_favorite,
             commands::create_command,
             commands::get_command,
