@@ -5,7 +5,7 @@ export type TViewMode = "list" | "grid" | "table";
 
 export const useCommandsStore = defineStore("commandsStore", () => {
   const search = ref("");
-  const selectedGroup = ref<number | "all">("all");
+  const selectedGroup = ref<number | "none">("none");
   const filterCategory = ref<number | "all">("all");
   const favoritesOnly = ref(false);
   const showRunningOnly = ref(false);
@@ -15,14 +15,14 @@ export const useCommandsStore = defineStore("commandsStore", () => {
     () =>
       favoritesOnly.value !== false ||
       filterCategory.value !== "all" ||
-      selectedGroup.value !== "all" ||
+      selectedGroup.value !== "none" ||
       showRunningOnly.value !== false
   );
 
   function clearFilter() {
     favoritesOnly.value = false;
     filterCategory.value = "all";
-    selectedGroup.value = "all";
+    selectedGroup.value = "none";
     showRunningOnly.value = false;
   }
 

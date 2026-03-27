@@ -2,7 +2,7 @@
   import { ChevronLeft } from "lucide-vue-next";
   import { computed, provide } from "vue";
   import { useRouter } from "vue-router";
-  import { AddIcon } from "@/assets/Icons.ts";
+  import { AddIcon, SelectAllIcon } from "@/assets/Icons.ts";
   import GroupTreeNode from "@/components/core/sidebar/groups/GroupTreeNode.vue";
   import CreateGroupDialog from "@/components/forms/groups/CreateGroupDialog.vue";
   import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@
     SidebarContent,
     SidebarHeader,
     SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
   } from "@/components/ui/sidebar";
   import Loading from "@/components/ui/tgui/Loading.vue";
   import { useGetGroups } from "@/lib/api/composables/groups.ts";
@@ -52,8 +54,17 @@
     </SidebarMenu>
   </SidebarHeader>
 
-  <SidebarContent>
+  <SidebarContent class="px-1">
     <SidebarMenu>
+      <SidebarMenuItem class="px-7">
+        <SidebarMenuButton
+          @click="store.selectedGroup='none'"
+          :isActive="store.selectedGroup === 'none'"
+        >
+          <SelectAllIcon />
+          Root Groups
+        </SidebarMenuButton>
+      </SidebarMenuItem>
       <Loading v-if="isLoading" />
       <GroupTreeNode
         v-else

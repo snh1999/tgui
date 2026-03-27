@@ -2,23 +2,17 @@
   import { computed, ref } from "vue";
   import SearchButton from "@/components/core/titlebar/SearchButton.vue";
   import CreateCommandsDialog from "@/components/forms/commands/CreateCommandsDialog.vue";
-  import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-  } from "@/components/ui/select";
+  import CategorySelect from "@/components/forms/common/CategorySelect.vue";
+  import { Button } from "@/components/ui/button";
   import { Toggle } from "@/components/ui/toggle";
   import DataViewToggle from "@/components/views/DataViewToggle.vue";
-  import { useGetCategories } from "@/lib/api/composables/categories.ts";
   import { useGetCommands } from "@/lib/api/composables/commands.ts";
   import { useCommandsStore } from "@/stores/commands.store.ts";
+  import { ClearIcon } from "@/assets/Icons.ts";
 
   const createDialogOpen = ref(false);
 
   const { data: commands } = useGetCommands();
-  const { data: categories } = useGetCategories();
   const commandsView = useCommandsStore();
 
   const filtered = computed(() => commands.value);
@@ -43,46 +37,42 @@
 </script>
 
 <template>
-  <header
-    class="flex items-center justify-between px-5 py-4 gap-3 shrink-0 flex-wrap"
-  >
-    <div class="flex items-baseline gap-2.5">
-      <h1 class="text-base font-bold tracking-[-0.02em]">Commands</h1>
-      <!--      TODO suspence block-->
-      <span class="text-[11px] text-muted-foreground">
-        {{ filtered?.length }} of
-        {{ commands?.length }}</span
-      >
+  <div class="flex flex-col gap-4 px-5 py-4">
+    <div class="flex items-center justify-between gap-3 shrink-0 flex-wrap">
+      <div class="flex items-baseline gap-2.5">
+        <h1 class="text-base font-bold tracking-[-0.02em]">Commands</h1>
+        <span class="text-[11px] text-muted-foreground">
+          {{ filtered?.length }} of
+          {{ commands?.length }}</span
+        >
+      </div>
+      <div class="flex items-baseline gap-3">
+        <SearchButton />
+        <CreateCommandsDialog v-model:open="createDialogOpen" view-trigger />
+      </div>
     </div>
-    <div class="flex items-center gap-2 flex-wrap">
-      <!--      TODO sort by-->
 
-      <div class="flex gap-1">
-        <Toggle v-model:pressed="commandsView.showRunningOnly">Running</Toggle>
-        <Toggle v-model:pressed="commandsView.showFavoritesOnly">
+    <div class="flex items-center gap-2 flex-wrap">
+      <Button
+        v-if="commandsView.isFilterChanged"
+        class="rounded-md bg-destructive/10"
+        size="sm"
+        @click="commandsView.clearFilter()"
+      >
+        <ClearIcon />
+        Clear Filters
+      </Button>
+
+      <div class="flex items-end ml-auto gap-2.5">
+        <Toggle v-model="commandsView.showRunningOnly">Running</Toggle>
+        <Toggle v-model="commandsView.showFavoritesOnly">
           <span class="h-2 w-2 rounded-full bg-current" />
           Favorites
         </Toggle>
       </div>
 
+      <CategorySelect v-model="commandsView.filterCategory" />
       <DataViewToggle v-model:view="commandsView.view" />
-
-      <CreateCommandsDialog v-model:open="createDialogOpen" view-trigger />
     </div>
-    <div class="flex items-end ml-auto gap-2.5">
-      <SearchButton />
-      <Select v-model="commandsView.filterCategory">
-        <SelectTrigger class="w-30 md:w-35">
-          <SelectValue placeholder="All categories" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All categories</SelectItem>
-          <SelectItem v-for="c in categories" :key="c.id" :value="c.id">
-            <span class="mr-2">{{ c.icon }}</span>
-            {{ c.name }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-  </header>
+  </div>
 </template>
