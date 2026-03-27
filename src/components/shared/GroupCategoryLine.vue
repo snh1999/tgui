@@ -4,13 +4,17 @@
   import { capitalize, computed } from "vue";
   import { ICategory } from "@/lib/api/api.types.ts";
 
-  const props = defineProps<{ category: ICategory; compact?: boolean }>();
+  /** using ICategory instead of custom type as this has common values of IGroup as well*/
+  const props = defineProps<{
+    element: Omit<ICategory, "createdAt" | "id">;
+    compact?: boolean;
+  }>();
 
   const iconComponent = computed(() => {
-    if (!props.category?.icon) {
+    if (!props.element?.icon) {
       return null;
     }
-    return (Icons as Record<string, unknown>)[props.category.icon] ?? null;
+    return (Icons as Record<string, unknown>)[props.element.icon] ?? null;
   });
 </script>
 
@@ -19,12 +23,12 @@
     :is="iconComponent"
     v-if="iconComponent"
     :size="16"
-    :style="{ color: category.color }"
+    :style="{ color: element.color }"
   />
   <span
     v-else-if="!compact"
     class="inline-block rounded-md shrink-0  w-4 h-4"
-    :style="{ backgroundColor: category.color?? 'grey' }"
+    :style="{ backgroundColor: element.color?? 'grey' }"
   />
-  {{ capitalize(category.name) }}
+  {{ capitalize(element.name) }}
 </template>

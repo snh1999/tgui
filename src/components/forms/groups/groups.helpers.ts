@@ -17,6 +17,7 @@ export const groupFormSchema = groupCommandFormSchema.extend({
 
 export interface IUpsertGroupForm {
   group?: IGroup;
+  isCreate?: boolean;
 }
 
 export function useGroupForm(props: IUpsertGroupForm, onSuccess: () => void) {
@@ -43,12 +44,14 @@ export function useGroupForm(props: IUpsertGroupForm, onSuccess: () => void) {
   const { mutate: updateGroup, isPending: isUpdatePending } = useUpdateGroup();
 
   const isPending = computed(() =>
-    props.group ? isUpdatePending.value : isCreatePending.value
+    props.group && !props.isCreate
+      ? isUpdatePending.value
+      : isCreatePending.value
   );
 
   const onSubmit = handleSubmit((rawData) => {
     const data = transformEnvVars(rawData);
-    if (props.group) {
+    if (props.group && !props.isCreate) {
       updateGroup(
         { id: props.group.id, payload: data },
         { onSuccess: () => onSuccess() }

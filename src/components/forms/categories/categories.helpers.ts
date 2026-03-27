@@ -45,7 +45,9 @@ export function useCategoryForm(
     useUpdateCategory();
 
   const isPending = computed(() =>
-    props.category ? isUpdatePending.value : isCreatePending.value
+    props.category && !props.isCreate
+      ? isUpdatePending.value
+      : isCreatePending.value
   );
 
   const onSubmit = handleSubmit((data) => {

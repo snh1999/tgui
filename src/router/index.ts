@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from "vue-router";
 import CategoryPage from "@/pages/CategoryPage.vue";
 import CommandsPage from "@/pages/CommandsPage.vue";
 import EmptyCategoriesPage from "@/pages/EmptyCategoriesPage.vue";
+import GroupsPage from "@/pages/GroupsPage.vue";
 import SettingsPage from "@/pages/SettingsPage.vue";
 
 export const routePaths = {
@@ -26,9 +27,10 @@ const router = createRouter({
       name: "category",
       component: CategoryPage,
     },
+    { path: routePaths.groups, name: "groups", component: GroupsPage },
+    { path: `${routePaths.groups}/:id`, name: "group", component: GroupsPage },
     { path: routePaths.settings, name: "settings", component: SettingsPage },
   ],
 });
-
 export default router;
 export type TRoutePaths = keyof typeof routePaths;
