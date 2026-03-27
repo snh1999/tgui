@@ -108,10 +108,10 @@ export const groupsApi = {
     invoke<void>("move_group_between", { ...movePosition }),
 
   getGroupTree: (rootId: number) =>
-    invoke<string[]>("get_group_tree", { rootId }),
+    invoke<IGroupNode>("get_group_tree", { rootId }),
 
   getGroupPath: (rootId: number) =>
-    invoke<IGroupNode>("get_group_path", { rootId }),
+    invoke<string[]>("get_group_path", { rootId }),
 
   getGroupCommandCount: (id: number) =>
     invoke<number>("get_groups_count", { id }),

@@ -1,19 +1,14 @@
 <script setup lang="ts">
-  import { ChevronRight, ListPlus, Plus, Settings } from "lucide-vue-next";
+  import { ListPlus, Settings } from "lucide-vue-next";
   import { useRoute } from "vue-router";
-  import { GroupIcon } from "@/assets/Icons.ts";
-  import CreateCategoryDialog from "@/components/forms/categories/CreateCategoryDialog.vue";
-  import { Collapsible } from "@/components/ui/collapsible";
+  import { CategoryIcon, GroupIcon } from "@/assets/Icons.ts";
   import {
     SidebarGroup,
-    SidebarGroupAction,
     SidebarGroupContent,
-    SidebarGroupLabel,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
   } from "@/components/ui/sidebar";
-  import { useGetCategories } from "@/lib/api/composables/categories.ts";
 
   const route = useRoute();
   const isMenuActive = (path: string) => path === route.path;
@@ -30,13 +25,16 @@
       icon: GroupIcon,
     },
     {
+      title: "Categories",
+      url: "/categories",
+      icon: CategoryIcon,
+    },
+    {
       title: "Settings",
       url: "/settings",
       icon: Settings,
     },
   ];
-
-  const { data: categories } = useGetCategories();
 </script>
 
 <template>
@@ -53,32 +51,5 @@
         </SidebarMenuItem>
       </SidebarMenu>
     </SidebarGroupContent>
-  </SidebarGroup>
-  <SidebarGroup as-child>
-    <Collapsible default-open class="group/collapsible">
-      <SidebarGroupLabel as-child>
-        <CollapsibleTrigger
-          class="group/label w-full text-left text-sm text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground [&[data-state=open]>svg]:rotate-90"
-        >
-          Categories
-          <ChevronRight
-            class="transition-transform group-data-[state=open]/collapsible:rotate-90"
-          />
-        </CollapsibleTrigger>
-        <SidebarGroupAction>
-          <Plus />
-          <CreateCategoryDialog viewTrigger />
-        </SidebarGroupAction>
-      </SidebarGroupLabel>
-      <CollapsibleContent>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            <SidebarMenuItem v-for="category in categories" :key="category.id">
-              {{ category.name }}
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </CollapsibleContent>
-    </Collapsible>
   </SidebarGroup>
 </template>
