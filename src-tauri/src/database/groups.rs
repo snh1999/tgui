@@ -214,12 +214,12 @@ impl Database {
             params![root_id],
             Self::row_to_group,
         )?;
-        
-        if flat.len() == 0{
+
+        if flat.len() == 0 {
             return Err(DatabaseError::NotFound {
                 id: root_id,
-                entity: GROUPS_TABLE
-            })
+                entity: GROUPS_TABLE,
+            });
         }
 
         let mut children_map: HashMap<i64, Vec<i64>> = HashMap::new();
@@ -239,7 +239,11 @@ impl Database {
             let group = nodes.remove(&id).unwrap();
             let children = children_map
                 .get(&id)
-                .map(|ids| ids.iter().map(|&cid| build(cid, nodes, children_map)).collect())
+                .map(|ids| {
+                    ids.iter()
+                        .map(|&cid| build(cid, nodes, children_map))
+                        .collect()
+                })
                 .unwrap_or_default();
             GroupNode { group, children }
         }

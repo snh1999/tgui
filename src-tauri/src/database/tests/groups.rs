@@ -742,10 +742,16 @@ fn tree_includes_multiple_levels_of_nesting() {
     let root_id = test_db.create_test_group("Root");
     let child_id =
         test_db.save_group_to_db(&GroupBuilder::new("Child").with_parent(root_id).build());
-    let grandchild_id = test_db
-        .save_group_to_db(&GroupBuilder::new("Grandchild").with_parent(child_id).build());
-    let great_id = test_db
-        .save_group_to_db(&GroupBuilder::new("Great").with_parent(grandchild_id).build());
+    let grandchild_id = test_db.save_group_to_db(
+        &GroupBuilder::new("Grandchild")
+            .with_parent(child_id)
+            .build(),
+    );
+    let great_id = test_db.save_group_to_db(
+        &GroupBuilder::new("Great")
+            .with_parent(grandchild_id)
+            .build(),
+    );
 
     let tree = test_db.db.get_group_tree(root_id).unwrap();
 
@@ -767,12 +773,21 @@ fn tree_includes_all_siblings_and_preserves_order() {
     let branch2_id =
         test_db.save_group_to_db(&GroupBuilder::new("Branch2").with_parent(root_id).build());
 
-    let b1_child1_id = test_db
-        .save_group_to_db(&GroupBuilder::new("B1Child1").with_parent(branch1_id).build());
-    let b1_child2_id = test_db
-        .save_group_to_db(&GroupBuilder::new("B1Child2").with_parent(branch1_id).build());
-    let b2_child1_id = test_db
-        .save_group_to_db(&GroupBuilder::new("B2Child1").with_parent(branch2_id).build());
+    let b1_child1_id = test_db.save_group_to_db(
+        &GroupBuilder::new("B1Child1")
+            .with_parent(branch1_id)
+            .build(),
+    );
+    let b1_child2_id = test_db.save_group_to_db(
+        &GroupBuilder::new("B1Child2")
+            .with_parent(branch1_id)
+            .build(),
+    );
+    let b2_child1_id = test_db.save_group_to_db(
+        &GroupBuilder::new("B2Child1")
+            .with_parent(branch2_id)
+            .build(),
+    );
 
     let tree = test_db.db.get_group_tree(root_id).unwrap();
 
@@ -796,8 +811,7 @@ fn tree_includes_all_siblings_and_preserves_order() {
 fn tree_of_leaf_node_returns_only_itself() {
     let test_db = TestDb::setup_test_db();
     let root_id = test_db.create_test_group("Root");
-    let leaf_id =
-        test_db.save_group_to_db(&GroupBuilder::new("Leaf").with_parent(root_id).build());
+    let leaf_id = test_db.save_group_to_db(&GroupBuilder::new("Leaf").with_parent(root_id).build());
 
     let tree = test_db.db.get_group_tree(leaf_id).unwrap();
 

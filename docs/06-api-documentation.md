@@ -351,7 +351,7 @@ const totalCount = await invoke('get_commands_count', {
 - Case-insensitive matching using SQLite `LIKE`
 - Searches across `name`, `command`, and `description` fields
 - Pattern: `%search_term%` (substring match)
-- Ordering: `is_favorite DESC, updated_at DESC` (favorites first, then most recently updated)
+- Ordering: `is_favorite DESC, position` (favorites first, then regular ordering)
 - Special characters (`%`, `_`) in search term are treated as wildcards by SQLite
 - Empty Search Term returns all commands ordered by favorites and updated_at
 
@@ -677,7 +677,6 @@ interface GroupNode {
 - `Err(NotFound { entity: "groups", id })`: No group with `root_id` exists
 
 **Usage**:
-
 ```typescript
 const tree = await invoke('get_group_tree', { rootId: 3 })
 // tree.group       → the root group
@@ -1521,7 +1520,7 @@ enum Status {
     Running,
     Success,
     Failed,
-    TimedOut,
+    TimeOut,
     Cancelled,
     Skipped,
     Paused,

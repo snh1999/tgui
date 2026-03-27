@@ -128,7 +128,8 @@ INSERT OR REPLACE INTO schema_version (version) VALUES (1);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_groups_position ON groups(parent_group_id, position);
-CREATE INDEX IF NOT EXISTS idx_groups_parent ON groups(parent_group_id);
+CREATE INDEX IF NOT EXISTS idx_groups_category ON groups(category_id);
+CREATE INDEX IF NOT EXISTS idx_groups_favorite ON groups(is_favorite) WHERE is_favorite = 1;
 CREATE INDEX IF NOT EXISTS idx_groups_name ON groups(name);
 
 CREATE INDEX IF NOT EXISTS idx_commands_category ON commands(category_id);
@@ -137,13 +138,15 @@ CREATE INDEX IF NOT EXISTS idx_commands_position ON commands(group_id, position)
 CREATE INDEX IF NOT EXISTS idx_commands_name ON commands(name);
 
 CREATE INDEX IF NOT EXISTS idx_workflows_name ON workflows(name);
+CREATE INDEX IF NOT EXISTS idx_workflows_favorite ON workflows(is_favorite) WHERE is_favorite = 1;
 CREATE INDEX IF NOT EXISTS idx_workflows_category ON workflows(category_id);
 CREATE INDEX IF NOT EXISTS idx_workflow_steps_workflow ON workflow_steps(workflow_id);
 CREATE INDEX IF NOT EXISTS idx_workflow_steps_command ON workflow_steps(command_id);
-CREATE INDEX IF NOT EXISTS idx_workflow_steps_position ON workflow_steps(workflow_id, command_id, position);
+CREATE INDEX IF NOT EXISTS idx_workflow_steps_position ON workflow_steps(workflow_id, position);
+CREATE INDEX IF NOT EXISTS idx_workflow_steps_workflow_enabled ON workflow_steps(workflow_id, enabled);
 
--- CREATE INDEX IF NOT EXISTS idx_execution_history_command ON execution_history(command_id);
--- CREATE INDEX IF NOT EXISTS idx_execution_history_workflow ON execution_history(workflow_id);
+
+
 CREATE INDEX IF NOT EXISTS idx_execution_history_workflow_step ON execution_history(command_id, workflow_id, workflow_step_id);
 CREATE INDEX IF NOT EXISTS idx_execution_history_status ON execution_history(status);
 CREATE INDEX IF NOT EXISTS idx_execution_history_command_status ON execution_history(command_id, status);
@@ -196,7 +199,7 @@ SET
         ELSE started_at
     END,
     completed_at = CASE
-       WHEN NEW.status IN ('success', 'failed', 'timeout', 'cancelled', 'completed')
+       WHEN NEW.status IN ('success', 'failed', 'timeout', 'cancelled')
            AND OLD.status = 'running'
            THEN CURRENT_TIMESTAMP
        ELSE completed_at
