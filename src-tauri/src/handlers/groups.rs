@@ -52,7 +52,6 @@ pub fn get_group_tree(
     db.get_group_tree(root_id).map_err(|err| err.into())
 }
 
-
 #[tauri::command]
 pub fn get_group_path(
     db: State<'_, Database>,
@@ -65,4 +64,3 @@ pub fn get_group_path(
 pub fn toggle_group_favorite(db: State<'_, Database>, id: i64) -> Result<(), SerializableError> {
     db.toggle_group_favorite(id).map_err(|err| err.into())
 }
-

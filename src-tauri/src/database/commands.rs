@@ -213,7 +213,7 @@ impl Database {
         self.query_database(
             "SELECT * FROM commands
          WHERE name LIKE ?1 OR command LIKE ?1 OR description LIKE ?1
-         ORDER BY is_favorite DESC, updated_at DESC",
+         ORDER BY is_favorite DESC, position",
             params![pattern],
             Self::row_to_command,
         )
