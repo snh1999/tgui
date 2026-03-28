@@ -42,3 +42,5 @@ export { default as PlayCircleIcon } from "~icons/solar/play-circle-bold";
 export { default as SunIcon } from "~icons/solar/sun-bold-duotone";
 
 export { default as ClearIcon } from "~icons/material-symbols/mop";
+
+export {default as DragIcon} from '~icons/mdi/drag';
