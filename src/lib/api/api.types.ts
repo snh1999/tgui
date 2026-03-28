@@ -56,6 +56,42 @@ export interface IMovePosition {
   nextId?: number;
 }
 
+export interface ISpawnContext {
+  commandId: number;
+  name: string;
+  executable: string;
+  arguments: string[];
+  workingDirectory: string;
+  envVars?: Map<string, string> | null;
+  shell?: string | null;
+}
+
+export interface IProcessInfo {
+  executionId: number;
+  pid: number;
+  commandId: number;
+  commandName: string;
+  command: string;
+  status: TProcessStatus;
+  startTime: string;
+  exitCode?: number | null;
+  logLineCount: number;
+}
+
+export type TProcessStatus =
+  | "Idle"
+  | { type: "running"; pid: number; startTime: string }
+  | { type: "stopping"; since: string }
+  | { type: "stopped"; exitCode: number; completedAt: string }
+  | { type: "error"; exitCode?: number; message: string };
+
+export interface ILogLine {
+  executionId: number;
+  timestamp: string;
+  content: string;
+  isStderr: boolean;
+}
+
 export interface IGroup extends IGroupCommandCommon {
   parentGroupId?: number | null;
   icon?: string | null;

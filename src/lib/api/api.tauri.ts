@@ -8,7 +8,10 @@ import type {
   IExecutionStats,
   IGroup,
   IGroupNode,
+  ILogLine,
   IMovePosition,
+  IProcessInfo,
+  ISpawnContext,
   ITrayStatus,
   IWorkflow,
   IWorkflowFilter,
@@ -187,6 +190,35 @@ export const workflowStepApi = {
 };
 
 export const processHandlerApi = {
+  resolveCommandContext: (commandId: number) =>
+    invoke<ISpawnContext>("resolve_command_context", { commandId }),
+
+  spawnCommand: (commandId: number) =>
+    invoke<number>("spawn_command", { commandId }),
+
+  killProcess: (executionId: number) =>
+    invoke<void>("kill_process", {
+      executionId,
+    }),
+
+  getRunningProcess: () => invoke<IProcessInfo[]>("get_running_process"),
+
+  getProcessStatus: (executionId: number) =>
+    invoke<IProcessInfo>("get_process_status", { executionId }),
+
+  getLogBuffer: (executionId: number, offset: number, limit: number) =>
+    invoke<ILogLine>("get_log_buffer", {
+      executionId,
+      offset,
+      limit,
+    }),
+
+  clearLogBuffer: (executionId: number) =>
+    invoke<void>("clear_log_buffer", { executionId }),
+
+  stopAllProcess: (force: boolean) =>
+    invoke<number>("stop_all_processes", { force }),
+
   getTrayStatus: () => invoke<ITrayStatus>("get_tray_status"),
 
   getValidShells: () => invoke<string[]>("get_valid_shells"),
@@ -197,6 +229,12 @@ export const executionHistoryApi = {
     invoke<IExecutionHistory[]>("get_command_execution_history", { commandId }),
 
   getRunningCommands: () => invoke<IExecutionHistory[]>("get_running_commands"),
+
+  cleanupCommandHistory: (commandId: number, keepLast: number) =>
+    invoke<void>("cleanup_command_history", { commandId, keepLast }),
+
+  cleanupHistoryOlderThan: (days: number) =>
+    invoke<void>("cleanup_history_older_than", { days }),
 
   getStats: (target: StatsTarget, days?: number) =>
     invoke<IExecutionStats>("get_execution_stats", { target, days }),
