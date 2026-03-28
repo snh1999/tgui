@@ -351,7 +351,7 @@ const totalCount = await invoke('get_commands_count', {
 - Case-insensitive matching using SQLite `LIKE`
 - Searches across `name`, `command`, and `description` fields
 - Pattern: `%search_term%` (substring match)
-- Ordering: `is_favorite DESC, updated_at DESC` (favorites first, then most recently updated)
+- Ordering: `is_favorite DESC, position, updated_at DESC` (favorites first, then regular ordering and update time as tiebreaker)
 - Special characters (`%`, `_`) in search term are treated as wildcards by SQLite
 - Empty Search Term returns all commands ordered by favorites and updated_at
 
@@ -661,22 +661,27 @@ const count = await invoke('get_group_command_count', {id: 5})
 
 ### Get Group Tree
 
-`get_group_tree(root_id: GroupId) -> Result<Vec<Group>>`
+`get_group_tree(root_id: GroupId) -> Result<GroupNode>`
 
-**Description**: Recursively retrieves a group and all its descendants using SQL recursive CTE.
+**Description**: Recursively retrieves a group and all its descendants as a nested tree using a SQL recursive CTE.
 
-**Returns**: Flattened array of groups ordered by `depth ASC, position ASC`
+**Returns**: A single `GroupNode` rooted at `root_id`, with children recursively populated and ordered by `position`.
+```typescript
+interface GroupNode {
+  group: Group
+  children: GroupNode[]  // ordered by position, empty for leaf nodes
+}
+```
 
-- root is always first,
-- then all depth-1 children by position,
-- then depth-2, and so on. A single-node tree returns just the root.
+**Errors**:
+- `Err(NotFound { entity: "groups", id })`: No group with `root_id` exists
 
 **Usage**:
-
 ```typescript
-// Get entire subtree starting from group 3
-const tree = await invoke('get_group_tree', {rootId: 3})
-// Returns [group_3, child_1, child_2, grandchild_1, ...]
+const tree = await invoke('get_group_tree', { rootId: 3 })
+// tree.group       → the root group
+// tree.children    → direct children, each with their own children
+// tree.children[0].children → grandchildren of first child
 ```
 
 ---
@@ -1515,7 +1520,7 @@ enum Status {
     Running,
     Success,
     Failed,
-    TimedOut,
+    TimeOut,
     Cancelled,
     Skipped,
     Paused,

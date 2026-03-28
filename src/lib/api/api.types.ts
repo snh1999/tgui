@@ -61,6 +61,11 @@ export interface IGroup extends IGroupCommandCommon {
   icon?: string | null;
 }
 
+export interface IGroupNode {
+  group: IGroup;
+  children: IGroupNode[];
+}
+
 export interface IWorkflowFilter {
   categoryId?: number;
   favoritesOnly: boolean;

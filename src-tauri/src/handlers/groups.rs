@@ -1,4 +1,4 @@
-use crate::database::{CategoryFilter, Database, Group, GroupFilter};
+use crate::database::{CategoryFilter, Database, Group, GroupFilter, GroupNode};
 use crate::handlers::serialize_errors::SerializableError;
 use tauri::State;
 
@@ -42,6 +42,14 @@ pub fn move_group_between(
 #[tauri::command]
 pub fn delete_group(db: State<'_, Database>, id: i64) -> Result<(), SerializableError> {
     db.delete_group(id).map_err(|err| err.into())
+}
+
+#[tauri::command]
+pub fn get_group_tree(
+    db: State<'_, Database>,
+    root_id: i64,
+) -> Result<GroupNode, SerializableError> {
+    db.get_group_tree(root_id).map_err(|err| err.into())
 }
 
 #[tauri::command]

@@ -712,8 +712,8 @@ fn test_get_group_tree_root_only() {
 
     let tree = test_db.db.get_group_tree(root_id).unwrap();
 
-    assert_eq!(tree.len(), 1);
-    assert_eq!(tree[0].id, root_id);
+    assert_eq!(tree.group.id, root_id);
+    assert!(tree.children.is_empty());
 }
 
 #[test]
@@ -726,14 +726,14 @@ fn test_get_group_tree() {
     let web_id = test_db.save_group_to_db(&GroupBuilder::new("Web").with_parent(root_id).build());
 
     let tree = test_db.db.get_group_tree(root_id).unwrap();
-    assert_eq!(tree.len(), 4); // All descendants + root
 
-    // Should include all levels
-    let ids: Vec<i64> = tree.iter().map(|g| g.id.clone()).collect();
-    assert!(ids.contains(&root_id));
-    assert!(ids.contains(&auth_id));
-    assert!(ids.contains(&api_id));
-    assert!(ids.contains(&web_id));
+    assert_eq!(tree.group.id, root_id);
+    assert_eq!(tree.children.len(), 3);
+
+    let child_ids: Vec<i64> = tree.children.iter().map(|n| n.group.id).collect();
+    assert!(child_ids.contains(&api_id));
+    assert!(child_ids.contains(&auth_id));
+    assert!(child_ids.contains(&web_id));
 }
 
 #[test]
@@ -754,13 +754,13 @@ fn tree_includes_multiple_levels_of_nesting() {
     );
 
     let tree = test_db.db.get_group_tree(root_id).unwrap();
-    let ids: Vec<i64> = tree.iter().map(|g| g.id).collect();
 
-    assert_eq!(tree.len(), 4);
-    assert!(ids.contains(&root_id));
-    assert!(ids.contains(&child_id));
-    assert!(ids.contains(&grandchild_id));
-    assert!(ids.contains(&great_id));
+    assert_eq!(tree.group.id, root_id);
+    let child = &tree.children[0];
+    assert_eq!(child.group.id, child_id);
+    let grandchild = &child.children[0];
+    assert_eq!(grandchild.group.id, grandchild_id);
+    assert_eq!(grandchild.children[0].group.id, great_id);
 }
 
 #[test]
@@ -768,13 +768,11 @@ fn tree_includes_all_siblings_and_preserves_order() {
     let test_db = TestDb::setup_test_db();
     let root_id = test_db.create_test_group("Root");
 
-    // Two branches under root
     let branch1_id =
         test_db.save_group_to_db(&GroupBuilder::new("Branch1").with_parent(root_id).build());
     let branch2_id =
         test_db.save_group_to_db(&GroupBuilder::new("Branch2").with_parent(root_id).build());
 
-    // Each branch has children
     let b1_child1_id = test_db.save_group_to_db(
         &GroupBuilder::new("B1Child1")
             .with_parent(branch1_id)
@@ -792,31 +790,21 @@ fn tree_includes_all_siblings_and_preserves_order() {
     );
 
     let tree = test_db.db.get_group_tree(root_id).unwrap();
-    let ids: Vec<i64> = tree.iter().map(|g| g.id).collect();
 
-    // Root comes first, then children ordered by position
-    assert_eq!(ids[0], root_id, "Root must be first");
+    assert_eq!(tree.group.id, root_id);
+    assert_eq!(tree.children.len(), 2);
 
-    // Both branches present before their children
-    let branch1_pos = ids.iter().position(|&id| id == branch1_id).unwrap();
-    let branch2_pos = ids.iter().position(|&id| id == branch2_id).unwrap();
-    let b1c1_pos = ids.iter().position(|&id| id == b1_child1_id).unwrap();
-    let b1c2_pos = ids.iter().position(|&id| id == b1_child2_id).unwrap();
-    let b2c1_pos = ids.iter().position(|&id| id == b2_child1_id).unwrap();
+    let branch1 = &tree.children[0];
+    let branch2 = &tree.children[1];
+    assert_eq!(branch1.group.id, branch1_id);
+    assert_eq!(branch2.group.id, branch2_id);
 
-    assert!(
-        branch1_pos < b1c1_pos,
-        "Branch1 must appear before its children"
-    );
-    assert!(
-        branch1_pos < b1c2_pos,
-        "Branch1 must appear before its children"
-    );
-    assert!(
-        branch2_pos < b2c1_pos,
-        "Branch2 must appear before its children"
-    );
-    assert_eq!(tree.len(), 6);
+    assert_eq!(branch1.children.len(), 2);
+    assert_eq!(branch1.children[0].group.id, b1_child1_id);
+    assert_eq!(branch1.children[1].group.id, b1_child2_id);
+
+    assert_eq!(branch2.children.len(), 1);
+    assert_eq!(branch2.children[0].group.id, b2_child1_id);
 }
 
 #[test]
@@ -826,8 +814,9 @@ fn tree_of_leaf_node_returns_only_itself() {
     let leaf_id = test_db.save_group_to_db(&GroupBuilder::new("Leaf").with_parent(root_id).build());
 
     let tree = test_db.db.get_group_tree(leaf_id).unwrap();
-    assert_eq!(tree.len(), 1);
-    assert_eq!(tree[0].id, leaf_id);
+
+    assert_eq!(tree.group.id, leaf_id);
+    assert!(tree.children.is_empty());
 }
 
 #[test]
@@ -836,23 +825,25 @@ fn tree_does_not_include_unrelated_groups() {
     let root_id = test_db.create_test_group("Root");
     let child_id =
         test_db.save_group_to_db(&GroupBuilder::new("Child").with_parent(root_id).build());
-    let unrelated_id = test_db.create_test_group("Unrelated");
+    test_db.create_test_group("Unrelated");
 
     let tree = test_db.db.get_group_tree(root_id).unwrap();
-    let ids: Vec<i64> = tree.iter().map(|g| g.id).collect();
 
-    assert!(ids.contains(&child_id));
-    assert!(
-        !ids.contains(&unrelated_id),
-        "Unrelated group should not appear in tree"
-    );
+    assert_eq!(tree.children.len(), 1);
+    assert_eq!(tree.children[0].group.id, child_id);
 }
 
 #[test]
-fn tree_nonexistent_root_returns_empty() {
+fn tree_nonexistent_root_returns_not_found() {
     let test_db = TestDb::setup_test_db();
-    let tree = test_db.db.get_group_tree(99).unwrap();
-    assert!(tree.is_empty());
+    let result = test_db.db.get_group_tree(99);
+    assert!(matches!(
+        result,
+        Err(DatabaseError::NotFound {
+            entity: GROUPS_TABLE,
+            id: 99
+        })
+    ));
 }
 
 #[test]

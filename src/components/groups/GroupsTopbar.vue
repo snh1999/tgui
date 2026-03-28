@@ -1,8 +1,8 @@
 <script setup lang="ts">
-  import { Copy, X } from "lucide-vue-next";
+  import { Copy } from "lucide-vue-next";
   import { ref } from "vue";
   import { useRouter } from "vue-router";
-  import { DeleteIcon } from "@/assets/Icons.ts";
+  import { ClearIcon, DeleteIcon } from "@/assets/Icons.ts";
   import CategorySelect from "@/components/forms/common/CategorySelect.vue";
   import CreateGroupDialog from "@/components/forms/groups/CreateGroupDialog.vue";
   import UpdateGroupDialog from "@/components/forms/groups/UpdateGroupDialog.vue";
@@ -43,15 +43,14 @@
 </script>
 
 <template>
-  <div class="px-5 py-4 flex flex-col gap-4">
-    <div class="flex items-center justify-between  gap-3 shrink-0 flex-wrap">
+  <div class="flex flex-col gap-4 px-5 py-4 ">
+    <div class="flex items-center justify-between gap-3 shrink-0 flex-wrap">
       <div class="flex items-baseline gap-2.5">
         <h1 v-if="!group" class="text-base font-bold tracking-[-0.02em]">
           Groups
         </h1>
         <GroupCategoryLine v-else :element="group" />
       </div>
-
       <div v-if="group" class="flex items-center gap-2">
         <UpdateGroupDialog
           :id="group.id"
@@ -90,7 +89,8 @@
         size="sm"
         @click="groupsView.clearFilter()"
       >
-        Clear Filters <X />
+        <ClearIcon />
+        Clear Filters
       </Button>
       <div class="flex gap-3">
         <CategorySelect v-model="groupsView.filterCategory" />
