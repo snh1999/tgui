@@ -41,8 +41,6 @@ and Vue frontend.
 **Status Deserialization**: Unknown status strings in DB default to `ExecutionStatus::Completed`
 with a warning log. This is a safety fallback, not a valid state to set intentionally.
 
-
-
 ## Command Management
 
 ### Create Command
@@ -702,8 +700,6 @@ const path = await invoke('get_group_path', {groupId: 8})
 // Useful for displaying: Root > Docker > Production > Database
 ```
 
----
----
 
 ### Search Groups
 
@@ -1732,7 +1728,7 @@ const stats = await invoke('get_execution_stats', { target: { Command: commandId
 
 ### Command Execution
 
-`spawn_command(command_id: CommandId) -> Result<Pid, Error>`
+`spawn_command(command_id: i64) -> Result<i64, Error>`
 
 **Description**: Spawns process by running a saved command and start streaming logs.
 
@@ -1747,27 +1743,31 @@ const stats = await invoke('get_execution_stats', { target: { Command: commandId
 
 **Parameters**:
 
-- `id`: Command ID from database
-- `window`: Tauri window handle (for emitting events), Optional
+- `command_id`: Command ID from database
+
+[//]: # (- `window`: Tauri window handle &#40;for emitting events&#41;, Optional)
 
 **Returns**:
 
-- `Ok(pid)`: Process ID (i64) on success
+- `Ok(execution_id)`: Execution history ID (i64) on success
 - `Err(msg)`: Error message
 
 **Events Emitted**:
 
-- process-started: `{ pid: number, commandId: number, command: string, timestamp: number }`
+- process-started: `{ executionId: number, pid: number, commandId: number, commandName: string, timestamp: string }`
+- process-status-changed: `{ executionId: number, oldStatus: ProcessStatus, newStatus: ProcessStatus, timestamp: string }`
 - log-line: `{ pid: number, line: string, source: 'stdout' | 'stderr', timestamp: number }` (
   repeated for each line)
-- process-stopped: `{ pid: number, exitCode: number, signal?: string }`
+- log-batch: `{ LogLineEvent[] }` (batched every 50ms or 50 lines)
+-  process-stopped: `{ executionId: number, pid: number, exitCode?: number, status: ExecutionStatus, timestamp: string }`
+
 
 **Errors**:
 
 - **Command not found**: Command not in PATH, Invalid command ID
 - **Directory not found**: Working directory doesn't exist
-- **Permission denied**: Can't execute command
-- **Already running**: Command is already running, Process with same PID exists
+- **Invalid shell**: Shell is not in allowed list
+- **Database error**: Command is already running, Execution history for command (with running status) already exists
 
 **Usage**:
 
@@ -1775,72 +1775,119 @@ const stats = await invoke('get_execution_stats', { target: { Command: commandId
 import { listen } from '@tauri-apps/api/event'
 
 // Start listening for logs
-const unlisten = await listen('log-line', (event) => {
-  const {pid, line, source, timestamp} = event.payload
-  console.log(`[${pid}] ${source}: ${line}`)
+const unlistenLog = await listen('log-line', (event) => {
+  const { executionId, content, isStderr, timestamp } = event.payload
+  console.log(`[${executionId}] ${isStderr ? 'stderr' : 'stdout'}: ${content}`)
+})
+
+// Start listening for status changes
+const unlistenStatus = await listen('process-status-changed', (event) => {
+  const { executionId, oldStatus, newStatus } = event.payload
+  console.log(`Process ${executionId}: ${oldStatus} -> ${newStatus}`)
 })
 
 // Execute command
-const pid = await invoke('spawn_command', {id: commandId})
+const executionId = await invoke('spawn_command', { commandId: 5 })
 
-// Clean up listener when done
-unlisten()
+// Clean up listeners when done
+unlistenLog()
+unlistenStatus()
+```
+
+### Resolve Command Context
+`resolve_command_context(command_id: i64) -> Result<SpawnContext, SerializableError>`
+
+**Description**: 
+Resolves the full spawn context for a command including inherited working directory, environment variables, and shell from its group hierarchy.
+
+**Parameters**:
+- `command_id`: Command ID from database
+
+**Returns**:
+- `Ok(context)`: `SpawnContext` object with resolved values
+- `Err(error)`: SerializableError
+
+**SpawnContext Structure**:
+```typescript
+interface SpawnContext {
+    commandId: number
+    name: string
+    executable: string
+    arguments: string[]
+    workingDirectory: string
+    envVars: [string, string][]
+    shell?: string
+}
 ```
 
 ---
 
 ### Process Termination
 
-`termination_process(pid: Pid, force: bool) -> Result<(), Error>`
+`kill_process(execution_id: i64, force: bool) -> Result<(), Error>`
 
 **Description**: Stop and send signal to running process.
 
 **Parameters**:
 
-- `pid`: Process ID (i64)
+- `execution_id`: Execution ID with running status
 - `force`: boolean
     - false: Send `SIGTERM` (graceful)
     - true: Send `SIGKILL` (immediate, Show dialog for confirmation)
 
 **Events Emitted**:
-
-- process-stopped { pid, exit_code, timestamp }
+- process-status-changed: Emitted with `Stopping` status when kill initiated
+- process-stopped: `{ pid, exit_code, timestamp }` when process stops
 
 **Returns**:
 
 - `Ok(())`: Signal sent successfully
 - `Err(msg)`: Error message
 
+
+**Errors**:
+- Not found: Process not found
+- Already exited: Process already terminated
+
 **Usage**:
 
 ```typescript
 // Graceful stop
-await invoke('kill_process', {pid: 12345, force: true})
+await invoke('kill_process', { executionId: 123, force: false })
 
 // Force kill (after confirmation)
-await invoke('kill_process', {pid: 12345, force: true})
+await invoke('kill_process', { executionId: 123, force: true })
 ```
 
 ---
 
-### Running Processes
+### List Running Processes
 
-`get_running_processes(state: State) -> Result<Vec, String>`
+`get_running_processes() -> Result<Vec<ProcessInfo>, SerializableError>`
 
-**Description**: Get all currently running processes.
+**Description**: Get all currently running processes (in memory retrieval not Database)
 
 **Returns**:
 
 ```typescript
 interface ProcessInfo {
+  executionId: number
   pid: number
   commandId: number
   commandName: string
   command: string
-  status: 'Running' | 'Stopping' | 'Stopped' | 'Error'
-  startTime: number // Unix timestamp
+  status: ProcessStatus
+  startTime: string
   exitCode?: number
+  logLineCount: number
 }
+
+type TProcessStatus = 
+  | 'Idle' 
+| { type: 'running', pid: number, startTime: string }
+| { type: 'stopping', since: string }
+| { type: 'stopped', exitCode: number, completedAt: string }
+| { type: 'error', exitCode?: number, message: string }
 
 const processes = await invoke('get_running_processes')
 ```
@@ -1849,41 +1896,35 @@ const processes = await invoke('get_running_processes')
 
 ### Get process Status
 
-`get_process_status(pid: Pid) -> ProcessStatus`
+`get_process_status(execution_id: i64) -> Result<ProcessInfo, SerializableError>`
 
-**Description**: Returns current process state by Id.
+**Description**: Returns current process state by execution ID.
+
+**Parameters**:
+- `execution_id`: Execution history ID
 
 **Returns**:
-
-```rust
-enum ProcessStatus {
-    Idle,
-    Running { pid: i64, start_time: u64 },
-    Stopping,
-    Stopped { exit_code: i32 },
-    Error { exit_code: i32, message: String },
-}
-```
+- `Ok(processInfo)`: Full `ProcessInfo` object
+- `Err(error)`: Error with "Process not found" if invalid ID
 
 ---
 
-### Terminate all process
+### Stop all process
 
 `stop_all_processes() -> Result<i64, Error>`
 
-<!--TODO: consider passing a Optional array if needed-->
-
 **Description**: Stops all running processes.
+
+**Parameters**:
+- `force`: If true, force kill all; otherwise graceful terminate
 
 **Returns**:
 
 - `OK(count)`: Count for killed process.
-- `Err("Something went wrong")`
 
 **Confirmation** : Always required (modal dialog)
 
-**Events Emitted**: process-stopped for each process
-
+**Events Emitted**: process-stopped for each process, process-status-changed during termination
 
 ---
 
@@ -1891,18 +1932,24 @@ enum ProcessStatus {
 
 ### Event: `log-line`
 
-**Description**: Emitted for each line of stdout/stderr.
+**Description**: Emitted for each line of stdout/stderr (batched for performance).
 
 **Payload**:
 
 ```rust
-struct LogLine {
-    pid: i64,
-    timestamp: u64,        // Unix millis
-    line: String,
+struct LogLineEvent {
+    execution_id: i64,
+    timestamp: String,
+    content: String,
     is_stderr: bool,
 }
 ```
+
+### Event: `log-batch`
+
+**Description**: Emitted when multiple log lines are batched together.
+
+**Payload**: `LogLineEvent[]`
 
 **Performance**: Batched every 50ms max to reduce IPC overhead
 
@@ -1914,22 +1961,27 @@ struct LogLine {
 
 ```rust
 struct ProcessStatusEvent {
-    pid: i64,
+    execution_id: i64,
     old_status: ProcessStatus,
     new_status: ProcessStatus,
+    timestamp: String
 }
 ```
 
 ### Get logs
 
-`get_log_buffer(pid: i64,offset: usize, limit: usize, ) -> Vec<LogLine>`
+`get_log_buffer(execution_id: i64, offset: usize, limit: usize) -> Vec<LogLineEvent>`
 
 **Description**: Get log lines from circular buffer. (Allows to reopen window and populate logs from
 memory)
 
+**NOTE: It keeps latest 10,000 lines while the process is actively running. FE needs some mechanism to save the short-running logs immediately(from events) as they are dropped from memory after 5s of execution is complete- we are not saving logs anywhere as of now.**
+The application is not on a state to monitor critical logs yet.
+
 **Parameters**:
 
-- `pid`: Process ID
+- `execution_id`: Execution ID related to the process
+- `offset`: Number of lines to skip from beginning (0 = oldest)
 - `limit`: Max number of lines (default: 10000)
 
 **Returns**: Slice of log buffer (newest first if offset = 0)
@@ -1937,12 +1989,6 @@ memory)
 **Usage**:
 
 ```typescript
-interface LogLine {
-  line: string
-  source: 'stdout' | 'stderr'
-  timestamp: number
-}
-
 const logs = await invoke('get_log_buffer', {
   pid: 12345,
   offset: 0,
@@ -1952,11 +1998,21 @@ const logs = await invoke('get_log_buffer', {
 
 ### Clear logs
 
-`clear_log_buffer(pid: Pid) -> Result<(), Error>`
+`clear_log_buffer((execution_id: i64) -> Result<(), Error>`
 
 **Description**:Clears log buffer for a process.
 
 **Use Case**: User wants to reset logs
+
+---
+
+### Get Valid Shells
+
+`get_valid_shells() -> Vec<String>`
+
+**Description**: Returns list of allowed shell names detected on the system.
+
+**Returns**: Array of shell names (e.g., `["bash", "zsh", "fish", "sh"]` on Unix; `["cmd", "powershell", "pwsh"]` on Windows)
 
 ---
 
