@@ -71,7 +71,6 @@
         v-for="group in rootGroups"
         :key="group.id"
         :group="group"
-        :node="null"
         showLinkButton
       />
     </SidebarMenu>

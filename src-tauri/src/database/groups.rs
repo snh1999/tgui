@@ -212,7 +212,7 @@ impl Database {
             SELECT g.* FROM groups g
             JOIN tree t ON g.parent_group_id = t.id
         )
-        SELECT * FROM tree",
+        SELECT * FROM tree ORDER BY position",
             params![root_id],
             Self::row_to_group,
         )?;
@@ -237,20 +237,24 @@ impl Database {
             id: i64,
             nodes: &mut HashMap<i64, Group>,
             children_map: &HashMap<i64, Vec<i64>>,
-        ) -> GroupNode {
-            let group = nodes.remove(&id).unwrap();
+        ) -> Result<GroupNode> {
+            let group = nodes.remove(&id).ok_or(DatabaseError::InvalidData {
+                field: "group_id",
+                reason: format!("Group {} missing during tree assembly", id),
+            })?;
             let children = children_map
                 .get(&id)
                 .map(|ids| {
                     ids.iter()
                         .map(|&cid| build(cid, nodes, children_map))
-                        .collect()
+                        .collect::<Result<Vec<_>>>()
                 })
+                .transpose()?
                 .unwrap_or_default();
-            GroupNode { group, children }
+            Ok(GroupNode { group, children })
         }
 
-        Ok(build(root_id, &mut nodes, &children_map))
+        build(root_id, &mut nodes, &children_map)
     }
 
     /// Walks the parent chain from group_id upward.

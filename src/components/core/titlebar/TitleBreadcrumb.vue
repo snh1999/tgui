@@ -31,7 +31,7 @@
 
   const breadcrumbText = computed(() => {
     const name = route.name as TRoutePaths;
-    return routeLabels[name] || name ? capitalize(name) : "Home";
+    return routeLabels[name] || (name ? capitalize(name) : "Home");
   });
 </script>
 

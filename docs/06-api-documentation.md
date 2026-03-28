@@ -351,7 +351,7 @@ const totalCount = await invoke('get_commands_count', {
 - Case-insensitive matching using SQLite `LIKE`
 - Searches across `name`, `command`, and `description` fields
 - Pattern: `%search_term%` (substring match)
-- Ordering: `is_favorite DESC, position` (favorites first, then regular ordering)
+- Ordering: `is_favorite DESC, position, updated_at DESC` (favorites first, then regular ordering and update time as tiebreaker)
 - Special characters (`%`, `_`) in search term are treated as wildcards by SQLite
 - Empty Search Term returns all commands ordered by favorites and updated_at
 
