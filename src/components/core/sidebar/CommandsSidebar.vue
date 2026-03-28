@@ -56,7 +56,7 @@
 
   <SidebarContent class="px-1">
     <SidebarMenu>
-      <SidebarMenuItem class="px-7">
+      <SidebarMenuItem>
         <SidebarMenuButton
           @click="store.selectedGroup='none'"
           :isActive="store.selectedGroup === 'none'"
