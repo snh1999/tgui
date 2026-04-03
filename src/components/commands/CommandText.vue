@@ -16,9 +16,8 @@
 
 <template>
   <code
-    class="flex items-center gap-2 px-3 py-2 mb-1 rounded bg-muted/80 font-mono text-xs"
+    class="flex items-center gap-2 px-2 py-2 mb-1 rounded bg-muted/80 font-mono text-xs"
   >
-    <span v-if="command.shell" class="italic">({{ command.shell }})</span>
     <BashIcon v-if="command.shell === 'bash'" />
     <ZshIcon v-else-if="command.shell === 'zsh'" />
     <FishShellIcon v-else-if="command.shell === 'fish'" />
