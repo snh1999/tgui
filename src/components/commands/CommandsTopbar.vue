@@ -1,21 +1,20 @@
 <script setup lang="ts">
-  import { computed, ref } from "vue";
+  import { ref } from "vue";
+  import { ClearIcon } from "@/assets/Icons.ts";
   import SearchButton from "@/components/core/titlebar/SearchButton.vue";
   import CreateCommandsDialog from "@/components/forms/commands/CreateCommandsDialog.vue";
   import CategorySelect from "@/components/forms/common/CategorySelect.vue";
   import { Button } from "@/components/ui/button";
   import { Toggle } from "@/components/ui/toggle";
   import DataViewToggle from "@/components/views/DataViewToggle.vue";
-  import { useGetCommands } from "@/lib/api/composables/commands.ts";
   import { useCommandsStore } from "@/stores/commands.store.ts";
-  import { ClearIcon } from "@/assets/Icons.ts";
 
   const createDialogOpen = ref(false);
 
-  const { data: commands } = useGetCommands();
   const commandsView = useCommandsStore();
 
-  const filtered = computed(() => commands.value);
+  // const { data: commands } = useGetCommands();
+  // const filtered = computed(() => commands.value);
   // const filtered = computed(() => {
   //   if(!commands.value) return []
   //   return commands.value.filter((cmd) => {
@@ -41,10 +40,10 @@
     <div class="flex items-center justify-between gap-3 shrink-0 flex-wrap">
       <div class="flex items-baseline gap-2.5">
         <h1 class="text-base font-bold tracking-[-0.02em]">Commands</h1>
-        <span class="text-[11px] text-muted-foreground">
-          {{ filtered?.length }} of
-          {{ commands?.length }}</span
-        >
+        <!--        <span class="text-[11px] text-muted-foreground">-->
+        <!--          {{ filtered?.length }} of-->
+        <!--          {{ commands?.length }}</span-->
+        <!--        >-->
       </div>
       <div class="flex items-baseline gap-3">
         <SearchButton />

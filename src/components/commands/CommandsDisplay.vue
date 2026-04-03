@@ -15,7 +15,12 @@
 <template>
   <DataDisplay :view="view">
     <template #list>
-      <CommandCard v-for="cmd in commands" :key="cmd.id" :command="cmd" />
+      <CommandCard
+        v-for="cmd in commands"
+        :key="cmd.id"
+        :command="cmd"
+        isCard
+      />
     </template>
 
     <template #grid>
@@ -23,7 +28,7 @@
         v-for="cmd in commands"
         :key="cmd.id"
         :command="cmd"
-        :isCard="isCard ?? true"
+        :isCard="true"
       />
     </template>
 
