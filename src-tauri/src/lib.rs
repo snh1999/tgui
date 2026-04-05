@@ -81,6 +81,7 @@ pub fn run() {
             commands::search_commands,
             commands::move_command_between,
             commands::toggle_command_favorite,
+            commands::get_latest_execution_for_command,
             workflows::create_workflow,
             workflows::get_workflow,
             workflows::get_workflows,
