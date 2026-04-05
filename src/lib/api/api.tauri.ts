@@ -57,6 +57,11 @@ export const commandsApi = {
 
   getById: (id: number) => invoke<ICommand>("get_command", { id }),
 
+  getLatestHistory: (commandId: number) =>
+    invoke<IExecutionHistory | null>("get_latest_execution_for_command", {
+      commandId,
+    }),
+
   create: (payload: TUpsertCommandPayload) =>
     invoke<number>("create_command", {
       cmd: {
@@ -199,15 +204,16 @@ export const processHandlerApi = {
   killProcess: (executionId: number) =>
     invoke<void>("kill_process", {
       executionId,
+      force: true,
     }),
 
-  getRunningProcess: () => invoke<IProcessInfo[]>("get_running_process"),
+  getRunningProcess: () => invoke<IProcessInfo[]>("get_running_processes"),
 
   getProcessStatus: (executionId: number) =>
     invoke<IProcessInfo>("get_process_status", { executionId }),
 
   getLogBuffer: (executionId: number, offset: number, limit: number) =>
-    invoke<ILogLine>("get_log_buffer", {
+    invoke<ILogLine[]>("get_log_buffer", {
       executionId,
       offset,
       limit,

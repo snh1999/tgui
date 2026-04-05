@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from "vue-router";
 import CategoryPage from "@/pages/CategoryPage.vue";
+import CommandPage from "@/pages/CommandPage.vue";
 import CommandsPage from "@/pages/CommandsPage.vue";
 import EmptyCategoriesPage from "@/pages/EmptyCategoriesPage.vue";
 import GroupsPage from "@/pages/GroupsPage.vue";
@@ -17,6 +18,11 @@ const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
     { path: routePaths.commands, name: "commands", component: CommandsPage },
+    {
+      path: `${routePaths.commands}/:id`,
+      name: "command",
+      component: CommandPage,
+    },
     {
       path: routePaths.categories,
       name: "categories",
