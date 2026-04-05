@@ -15,14 +15,12 @@ export const useCommandsStore = defineStore("commandsStore", () => {
     () =>
       favoritesOnly.value !== false ||
       filterCategory.value !== "all" ||
-      selectedGroup.value !== "none" ||
       showRunningOnly.value !== false
   );
 
   function clearFilter() {
     favoritesOnly.value = false;
     filterCategory.value = "all";
-    selectedGroup.value = "none";
     showRunningOnly.value = false;
   }
 

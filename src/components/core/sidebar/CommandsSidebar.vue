@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { ChevronLeft } from "lucide-vue-next";
   import { computed, provide } from "vue";
-  import { useRouter } from "vue-router";
+  import { useRoute, useRouter } from "vue-router";
   import { AddIcon, SelectAllIcon } from "@/assets/Icons.ts";
   import GroupTreeNode from "@/components/core/sidebar/groups/GroupTreeNode.vue";
   import CreateGroupDialog from "@/components/forms/groups/CreateGroupDialog.vue";
@@ -15,10 +15,13 @@
   } from "@/components/ui/sidebar";
   import Loading from "@/components/ui/tgui/Loading.vue";
   import { useGetGroups } from "@/lib/api/composables/groups.ts";
+  import { routePaths } from "@/router";
   import { useCommandsStore } from "@/stores/commands.store.ts";
 
   const router = useRouter();
   const store = useCommandsStore();
+
+  const route = useRoute();
 
   const { data: rootGroups, isLoading } = useGetGroups({
     parentId: "None",
@@ -26,8 +29,15 @@
     favoritesOnly: false,
   });
 
+  const onGroupSelect = (id?: number) => {
+    if (route.params.id) {
+      router.push(routePaths.commands);
+    }
+    store.selectedGroup = id ? id : "none";
+  };
+
   provide("onGroupSelected", (id: number) => {
-    store.selectedGroup = id;
+    onGroupSelect(id);
   });
 
   provide(
@@ -58,7 +68,7 @@
     <SidebarMenu>
       <SidebarMenuItem>
         <SidebarMenuButton
-          @click="store.selectedGroup='none'"
+          @click="()=>onGroupSelect()"
           :isActive="store.selectedGroup === 'none'"
         >
           <SelectAllIcon />
