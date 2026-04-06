@@ -51,7 +51,6 @@ impl Database {
 
         self.execute_db(
             CATEGORIES_TABLE,
-            "UPDATE",
             id,
             "UPDATE categories SET name = ?1, icon = ?2, color = ?3 WHERE id = ?4",
             params![name, icon, color, id],
@@ -62,7 +61,6 @@ impl Database {
     pub fn delete_category(&self, id: i64) -> Result<()> {
         self.execute_db(
             CATEGORIES_TABLE,
-            "DELETE",
             id,
             "DELETE FROM categories WHERE id = ?1",
             params![id],

@@ -1,16 +1,16 @@
 <script setup lang="ts">
-  import { onMounted, ref, watch } from "vue";
   import { useDebounceFn } from "@vueuse/core";
+  import { onMounted, ref, watch } from "vue";
   import { toast } from "vue-sonner";
+  import ShellSelect from "@/components/forms/common/ShellSelect.vue";
+  import SettingsRow from "@/components/settings/SettingsRow.vue";
+  import SettingsSectionWrapper from "@/components/settings/SettingsSectionWrapper.vue";
+  import { NumberField, NumberFieldInput } from "@/components/ui/number-field";
   import { Switch } from "@/components/ui/switch";
   import {
     useGetAllSettings,
     useSetSetting,
   } from "@/lib/api/composables/settings.ts";
-  import SettingsSectionWrapper from "@/components/settings/SettingsSectionWrapper.vue";
-  import ShellSelect from "@/components/forms/common/ShellSelect.vue";
-  import { NumberField, NumberFieldInput } from "@/components/ui/number-field";
-  import SettingsRow from "@/components/settings/SettingsRow.vue";
 
   const { data: rawSettings } = useGetAllSettings();
   const { mutate: setSetting } = useSetSetting();
@@ -24,7 +24,9 @@
     watch(
       rawSettings,
       (s) => {
-        if (!s) return;
+        if (!s) {
+          return;
+        }
         defaultShell.value = s.default_shell ?? "";
         maxConcurrentProcesses.value = Number(s.max_concurrent_processes) || 20;
         warnBeforeKill.value = s.warn_before_kill === "true";
@@ -58,7 +60,9 @@
   }, 600);
 
   const saveNumberDebounced = useDebounceFn((key: string, value: number) => {
-    if (!Number.isNaN(value) && value > 0) save(key, String(value));
+    if (!Number.isNaN(value) && value > 0) {
+      save(key, String(value));
+    }
   }, 600);
 </script>
 

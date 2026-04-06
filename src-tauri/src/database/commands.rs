@@ -240,7 +240,6 @@ impl Database {
 
         self.execute_db(
             COMMANDS_TABLE,
-            "UPDATE",
             cmd.id,
             "UPDATE commands SET
             name = :name,
@@ -300,7 +299,6 @@ impl Database {
     pub fn delete_command(&self, id: i64) -> Result<()> {
         self.execute_db(
             COMMANDS_TABLE,
-            "DELETE",
             id,
             "DELETE FROM commands WHERE id = ?1",
             params![id],
@@ -312,7 +310,6 @@ impl Database {
         debug!(command_id = id, "Toggling favorite");
         self.execute_db(
             COMMANDS_TABLE,
-            "UPDATE",
             id,
             "UPDATE commands SET is_favorite = NOT is_favorite WHERE id = ?1",
             params![id],

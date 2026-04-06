@@ -71,7 +71,6 @@ impl Database {
 
         self.execute_db(
             WORKFLOWS_TABLE,
-            "UPDATE",
             workflow.id,
             "UPDATE workflows SET
                 name = :name,
@@ -95,7 +94,6 @@ impl Database {
     pub fn delete_workflow(&self, id: i64) -> Result<()> {
         self.execute_db(
             WORKFLOWS_TABLE,
-            "DELETE",
             id,
             "DELETE FROM workflows WHERE id = ?1",
             params![id],
@@ -106,7 +104,6 @@ impl Database {
     pub fn toggle_favorite_workflow(&self, id: i64) -> Result<()> {
         self.execute_db(
             WORKFLOWS_TABLE,
-            "UPDATE",
             id,
             "UPDATE workflows SET is_favorite = NOT is_favorite WHERE id = ?1",
             params![id],
@@ -307,7 +304,6 @@ impl Database {
 
         self.execute_db(
             WORKFLOW_STEPS_TABLE,
-            "UPDATE",
             flow_step.id,
             "UPDATE workflow_steps SET
                 command_id = :command_id,
@@ -335,7 +331,6 @@ impl Database {
 
         self.execute_db(
             WORKFLOW_STEPS_TABLE,
-            "DELETE",
             id,
             "DELETE FROM workflow_steps WHERE id = ?1",
             params![id],
@@ -383,7 +378,6 @@ impl Database {
 
         self.execute_db(
             WORKFLOW_STEPS_TABLE,
-            "UPDATE",
             id,
             "UPDATE workflow_steps SET enabled = NOT enabled WHERE id = ?1",
             params![id],

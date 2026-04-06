@@ -138,7 +138,6 @@ impl Database {
 
         self.execute_db(
             GROUPS_TABLE,
-            "UPDATE",
             group.id,
             "UPDATE groups SET
             name = :name,
@@ -196,7 +195,6 @@ impl Database {
     pub fn delete_group(&self, id: i64) -> Result<()> {
         self.execute_db(
             GROUPS_TABLE,
-            "DELETE",
             id,
             "DELETE FROM groups WHERE id = ?1",
             params![id],
@@ -301,7 +299,6 @@ impl Database {
 
         self.execute_db(
             GROUPS_TABLE,
-            "UPDATE",
             id,
             "UPDATE groups SET is_favorite = NOT is_favorite WHERE id = ?1",
             params![id],

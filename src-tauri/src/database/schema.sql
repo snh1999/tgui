@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS workflow_steps (
     auto_retry_count INTEGER DEFAULT 0,
     enabled BOOLEAN NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)),
     continue_on_failure BOOLEAN NOT NULL DEFAULT 0 CHECK(continue_on_failure IN (0,1)),
-    wait_for_completion BOOLEAN NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)),
+    wait_for_completion BOOLEAN NOT NULL DEFAULT 1 CHECK(wait_for_completion IN (0,1)),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CHECK(condition IN ('always', 'on_success', 'on_failure'))

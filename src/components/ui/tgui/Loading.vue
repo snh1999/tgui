@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  /** use it under the container element, some fields may remain in focus otherwise **/
+  /** use it under the container element, some fields may remain in focus otherwise */
   import { Spinner } from "@/components/ui/spinner";
 </script>
 

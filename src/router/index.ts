@@ -1,4 +1,8 @@
-import { createRouter, createWebHashHistory } from "vue-router";
+import {
+  createRouter,
+  createWebHashHistory,
+  type RouteLocationNormalizedGeneric,
+} from "vue-router";
 import CategoryPage from "@/pages/CategoryPage.vue";
 import CommandPage from "@/pages/CommandPage.vue";
 import CommandsPage from "@/pages/CommandsPage.vue";
@@ -14,6 +18,16 @@ export const routePaths = {
   settings: "/settings",
 };
 
+const validateIdParam = (
+  to: RouteLocationNormalizedGeneric,
+  redirectPath: string
+) => {
+  const id = Number(to.params.id);
+  if (Number.isNaN(id) || id <= 0) {
+    return { path: redirectPath, replace: true };
+  }
+};
+
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
@@ -22,12 +36,7 @@ const router = createRouter({
       path: `${routePaths.commands}/:id`,
       name: "command",
       component: CommandPage,
-      beforeEnter: (to) => {
-        const id = Number(to.params.id);
-        if (Number.isNaN(id) || id <= 0) {
-          return { path: routePaths.commands, replace: true };
-        }
-      },
+      beforeEnter: (to) => validateIdParam(to, routePaths.commands),
     },
     {
       path: routePaths.categories,
@@ -38,24 +47,14 @@ const router = createRouter({
       path: `${routePaths.categories}/:id`,
       name: "category",
       component: CategoryPage,
-      beforeEnter: (to) => {
-        const id = Number(to.params.id);
-        if (Number.isNaN(id) || id <= 0) {
-          return { path: routePaths.categories, replace: true };
-        }
-      },
+      beforeEnter: (to) => validateIdParam(to, routePaths.categories),
     },
     { path: routePaths.groups, name: "groups", component: GroupsPage },
     {
       path: `${routePaths.groups}/:id`,
       name: "group",
       component: GroupsPage,
-      beforeEnter: (to) => {
-        const id = Number(to.params.id);
-        if (Number.isNaN(id) || id <= 0) {
-          return { path: routePaths.groups, replace: true };
-        }
-      },
+      beforeEnter: (to) => validateIdParam(to, routePaths.groups),
     },
     { path: routePaths.settings, name: "settings", component: SettingsPage },
   ],

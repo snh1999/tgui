@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import { AlertCircle, RefreshCw, X } from "lucide-vue-next";
   import { computed } from "vue";
   import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
   import { Button } from "@/components/ui/button";
-  import { AlertCircle, RefreshCw, X } from "lucide-vue-next";
 
   interface Props {
     error?: Error | { message: string; code?: string } | string | null;
@@ -21,7 +21,9 @@
   });
 
   const errorMessage = computed(() => {
-    if (!props.error) return "An unknown error occurred";
+    if (!props.error) {
+      return "An unknown error occurred";
+    }
 
     if (typeof props.error === "string") {
       return props.error;

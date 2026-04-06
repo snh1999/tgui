@@ -40,13 +40,9 @@
   const { mutate: spawnCommand, isPending: isSpawning } = useSpawnCommand();
   const { mutate: killProcess, isPending: isKilling } = useKillProcess();
 
-  // Tracks which execution's logs to display. Persists across navigation because
-  // on mount we restore from the store (same session) or localStorage (new session).
   const activeExecutionId = ref<number | null>(null);
 
-  // Derived purely from the store — not from activeExecutionId — so it's correct
-  // even if this component was just mounted fresh.
-  const isRunning = computed(() => store.isCommandRunning(commandId));
+  const isRunning = computed(() => store.isCommandRunning(commandId.value));
 
   const currentLogs = computed(() =>
     activeExecutionId.value
@@ -54,7 +50,6 @@
       : []
   );
 
-  // Label shown next to the Run button when the last execution has exited
   const lastRunStatus = computed(() => {
     if (!activeExecutionId.value) {
       return null;
@@ -68,14 +63,14 @@
 
   onMounted(() => {
     // 1. Same session — process might still be running or was recently stopped
-    const inMemory = store.getLastExecutionForCommand(commandId);
+    const inMemory = store.getLastExecutionForCommand(commandId.value);
     if (inMemory) {
       activeExecutionId.value = inMemory.id;
       return;
     }
 
     // 2. Previous session — restore from localStorage so logs survive app restart
-    const persisted = loadExecutionLogs(commandId);
+    const persisted = loadExecutionLogs(commandId.value);
     if (persisted) {
       store.addExecution({
         id: persisted.executionId,
@@ -93,13 +88,13 @@
   });
 
   function handleRun() {
-    spawnCommand(commandId, {
+    spawnCommand(commandId.value, {
       onSuccess: (executionId) => {
         activeExecutionId.value = executionId;
 
         store.addExecution({
           id: executionId,
-          commandId,
+          commandId: commandId.value,
           commandName: command.value?.name ?? "",
           status: "running",
           triggeredBy: "manual",
@@ -116,7 +111,6 @@
       return;
     }
     killProcess(activeExecutionId.value);
-    // Store status updates automatically via the process-status-changed event
   }
 </script>
 

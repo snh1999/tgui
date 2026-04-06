@@ -7,7 +7,7 @@ export function useGetSetting(key: MaybeRef<string>) {
     queryKey: ["settings", unref(key)],
     queryFn: () => settingsApi.getSetting(unref(key)),
     enabled: () => unref(key).length > 0,
-  });
+  }));
 }
 
 export function useGetAllSettings() {
