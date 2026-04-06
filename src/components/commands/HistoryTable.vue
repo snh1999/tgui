@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { useTimeAgo } from "@vueuse/core";
   import { computed, ref, watch } from "vue";
   import StatusBadge from "@/components/commands/StatusBadge.vue";
   import { Badge } from "@/components/ui/badge";
@@ -27,7 +26,11 @@
   } from "@/components/ui/tooltip";
   import { IExecutionHistory, TTriggeredBy } from "@/lib/api/api.types.ts";
   import { useGetCommandExecutionHistory } from "@/lib/api/composables/history.ts";
-  import { formatDuration, useFormatDateTime } from "@/lib/utils.ts";
+  import {
+    formatAbsoluteDateTime,
+    formatDuration,
+    formatRelativeTime,
+  } from "@/lib/utils.ts";
 
   const props = withDefaults(
     defineProps<{
@@ -146,11 +149,11 @@
                       <span
                         class="text-xs text-muted-foreground cursor-default"
                       >
-                        {{ useTimeAgo(row.startedAt??"") }}
+                        {{ formatRelativeTime(row.startedAt??"") }}
                       </span>
                     </TooltipTrigger>
                     <TooltipContent>
-                      {{ useFormatDateTime(row.startedAt) }}
+                      {{ formatAbsoluteDateTime(row.startedAt) }}
                     </TooltipContent>
                   </Tooltip>
                 </TableCell>
