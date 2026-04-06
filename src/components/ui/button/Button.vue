@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import type { PrimitiveProps } from "reka-ui";
-import { Primitive } from "reka-ui";
-import type { HTMLAttributes } from "vue";
-import { Spinner } from "@/components/ui/spinner";
-import { cn } from "@/lib/utils";
-import type { ButtonVariants } from ".";
-import { buttonVariants } from ".";
+  import type { PrimitiveProps } from "reka-ui";
+  import { Primitive } from "reka-ui";
+  import type { HTMLAttributes } from "vue";
+  import { Spinner } from "@/components/ui/spinner";
+  import { cn } from "@/lib/utils";
+  import type { ButtonVariants } from ".";
+  import { buttonVariants } from ".";
 
-interface Props extends PrimitiveProps {
-  variant?: ButtonVariants["variant"];
-  size?: ButtonVariants["size"];
-  class?: HTMLAttributes["class"];
-  isPending?: boolean;
-}
+  interface Props extends PrimitiveProps {
+    variant?: ButtonVariants["variant"];
+    size?: ButtonVariants["size"];
+    class?: HTMLAttributes["class"];
+    isPending?: boolean;
+  }
 
-const props = withDefaults(defineProps<Props>(), {
-  as: "button",
-});
+  const props = withDefaults(defineProps<Props>(), {
+    as: "button",
+  });
 </script>
 
 <template>

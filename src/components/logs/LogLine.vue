@@ -1,10 +1,9 @@
 <script setup lang="ts">
-
-defineProps<{
-  timestamp: string
-  type: string
-  message: string
-}>()
+  defineProps<{
+    timestamp: string;
+    type: string;
+    message: string;
+  }>();
 </script>
 
 <template>
@@ -16,30 +15,30 @@ defineProps<{
 </template>
 
 <style scoped>
-.log-line {
-  margin-bottom: 4px;
-  line-height: 1.6;
-}
+  .log-line {
+    margin-bottom: 4px;
+    line-height: 1.6;
+  }
 
-.log-time {
-  color: #6b7280;
-}
+  .log-time {
+    color: #6b7280;
+  }
 
-.log-type {
-  font-weight: 600;
-  margin: 0 8px;
-  text-transform: uppercase;
-}
+  .log-type {
+    font-weight: 600;
+    margin: 0 8px;
+    text-transform: uppercase;
+  }
 
-.info {
-  color: #3b82f6;
-}
+  .info {
+    color: #3b82f6;
+  }
 
-.log {
-  color: #10b981;
-}
+  .log {
+    color: #10b981;
+  }
 
-.error {
-  color: #ef4444;
-}
+  .error {
+    color: #ef4444;
+  }
 </style>

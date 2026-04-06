@@ -1,13 +1,15 @@
 <script setup lang="ts">
+  /** biome-ignore-all lint/complexity/noForEach: <for simplicity> */
+
   import { type Component, onMounted, onUnmounted } from "vue";
+  import AppearanceSettings from "@/components/settings/sections/AppearanceSettings.vue";
+  import DataAndLogsSettings from "@/components/settings/sections/DataAndLogsSettings.vue";
+  import ExecutionSettings from "@/components/settings/sections/ExecutionSettings.vue";
   import SettingsDangerZone from "@/components/settings/sections/SettingsDangerZone.vue";
   import {
     TSettingsSection,
     useSettingsStateStore,
   } from "@/stores/settings.store";
-  import DataAndLogsSettings from "@/components/settings/sections/DataAndLogsSettings.vue";
-  import ExecutionSettings from "@/components/settings/sections/ExecutionSettings.vue";
-  import AppearanceSettings from "@/components/settings/sections/AppearanceSettings.vue";
 
   const settingsStore = useSettingsStateStore();
 

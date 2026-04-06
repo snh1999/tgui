@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { Field as VeeField } from "vee-validate";
+  import { cloneVNode, computed, h, isVNode, useSlots } from "vue";
   import {
     Field,
     FieldDescription,
@@ -7,7 +8,6 @@
     FieldLabel,
   } from "@/components/ui/field";
   import { Input } from "@/components/ui/input";
-  import { cloneVNode, computed, h, isVNode, useSlots } from "vue";
 
   /**
    * FormField
@@ -56,6 +56,7 @@
 
   // NOTE: consider using a type prop instead of manipulating the slot node
   // can not pass/append values directly via slot concisely, so that is the option
+  // biome-ignore lint/suspicious/noExplicitAny: <type unknown>
   const AutoInput = ({ field, errors }: { field: any; errors: string[] }) => {
     const bindings = {
       id: fieldId.value,
