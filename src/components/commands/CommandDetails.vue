@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { useDateFormat, useTimeAgo } from "@vueuse/core";
+  import { useTimeAgo } from "@vueuse/core";
   import {
     ChevronDown,
     FolderOpen,
@@ -23,7 +23,7 @@
     TooltipTrigger,
   } from "@/components/ui/tooltip";
   import { ICommand } from "@/lib/api/api.types.ts";
-  import { useFormatDateTime } from "@/lib/utils.ts";
+  import { formatAbsoluteDateTime } from "@/lib/utils.ts";
 
   const props = defineProps<{
     command: ICommand;
@@ -36,6 +36,8 @@
   );
 
   const envVars = computed(() => Object.entries(props.command.envVars ?? {}));
+  const createdAt = useTimeAgo(() => props.command.createdAt ?? "-");
+  const updatedAt = useTimeAgo(() => props.command.updatedAt ?? "-");
 
   const envOpen = ref(false);
 </script>
@@ -161,22 +163,18 @@
           >
             <Tooltip>
               <TooltipTrigger as-child>
-                <span class="cursor-default"
-                  >Created {{ useTimeAgo(command.createdAt??"") }}</span
-                >
+                <span class="cursor-default">Created {{ createdAt }}</span>
               </TooltipTrigger>
               <TooltipContent>
-                {{ useFormatDateTime(command.createdAt) }}
+                {{ formatAbsoluteDateTime(command.createdAt) }}
               </TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger as-child>
-                <span class="cursor-default"
-                  >Updated {{ useTimeAgo(command.updatedAt??"") }}</span
-                >
+                <span class="cursor-default">Updated {{ updatedAt }}</span>
               </TooltipTrigger>
               <TooltipContent>
-                {{ useFormatDateTime(command.updatedAt) }}
+                {{ formatAbsoluteDateTime(command.updatedAt) }}
               </TooltipContent>
             </Tooltip>
           </div>

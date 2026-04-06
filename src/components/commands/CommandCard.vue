@@ -35,9 +35,7 @@
     () => Object.keys(props.command.envVars ?? {}).length
   );
 
-  const timeAgo = useTimeAgo(
-    computed(() => props.command.history?.startedAt ?? "")
-  );
+  const timeAgo = useTimeAgo(() => props.command.history?.startedAt ?? "");
 
   const { mutate: toggleFavoriteCommand } = useToggleFavoriteCommand();
 </script>
