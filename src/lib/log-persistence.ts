@@ -1,10 +1,12 @@
-import type { TExecutionStatus } from "@/lib/api/api.types";
-import type { LogEntry } from "@/stores/execution.store";
-
-const KEY_PREFIX = "exec_logs:";
-const MAX_PERSISTED_LOGS = 5000;
+import {
+  LOG_KEY_PREFIX,
+  LOG_PERSISTENCE_VERSION,
+  MAX_PERSISTED_LOGS,
+} from "@/app.constants.ts";
+import type { ILogLine, TExecutionStatus } from "@/lib/api/api.types";
 
 export interface PersistedExecution {
+  _v: number;
   executionId: number;
   commandId: number;
   commandName: string;
@@ -12,7 +14,7 @@ export interface PersistedExecution {
   startedAt?: string;
   completedAt?: string;
   savedAt: string;
-  logs: LogEntry[];
+  logs: ILogLine[];
 }
 
 /**
@@ -21,14 +23,15 @@ export interface PersistedExecution {
  */
 export function saveExecutionLogs(
   commandId: number,
-  data: PersistedExecution
+  data: Omit<PersistedExecution, "_v">
 ): void {
   try {
     const payload: PersistedExecution = {
+      _v: LOG_PERSISTENCE_VERSION,
       ...data,
       logs: data.logs.slice(-MAX_PERSISTED_LOGS),
     };
-    localStorage.setItem(KEY_PREFIX + commandId, JSON.stringify(payload));
+    localStorage.setItem(LOG_KEY_PREFIX + commandId, JSON.stringify(payload));
   } catch (e) {
     // Storage full or unavailable — fail silently
     console.warn("[log-persistence] Failed to save execution logs:", e);
@@ -42,13 +45,26 @@ export function loadExecutionLogs(
   commandId: number
 ): PersistedExecution | null {
   try {
-    const raw = localStorage.getItem(KEY_PREFIX + commandId);
-    return raw ? (JSON.parse(raw) as PersistedExecution) : null;
+    const raw = localStorage.getItem(LOG_KEY_PREFIX + commandId);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw) as PersistedExecution;
+
+    if (parsed._v !== LOG_PERSISTENCE_VERSION) {
+      console.log(
+        `[log-persistence] Discarding v${parsed._v} data for command ${commandId}`
+      );
+      localStorage.removeItem(LOG_KEY_PREFIX + commandId);
+      return null;
+    }
+
+    return parsed;
   } catch {
     return null;
   }
 }
 
 export function clearExecutionLogs(commandId: number): void {
-  localStorage.removeItem(KEY_PREFIX + commandId);
+  localStorage.removeItem(LOG_KEY_PREFIX + commandId);
 }
