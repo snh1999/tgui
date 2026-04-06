@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import { TViewMode } from "@/stores/commands.store.ts";
+import type { TViewMode } from "@/stores/commands.store.ts";
 
 export const useCategoryStore = defineStore("categoriesState", () => {
   const selectedCategory = ref<number | null>(null);

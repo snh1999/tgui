@@ -33,6 +33,14 @@ export function useGetCommand(id: MaybeRef<number>) {
   }));
 }
 
+export function useGetLatestCommandHistory(id: MaybeRef<number>) {
+  return useQuery(() => ({
+    queryKey: [...queryKeys.commands.detail(unref(id)), "history-latest"],
+    queryFn: () => commandsApi.getLatestHistory(unref(id)),
+    enabled: () => unref(id) > 0,
+  }));
+}
+
 export function useCommandSearch(searchTerm: MaybeRef<string>) {
   return useQuery(() => ({
     queryKey: [

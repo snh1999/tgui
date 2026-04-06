@@ -1,4 +1,6 @@
-use crate::database::{CategoryFilter, Command, Database, GroupFilter, WithHistory};
+use crate::database::{
+    CategoryFilter, Command, Database, ExecutionHistory, GroupFilter, WithHistory,
+};
 use crate::handlers::serialize_errors::SerializableError;
 use tauri::State;
 
@@ -74,4 +76,12 @@ pub fn search_commands(
     search_term: String,
 ) -> Result<Vec<Command>, SerializableError> {
     db.search_commands(&search_term).map_err(|e| e.into())
+}
+
+#[tauri::command]
+pub fn get_latest_execution_for_command(
+    db: State<'_, Database>,
+    command_id: i64,
+) -> Option<ExecutionHistory> {
+    db.get_latest_execution_for_command(command_id)
 }

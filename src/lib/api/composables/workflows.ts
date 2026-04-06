@@ -1,5 +1,5 @@
 import {
-  QueryClient,
+  type QueryClient,
   useMutation,
   useQuery,
   useQueryClient,
@@ -12,8 +12,8 @@ import {
   queryKeys,
   WORKFLOW_STEP_COUNT,
 } from "@/lib/api/api.keys.ts";
-import { workflowsApi, workflowStepApi } from "@/lib/api/api.tauri.ts";
-import {
+import { workflowStepApi, workflowsApi } from "@/lib/api/api.tauri.ts";
+import type {
   IMovePosition,
   IWorkflowFilter,
   IWorkflowStepFilter,

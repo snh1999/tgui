@@ -13,7 +13,6 @@ pub struct OrphanedProcess {
     pub still_running: bool,
 }
 
-// Process Info for frontend
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ProcessInfo {
@@ -28,7 +27,7 @@ pub struct ProcessInfo {
     pub log_line_count: usize,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub enum KillMode {
     Graceful,
     Force,
@@ -85,7 +84,7 @@ pub struct LogLineEvent {
     pub is_stderr: bool,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ProcessStoppedEvent {
     pub execution_id: i64,
@@ -95,7 +94,7 @@ pub struct ProcessStoppedEvent {
     pub timestamp: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug,Serialize, Deserialize, Clone)]
 pub struct SpawnContext {
     pub command_id: i64,
     pub name: String,
@@ -106,7 +105,7 @@ pub struct SpawnContext {
     pub shell: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StreamingConfig {
     /// Max lines per process in memory
     pub buffer_capacity: usize,
@@ -137,7 +136,7 @@ impl StreamingConfig {
     }
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrayStatus {
     pub running_count: i64,

@@ -20,13 +20,13 @@ export function sanitizeHexInput(raw: string): string {
     .replace(/[^0-9a-fA-F]/g, "")
     .slice(0, 8);
   if (body.length <= 4) {
-    return "#" + body.slice(0, 4);
+    return `#${body.slice(0, 4)}`;
   }
 
   if (body.length > 4 && body.length < 6) {
-    return "#" + body.slice(0, 6).padEnd(6, "0");
+    return `#${body.slice(0, 6).padEnd(6, "0")}`;
   }
-  return "#" + body.slice(0, 8);
+  return `#${body.slice(0, 8)}`;
 }
 
 function hsvToRgb(h: number, s: number, v: number) {
@@ -70,6 +70,8 @@ function hsvToRgb(h: number, s: number, v: number) {
       g = p;
       b = q;
       break;
+    default:
+      break;
   }
   return {
     r: Math.round(r * 255),
@@ -99,6 +101,8 @@ function rgbToHsv(r: number, g: number, b: number) {
       case b:
         h = (r - g) / d + 4;
         break;
+      default:
+        break;
     }
     h /= 6;
   }
@@ -126,7 +130,7 @@ function hslToHsv(h: number, s: number, l: number) {
 }
 
 function rgbToHex(r: number, g: number, b: number) {
-  return "#" + [r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("");
+  return `#${[r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("")}`;
 }
 
 function parseHex(
@@ -143,22 +147,26 @@ function parseHex(
 
   if (clean.length === 6) {
     const m = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(clean);
-    if (!m) return null;
+    if (!m) {
+      return null;
+    }
     return {
-      r: parseInt(m[1], 16),
-      g: parseInt(m[2], 16),
-      b: parseInt(m[3], 16),
+      r: Number.parseInt(m[1], 16),
+      g: Number.parseInt(m[2], 16),
+      b: Number.parseInt(m[3], 16),
       a: 1,
     };
   }
   if (clean.length === 8) {
     const m = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(clean);
-    if (!m) return null;
+    if (!m) {
+      return null;
+    }
     return {
-      r: parseInt(m[1], 16),
-      g: parseInt(m[2], 16),
-      b: parseInt(m[3], 16),
-      a: Math.round((parseInt(m[4], 16) / 255) * 100) / 100,
+      r: Number.parseInt(m[1], 16),
+      g: Number.parseInt(m[2], 16),
+      b: Number.parseInt(m[3], 16),
+      a: Math.round((Number.parseInt(m[4], 16) / 255) * 100) / 100,
     };
   }
   return null;
@@ -222,6 +230,8 @@ export function useColorPicker() {
         return a < 1
           ? `hsla(${h}, ${s}%, ${l}%, ${a.toFixed(2)})`
           : `hsl(${h}, ${s}%, ${l}%)`;
+      default:
+        break;
     }
   });
 
@@ -246,9 +256,13 @@ export function useColorPicker() {
 
   // Apply: Hex → HSV
   function applyFromHex(hex?: string) {
-    if (!hex) return;
+    if (!hex) {
+      return;
+    }
     const parsed = parseHex(hex);
-    if (!parsed) return;
+    if (!parsed) {
+      return;
+    }
     const hsv = rgbToHsv(parsed.r, parsed.g, parsed.b);
     hue.value = hsv.h;
     saturation.value = hsv.s;
