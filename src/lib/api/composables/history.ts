@@ -11,6 +11,7 @@ export function useGetCommandExecutionHistory(commandId: MaybeRef<number>) {
     queryKey: [...queryKeys.commands.detail(unref(commandId)), "history"],
     queryFn: () =>
       executionHistoryApi.getCommandExecutionHistory(unref(commandId)),
+    enabled: unref(commandId) > 0,
   });
 }
 

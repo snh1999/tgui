@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { Copy, Play, Square, Trash2 } from "lucide-vue-next";
   import { computed, onMounted, ref } from "vue";
-  import { useRoute, useRouter } from "vue-router";
+  import { useRoute } from "vue-router";
   import CategoryBadge from "@/components/categories/CategoryBadge.vue";
   import CommandDetails from "@/components/commands/CommandDetails.vue";
   import HistoryTable from "@/components/commands/HistoryTable.vue";
@@ -24,16 +24,11 @@
   } from "@/lib/api/composables/process.ts";
   import { loadExecutionLogs } from "@/lib/log-persistence.ts";
   import PageWrapper from "@/pages/PageWrapper.vue";
-  import { routePaths } from "@/router";
   import { useExecutionStore } from "@/stores/execution.store.ts";
 
   const route = useRoute();
-  const router = useRouter();
 
-  const commandId = Number(route.params.id);
-  if (Number.isNaN(commandId)) {
-    router.push({ path: routePaths.commands });
-  }
+  const commandId = computed(() => Number(route.params.id));
 
   const { data: command, isLoading } = useGetCommand(commandId);
   const { data: history } = useGetCommandExecutionHistory(commandId);
