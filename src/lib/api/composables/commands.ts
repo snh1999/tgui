@@ -35,7 +35,7 @@ export function useGetCommand(id: MaybeRef<number>) {
 
 export function useGetLatestCommandHistory(id: MaybeRef<number>) {
   return useQuery(() => ({
-    queryKey: queryKeys.commands.detail(unref(id)),
+    queryKey: [...queryKeys.commands.detail(unref(id)), "history-latest"],
     queryFn: () => commandsApi.getLatestHistory(unref(id)),
     enabled: () => unref(id) > 0,
   }));

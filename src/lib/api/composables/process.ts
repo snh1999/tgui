@@ -44,8 +44,10 @@ export function useGetRunningProcesses() {
 
 export function useGetProcessStatus(executionId: number) {
   return useQuery({
-    queryKey: [],
+    queryKey: ["process-status", executionId],
     queryFn: () => processHandlerApi.getProcessStatus(executionId),
+    staleTime: 1000,
+    gcTime: 3000,
   });
 }
 
@@ -55,8 +57,10 @@ export function useGetLogBuffer(
   limit: number
 ) {
   return useQuery({
-    queryKey: [],
+    queryKey: ["log-buffer", executionId, offset, limit],
     queryFn: () => processHandlerApi.getLogBuffer(executionId, offset, limit),
+    staleTime: 3000,
+    gcTime: 5000,
   });
 }
 
