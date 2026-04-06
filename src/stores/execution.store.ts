@@ -36,6 +36,7 @@ export const useExecutionStore = defineStore("execution", () => {
         exitCode?: number;
         timestamp: string;
         status?: TExecutionStatus;
+        bufferedAt: number;
       }
     >
   >(new Map());
@@ -51,7 +52,7 @@ export const useExecutionStore = defineStore("execution", () => {
 
   function addExecution(execution: IExecution) {
     executions.value.set(execution.id, execution);
-    // Apply a stop event that arrived before this execution was registered
+    // A stop event that arrived before this execution was registered
     const pending = pendingStops.value.get(execution.id);
     if (pending) {
       markProcessStopped(
@@ -141,8 +142,13 @@ export const useExecutionStore = defineStore("execution", () => {
     const execution = executions.value.get(executionId);
     if (!execution) {
       // Race condition: stopped event arrived before addExecution was called.
-      // Buffer it — addExecution will apply it when the execution is registered.
-      pendingStops.value.set(executionId, { exitCode, timestamp, status });
+      // Buffering it, addExecution will apply it when the execution is registered.
+      pendingStops.value.set(executionId, {
+        exitCode,
+        timestamp,
+        status,
+        bufferedAt: Date.now(),
+      });
       return;
     }
 
@@ -201,6 +207,13 @@ export const useExecutionStore = defineStore("execution", () => {
         new Date(exec.lastAccessedAt).getTime() < cutoff
       ) {
         executions.value.delete(id);
+      }
+    }
+
+    const cutoffMs = Date.now() - 60 * 1000;
+    for (const [id, stop] of pendingStops.value) {
+      if (stop.bufferedAt < cutoffMs) {
+        pendingStops.value.delete(id);
       }
     }
   }
