@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { useTimeAgo } from "@vueuse/core";
   import { computed, ref, watch } from "vue";
+  import StatusBadge from "@/components/commands/StatusBadge.vue";
   import { Badge } from "@/components/ui/badge";
   import {
     Pagination,
@@ -27,7 +28,6 @@
   import { IExecutionHistory, TTriggeredBy } from "@/lib/api/api.types.ts";
   import { useGetCommandExecutionHistory } from "@/lib/api/composables/history.ts";
   import { formatDuration, useFormatDateTime } from "@/lib/utils.ts";
-  import StatusBadge from "@/pages/components/browse/StatusBadge.vue";
 
   const props = withDefaults(
     defineProps<{
