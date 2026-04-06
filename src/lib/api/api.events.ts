@@ -9,7 +9,6 @@ import type {
 import { saveExecutionLogs } from "@/lib/log-persistence.ts";
 import { useExecutionStore } from "@/stores/execution.store";
 
-let initialized = false;
 let unlisteners: Array<() => void> = [];
 
 function normalizeStatus(status: TProcessStatus): TExecutionStatus {
@@ -32,17 +31,7 @@ function normalizeStatus(status: TProcessStatus): TExecutionStatus {
 }
 
 export async function initExecutionEvents() {
-  if (unlisteners.length > 0) {
-    return;
-  }
-
-  if (initialized) {
-    return;
-  }
-  initialized = true;
-
   const store = useExecutionStore();
-
   unlisteners.push(
     await listen<ILogLine[]>("log-batch", ({ payload }) => {
       if (!(Array.isArray(payload) && payload.length)) {
@@ -52,7 +41,6 @@ export async function initExecutionEvents() {
     })
   );
 
-  // Add this alongside the existing log-batch listener
   unlisteners.push(
     await listen<ILogLine>("log-line", ({ payload }) => {
       store.appendLogBatch([payload]);
@@ -83,11 +71,9 @@ export async function initExecutionEvents() {
         payload.executionId,
         payload.exitCode,
         payload.timestamp,
-        normalizeStatus(payload.status) // use the authoritative status from the BE, not derived from exitCode
+        normalizeStatus(payload.status)
       );
 
-      // Flush to localStorage so logs survive app restart.
-      // The BE drops logs 5s after exit, so we persist here while the store still has them.
       const execution = store.getExecution(payload.executionId);
       if (execution?.commandId) {
         saveExecutionLogs(execution.commandId, {
@@ -123,7 +109,6 @@ export async function initExecutionEvents() {
     const running = await processHandlerApi.getRunningProcess();
 
     for (const proc of running) {
-      // Already in store (shouldn't happen on cold start)
       if (store.getExecution(proc.executionId)) {
         continue;
       }
@@ -145,8 +130,8 @@ export async function initExecutionEvents() {
         logs: [
           {
             timestamp: new Date().toISOString(),
-            type: "info",
-            message: `Reconnected to running process (PID: ${proc.pid})`,
+            isStderr: false,
+            content: `Reconnected to running process (PID: ${proc.pid})`,
             executionId: proc.executionId,
           },
         ],
@@ -176,5 +161,4 @@ export function cleanupExecutionEvents() {
     fn();
   });
   unlisteners = [];
-  initialized = false;
 }

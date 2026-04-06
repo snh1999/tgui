@@ -16,6 +16,9 @@ app.use(VueQueryPlugin, {
 });
 app.use(createPinia());
 
+// REASONS TO USE IT HERE
+// 1. App.vue mount-remount can cause log events to appear twice. it runs exactly once now
+// 2. the backend data hydrates before app mounts, so no risk of getting stale data
 initExecutionEvents().catch((err) => {
   console.error("Failed to initialize execution events:", err);
 });

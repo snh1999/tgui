@@ -129,6 +129,7 @@ export interface IWorkflowStepFilter {
 }
 
 export type TExecutionStatus =
+  | "idle"
   | "running"
   | "success"
   | "paused"

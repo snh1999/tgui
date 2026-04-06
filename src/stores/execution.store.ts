@@ -6,18 +6,9 @@ import type {
   TExecutionStatus,
 } from "@/lib/api/api.types.ts";
 
-export type LogType = "info" | "log" | "error";
-
-export interface LogEntry {
-  timestamp: string;
-  type: LogType;
-  message: string;
-  executionId: number;
-}
-
 export interface IExecution extends IExecutionHistory {
   commandName: string;
-  logs: LogEntry[];
+  logs: ILogLine[];
   lastAccessedAt: string;
 }
 
@@ -90,8 +81,8 @@ export const useExecutionStore = defineStore("execution", () => {
 
     execution.logs.push({
       timestamp,
-      type: isStderr ? "error" : "log",
-      message: content,
+      isStderr,
+      content,
       executionId,
     });
 
@@ -121,14 +112,7 @@ export const useExecutionStore = defineStore("execution", () => {
         continue;
       }
 
-      for (const log of group) {
-        execution.logs.push({
-          timestamp: log.timestamp,
-          type: log.isStderr ? "error" : "log",
-          message: log.content,
-          executionId: log.executionId,
-        });
-      }
+      execution.logs.push(...group);
 
       if (execution.logs.length > 5000) {
         execution.logs.splice(0, execution.logs.length - 5000);
@@ -192,8 +176,8 @@ export const useExecutionStore = defineStore("execution", () => {
     execution.status = "stopping";
     execution.logs.push({
       timestamp,
-      type: "info",
-      message: force
+      isStderr: false,
+      content: force
         ? "Force killing process..."
         : "Gracefully stopping process...",
       executionId,
