@@ -35,7 +35,7 @@
       showPagination?: boolean;
       pageSize?: number;
     }>(),
-    { isLoading: false, showPagination: true, pageSize: 20 }
+    { showPagination: true, pageSize: 20 }
   );
 
   const currentPage = ref(1);
