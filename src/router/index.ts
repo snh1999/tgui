@@ -22,6 +22,12 @@ const router = createRouter({
       path: `${routePaths.commands}/:id`,
       name: "command",
       component: CommandPage,
+      beforeEnter: (to) => {
+        const id = Number(to.params.id);
+        if (Number.isNaN(id) || id <= 0) {
+          return { path: routePaths.commands, replace: true };
+        }
+      },
     },
     {
       path: routePaths.categories,
@@ -32,9 +38,25 @@ const router = createRouter({
       path: `${routePaths.categories}/:id`,
       name: "category",
       component: CategoryPage,
+      beforeEnter: (to) => {
+        const id = Number(to.params.id);
+        if (Number.isNaN(id) || id <= 0) {
+          return { path: routePaths.categories, replace: true };
+        }
+      },
     },
     { path: routePaths.groups, name: "groups", component: GroupsPage },
-    { path: `${routePaths.groups}/:id`, name: "group", component: GroupsPage },
+    {
+      path: `${routePaths.groups}/:id`,
+      name: "group",
+      component: GroupsPage,
+      beforeEnter: (to) => {
+        const id = Number(to.params.id);
+        if (Number.isNaN(id) || id <= 0) {
+          return { path: routePaths.groups, replace: true };
+        }
+      },
+    },
     { path: routePaths.settings, name: "settings", component: SettingsPage },
   ],
 });
