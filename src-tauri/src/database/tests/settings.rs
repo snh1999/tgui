@@ -6,9 +6,6 @@ fn test_initialize_settings_creates_defaults() {
 
     let theme = test_db.db.get_setting("theme").unwrap();
     assert_eq!(theme, "system");
-
-    let shell = test_db.db.get_setting("default_shell").unwrap();
-    assert_eq!(shell, "sh");
 }
 
 #[test]

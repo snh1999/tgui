@@ -15,7 +15,7 @@ static DEFAULT_SETTINGS: LazyLock<HashMap<&'static str, &'static str>> = LazyLoc
         ("warn_before_kill", "true"),
         ("kill_process_tree_by_default", "false"),
         ("available_shells", "[]"),
-        // TODO add log_retention_days
+        ("tldr_data_version", "0"), // TODO add log_retention_days
     ])
 });
 

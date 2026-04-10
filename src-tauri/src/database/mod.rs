@@ -18,6 +18,7 @@ mod workflows;
 pub use errors::{DatabaseError, Result};
 pub use models::*;
 
+mod explainer;
 #[cfg(test)]
 pub mod tests;
 

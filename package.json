@@ -7,13 +7,15 @@
     "dev": "vite & while ! curl -s http://localhost:1420 > /dev/null; do sleep 0.1; done && wait",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "get-tldr": "./get-tldr.sh"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/vue-query": "^5.92.9",
     "@tanstack/vue-table": "^8.21.3",
     "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
     "@tauri-apps/plugin-dialog": "^2.6.0",
     "@tauri-apps/plugin-opener": "^2",
     "@vee-validate/zod": "^4.15.1",
@@ -39,7 +41,7 @@
     "@iconify-json/octicon": "^1.2.20",
     "@iconify-json/simple-icons": "^1.2.73",
     "@iconify-json/solar": "^1.2.5",
-    "@tauri-apps/cli": "^2",
+    "@tauri-apps/cli": "^2.10.1",
     "@types/node": "^25.0.10",
     "@vitejs/plugin-vue": "^6.0.3",
     "tw-animate-css": "^1.4.0",

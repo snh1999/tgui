@@ -10,17 +10,33 @@ use crate::handlers::{
 };
 use crate::process::manager::ProcessManager;
 use handlers::logger;
+use std::fs;
+use std::path::{Path, PathBuf};
 use tauri::Manager;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 fn error_map(error_message: &str) -> &str {
     error!(error_message);
     error_message
 }
 
+fn find_tldr_dir(resources: &PathBuf) -> Option<PathBuf> {
+    fs::read_dir(resources)
+        .ok()?
+        .flatten()
+        .map(|e| e.path())
+        .find(|p| {
+            p.is_dir()
+                && p.file_name()
+                    .and_then(|n| n.to_str())
+                    .map_or(false, |n| n.starts_with("tldr-pages-"))
+        })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
@@ -42,6 +58,22 @@ pub fn run() {
                 error!(error = %e, "Database initialization failed");
                 e
             })?;
+
+            #[cfg(debug_assertions)]
+            let resources_dir =
+                std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources");
+
+            #[cfg(not(debug_assertions))]
+            let resources_dir = app
+                .path()
+                .resource_dir()
+                .map_err(|_| error_map("Failed to get resource dir"))?;
+
+            let Some(tldr_dir) = find_tldr_dir(&resources_dir) else {
+                tracing::warn!("No tldr-pages directory found in resources, skipping");
+                return Ok(());
+            };
+            db.ensure_tldr_populated(&tldr_dir)?;
 
             let pm = tauri::async_runtime::block_on(async {
                 ProcessManager::new(db.clone(), Some(app.handle().clone()))
@@ -82,6 +114,7 @@ pub fn run() {
             commands::move_command_between,
             commands::toggle_command_favorite,
             commands::get_latest_execution_for_command,
+            commands::explain_command,
             workflows::create_workflow,
             workflows::get_workflow,
             workflows::get_workflows,
