@@ -115,6 +115,14 @@ CREATE TABLE IF NOT EXISTS execution_history (
     CHECK(triggered_by IN ('manual', 'workflow', 'schedule'))
 );
 
+CREATE TABLE IF NOT EXISTS tldr_commands (
+    id INTEGER PRIMARY KEY,
+    page_name TEXT NOT NULL,
+    command_name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    platform TEXT NOT NULL DEFAULT 'common'
+);
+
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -146,7 +154,6 @@ CREATE INDEX IF NOT EXISTS idx_workflow_steps_position ON workflow_steps(workflo
 CREATE INDEX IF NOT EXISTS idx_workflow_steps_workflow_enabled ON workflow_steps(workflow_id, enabled);
 
 
-
 CREATE INDEX IF NOT EXISTS idx_execution_history_workflow_step ON execution_history(command_id, workflow_id, workflow_step_id);
 CREATE INDEX IF NOT EXISTS idx_execution_history_status ON execution_history(status);
 CREATE INDEX IF NOT EXISTS idx_execution_history_command_status ON execution_history(command_id, status);
@@ -155,6 +162,9 @@ CREATE INDEX IF NOT EXISTS idx_execution_history_workflow_status ON execution_hi
 CREATE INDEX IF NOT EXISTS idx_execution_history_started ON execution_history(started_at);
 CREATE INDEX IF NOT EXISTS idx_execution_history_command_time ON execution_history(command_id, started_at);
 CREATE INDEX IF NOT EXISTS idx_execution_history_workflow_time ON execution_history(workflow_id, started_at);
+
+CREATE INDEX IF NOT EXISTS idx_tldr_page_name ON tldr_commands(page_name);
+CREATE INDEX IF NOT EXISTS idx_tldr_cmd_name ON tldr_commands(command_name);
 
 -- Triggers
 -- Updated At time

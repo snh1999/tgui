@@ -194,3 +194,21 @@ export interface IExecutionStats {
   lastExecutedAt?: Date;
   firstExecutedAt?: Date;
 }
+
+export interface IExplainResult {
+  summary: string;
+  isPrivileged: boolean;
+  isDestructive: boolean;
+  segments: ISegmentResult[];
+}
+
+export interface ISegmentResult {
+  raw: string;
+  tldrDescription?: string;
+  unknownParts?: string[];
+  isPrivileged: boolean;
+  isDestructive: boolean;
+  connector?: string;
+  hasRedirection: boolean;
+  isBackground: boolean;
+}

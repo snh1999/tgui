@@ -1,11 +1,15 @@
 <script setup lang="ts">
   import { computed } from "vue";
   import { DragIcon } from "@/assets/Icons.ts";
+  import { useSidebar } from "@/components/ui/sidebar";
 
   const props = defineProps<{ modelValue: number }>();
   const emit = defineEmits<{ "update:modelValue": [value: number] }>();
 
   const handleLeft = computed(() => props.modelValue - 2);
+
+  const sidebar = useSidebar();
+  const isSidebarExpanded = computed(() => sidebar.state.value === "expanded");
 
   const startDrag = (e: MouseEvent) => {
     e.preventDefault();
@@ -32,7 +36,8 @@
 
 <template>
   <div
-    class="fixed top-10 h-screen w-1 active:cursor-grabbing hover:bg-primary/40 cursor-col-resize z-100 transition-colors"
+    v-show="isSidebarExpanded"
+    class="fixed top-10 h-screen w-1 active:cursor-grabbing hover:bg-primary/40 cursor-col-resize z-30 transition-colors"
     :style="{ left: `${handleLeft}px` }"
     @mousedown="startDrag"
   >

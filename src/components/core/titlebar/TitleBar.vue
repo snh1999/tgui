@@ -37,8 +37,9 @@
 
 <template>
   <!--TODO: make cursor grabbing while dragging-->
+  <!--	TODO: add double click maximize-->
   <header
-    class="flex items-center justify-between h-10 pl-2 text-card-foreground bg-card border-b select-none shrink-0"
+    class="flex items-center justify-between h-10 pl-2 active:cursor-grabbing cursor-grab text-card-foreground bg-card border-b select-none shrink-0"
     @mousedown="startDrag"
   >
     <div class="flex items-center h-full" @mousedown.stop>

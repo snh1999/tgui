@@ -1,5 +1,5 @@
 use crate::database::{
-    CategoryFilter, Command, Database, ExecutionHistory, GroupFilter, WithHistory,
+    CategoryFilter, Command, Database, ExecutionHistory, ExplainResult, GroupFilter, WithHistory,
 };
 use crate::handlers::serialize_errors::SerializableError;
 use tauri::State;
@@ -84,4 +84,9 @@ pub fn get_latest_execution_for_command(
     command_id: i64,
 ) -> Option<ExecutionHistory> {
     db.get_latest_execution_for_command(command_id)
+}
+
+#[tauri::command]
+pub fn explain_command(db: State<Database>, input: String) -> Result<ExplainResult, SerializableError> {
+    db.explain_command(&input).map_err(|e| e.into())
 }

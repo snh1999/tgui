@@ -36,12 +36,7 @@
 
     <form :id="COMMAND_FORM_ID" @submit="onSubmit">
       <FieldGroup>
-        <FormField
-          name="name"
-          :form-id="COMMAND_FORM_ID"
-          label="Name"
-          :class="[isPending ? 'pointer-events-none' : '']"
-        >
+        <FormField name="name" :form-id="COMMAND_FORM_ID" label="Name">
           <Input placeholder="Command Name" />
         </FormField>
 
@@ -50,7 +45,7 @@
           :form-id="COMMAND_FORM_ID"
           label="Command Text"
         >
-          <Input placeholder="Command to execute" />
+          <Input placeholder="Command to execute" autofocus />
         </FormField>
 
         <ArrayInput

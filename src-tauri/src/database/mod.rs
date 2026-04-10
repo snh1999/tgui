@@ -14,6 +14,8 @@ mod errors;
 mod execution_history;
 pub mod models;
 mod workflows;
+mod explainer;
+
 
 pub use errors::{DatabaseError, Result};
 pub use models::*;

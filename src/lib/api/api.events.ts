@@ -6,7 +6,7 @@ import type {
   TExecutionStatus,
   TProcessStatus,
 } from "@/lib/api/api.types.ts";
-import { saveExecutionLogs } from "@/lib/log-persistence.ts";
+import { saveExecutionLogs } from "@/lib/composables/log-persistence.ts";
 import { useExecutionStore } from "@/stores/execution.store";
 
 let unlisteners: Array<() => void> = [];
