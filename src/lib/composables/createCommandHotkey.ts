@@ -14,11 +14,9 @@ export function createCommandHotKeys(dialogOpen: Ref<boolean>) {
 
   const command = ref<ICommand | undefined>();
 
-  const isTyping = computed(() =>
-    ["INPUT", "TEXTAREA", "CONTENTEDITABLE"].includes(
-      activeElement.value?.tagName || ""
-    )
-  );
+  const isTyping = computed(() => {
+    return ["INPUT", "TEXTAREA"].includes(activeElement.value?.tagName || "");
+  });
 
   const isCorrectPath = computed(
     () =>
@@ -28,20 +26,20 @@ export function createCommandHotKeys(dialogOpen: Ref<boolean>) {
       )
   );
 
-  const noDialogOpen = computed(() => {
+  const hasOpenDialog = () => {
     return (
       document.querySelectorAll(
         '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]'
-      ).length === 0
+      ).length > 0
     );
-  });
+  };
 
   const shouldOpen = computed(
     () =>
       keys.ctrl_v.value &&
       isCorrectPath.value &&
       !isTyping.value &&
-      noDialogOpen.value
+      !hasOpenDialog()
   );
 
   watch(dialogOpen, () => {
@@ -51,13 +49,11 @@ export function createCommandHotKeys(dialogOpen: Ref<boolean>) {
   });
 
   whenever(shouldOpen, async () => {
-    const text = await readText();
-    if (!text) {
-      return;
-    }
-    toast.success("Copied from clipboard");
-
     try {
+      const text = await readText();
+      if (!text?.trim()) {
+        return;
+      }
       const result = await commandsApi.explain(text);
       command.value = {
         position: 0,
@@ -65,9 +61,11 @@ export function createCommandHotKeys(dialogOpen: Ref<boolean>) {
         name: result.summary,
         command: text,
       };
+      toast.success("Copied from clipboard");
     } catch (error) {
       toast.error("Something went wrong");
       console.error("Failed to fetch command explanation:", error);
+      return;
     }
 
     dialogOpen.value = true;
