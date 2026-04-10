@@ -3,7 +3,7 @@ import {
   LOG_PERSISTENCE_VERSION,
   MAX_PERSISTED_LOGS,
 } from "@/app.constants.ts";
-import type { ILogLine, TExecutionStatus } from "@/lib/api/api.types";
+import type { ILogLine, TExecutionStatus } from "@/lib/api/api.types.ts";
 
 export interface PersistedExecution {
   _v: number;

@@ -1,11 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
-import type {
+import {
   ICategory,
   ICommand,
   ICommandGroupFilter,
   ICommandWithHistory,
   IExecutionHistory,
   IExecutionStats,
+  IExplainResult,
   IGroup,
   IGroupNode,
   ILogLine,
@@ -85,6 +86,9 @@ export const commandsApi = {
 
   search: (searchTerm: string) =>
     invoke<ICommand[]>("search_commands", { searchTerm }),
+
+  explain: (input: string) =>
+    invoke<IExplainResult>("explain_command", { input }),
 };
 
 export const groupsApi = {

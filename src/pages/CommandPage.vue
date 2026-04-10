@@ -22,7 +22,7 @@
     useKillProcess,
     useSpawnCommand,
   } from "@/lib/api/composables/process.ts";
-  import { loadExecutionLogs } from "@/lib/log-persistence.ts";
+  import { loadExecutionLogs } from "@/lib/composables/log-persistence.ts";
   import PageWrapper from "@/pages/PageWrapper.vue";
   import { useExecutionStore } from "@/stores/execution.store.ts";
 
