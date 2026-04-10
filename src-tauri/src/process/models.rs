@@ -94,7 +94,7 @@ pub struct ProcessStoppedEvent {
     pub timestamp: String,
 }
 
-#[derive(Debug,Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SpawnContext {
     pub command_id: i64,
     pub name: String,

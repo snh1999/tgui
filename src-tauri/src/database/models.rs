@@ -1,3 +1,4 @@
+use crate::database::explainer::SegmentResult;
 use crate::utils::get_utc_timestamp_string;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -319,4 +320,13 @@ pub enum CategoryFilter {
     Category(i64),
     None,
     All,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct ExplainResult {
+    pub summary: String,
+    pub is_privileged: bool,
+    pub is_destructive: bool,
+    /// One entry per segment (split by &&, ||, |, ;).
+    pub segments: Vec<SegmentResult>,
 }

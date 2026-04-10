@@ -2,6 +2,7 @@ use super::*;
 mod categories;
 mod commands;
 mod execution_history;
+mod explainer;
 mod groups;
 pub mod helpers;
 mod integration;
