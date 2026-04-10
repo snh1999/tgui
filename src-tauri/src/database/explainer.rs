@@ -1,24 +1,12 @@
 use std::fs;
 use std::path::{Path};
 
-use super::{Database, DatabaseError, ExplainResult, Result};
+use super::{Database, DatabaseError, ExplainResult, Result, SegmentResult};
 use tracing::{debug};
 use rusqlite::params;
 use serde::Serialize;
 
-#[derive(Debug, Serialize, Clone)]
-pub struct SegmentResult {
-    /// The cleaned segment text (redirections/background stripped).
-    pub raw: String,
-    pub tldr_description: Option<String>,
-    pub unknown_parts: Vec<String>,
-    pub is_privileged: bool,
-    pub is_destructive: bool,
-    /// Operator that preceded this segment in the original string: &&, ||, |, ;
-    pub connector: Option<String>,
-    pub has_redirection: bool,
-    pub is_background: bool,
-}
+
 
 #[derive(Debug)]
 struct RawSegment {
@@ -46,7 +34,7 @@ impl Database {
         }
 
         tracing::info!(version = %tldr_dir_name, "Populating tldr commands");
-        self.populate_tldr_from_folder(pages_dir.to_str().unwrap())?;
+        self.populate_tldr_from_folder(pages_dir.to_str().unwrap_or(""))?;
         self.set_setting("tldr_data_version", current_version)?;
 
         let stored = self.get_setting("tldr_data_version")?;
@@ -478,16 +466,6 @@ fn build_summary(segments: &[SegmentResult]) -> String {
         } else {
             base.to_string()
         };
-
-        // if !seg.unknown_parts.is_empty() {
-        //     let list = seg
-        //         .unknown_parts
-        //         .iter()
-        //         .map(|u| format!("`{}`", u))
-        //         .collect::<Vec<_>>()
-        //         .join(", ");
-        //     part = format!("{} ({} unrecognized)", part, list);
-        // }
 
         if seg.has_redirection {
             part = format!("{} [output redirected]", part);

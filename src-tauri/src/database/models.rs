@@ -1,4 +1,4 @@
-use crate::database::explainer::SegmentResult;
+
 use crate::utils::get_utc_timestamp_string;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -323,10 +323,26 @@ pub enum CategoryFilter {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ExplainResult {
     pub summary: String,
     pub is_privileged: bool,
     pub is_destructive: bool,
     /// One entry per segment (split by &&, ||, |, ;).
     pub segments: Vec<SegmentResult>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SegmentResult {
+    /// The cleaned segment text (redirections/background stripped).
+    pub raw: String,
+    pub tldr_description: Option<String>,
+    pub unknown_parts: Vec<String>,
+    pub is_privileged: bool,
+    pub is_destructive: bool,
+    /// Operator that preceded this segment in the original string: &&, ||, |, ;
+    pub connector: Option<String>,
+    pub has_redirection: bool,
+    pub is_background: bool,
 }
