@@ -41,6 +41,9 @@ export const useExecutionStore = defineStore("execution", () => {
     >
   >(new Map());
 
+  // Mirrors pendingStops: log batches that arrived before addExecution was called. Flushed in addExecution, same as pendingStops.
+  const pendingLogs = ref<Map<number, ILogLine[]>>(new Map());
+
   const getExecution = (id: number) => executions.value.get(id);
   const getExecutionLogs = (id: number) => executions.value.get(id)?.logs ?? [];
 
@@ -52,6 +55,18 @@ export const useExecutionStore = defineStore("execution", () => {
 
   function addExecution(execution: IExecution) {
     executions.value.set(execution.id, execution);
+
+    // Flush any log lines that arrived before this execution was registered.
+    const bufferedLogs = pendingLogs.value.get(execution.id);
+    if (bufferedLogs?.length) {
+      execution.logs.push(...bufferedLogs);
+      if (execution.logs.length > 5000) {
+        execution.logs.splice(0, execution.logs.length - 5000);
+      }
+      execution.lastAccessedAt = new Date().toISOString();
+      pendingLogs.value.delete(execution.id);
+    }
+
     // A stop event that arrived before this execution was registered
     const pending = pendingStops.value.get(execution.id);
     if (pending) {
@@ -110,6 +125,11 @@ export const useExecutionStore = defineStore("execution", () => {
     for (const [executionId, group] of byExecution) {
       const execution = executions.value.get(executionId);
       if (!execution) {
+        // Log batch arrived before addExecution was called.
+        // Buffer the lines; addExecution will flush them when the execution is registered
+        const existing = pendingLogs.value.get(executionId) ?? [];
+        existing.push(...group);
+        pendingLogs.value.set(executionId, existing);
         continue;
       }
 
@@ -216,6 +236,16 @@ export const useExecutionStore = defineStore("execution", () => {
         pendingStops.value.delete(id);
       }
     }
+
+    // Expire stale pending logs with the same 60s window as pendingStops.
+    // These are keyed by executionId with no timestamp, so we evict based on
+    // whether the corresponding execution is already terminal or unknown.
+    for (const [id] of pendingLogs.value) {
+      const exec = executions.value.get(id);
+      if (!exec || terminal.has(exec.status)) {
+        pendingLogs.value.delete(id);
+      }
+    }
   }
 
   function clearLogs(executionId: number) {
@@ -228,6 +258,7 @@ export const useExecutionStore = defineStore("execution", () => {
   function $reset() {
     executions.value.clear();
     pendingStops.value.clear();
+    pendingLogs.value.clear();
   }
 
   return {
