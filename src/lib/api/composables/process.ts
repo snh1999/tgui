@@ -1,4 +1,5 @@
-import { useMutation, useQuery } from "@tanstack/vue-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
+import { unref } from "vue";
 import { toast } from "vue-sonner";
 import { queryKeys } from "@/lib/api/api.keys.ts";
 import { processHandlerApi } from "@/lib/api/api.tauri.ts";
@@ -14,11 +15,16 @@ export function useResolveCommandContext(commandId: number) {
 }
 
 export function useSpawnCommand() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (commandId: number) =>
       processHandlerApi.spawnCommand(commandId),
-    onSuccess: () => {
+    onSuccess: (_, commandId) => {
       toast.success("Spawned command");
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.commands.detail(unref(commandId)), "history"],
+      });
     },
     onError: toastError,
   });
