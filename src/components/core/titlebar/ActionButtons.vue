@@ -39,7 +39,7 @@
     </DropdownMenuContent>
   </DropdownMenu>
 
-  <CreateCommandsDialog v-model:open="createCommandOpen" :command="command" />
+  <CreateCommandsDialog v-model:open="createCommandOpen" />
   <CreateGroupDialog v-model:open="createGroupOpen" />
   <CreateCategoryDialog v-model:open="createCategoryOpen" />
 </template>

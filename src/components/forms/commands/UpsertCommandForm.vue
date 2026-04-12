@@ -3,11 +3,12 @@
   import {
     IUpsertCommandForm,
     useCommandForm,
+    useCommandLineSync,
   } from "@/components/forms/commands/commands.helpers.ts";
   import CategorySelect from "@/components/forms/common/CategorySelect.vue";
   import GroupSelect from "@/components/forms/common/GroupSelect.vue";
   import ShellSelect from "@/components/forms/common/ShellSelect.vue";
-  import { FieldGroup } from "@/components/ui/field";
+  import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
   import { Input } from "@/components/ui/input";
   import {
     InputGroup,
@@ -20,13 +21,25 @@
   import FormField from "@/components/ui/tgui/inputs/FormField.vue";
   import MapInput from "@/components/ui/tgui/inputs/MapInput.vue";
   import Loading from "@/components/ui/tgui/Loading.vue";
+  import { Separator } from "@/components/ui/separator";
 
   const props = defineProps<IUpsertCommandForm>();
   const emit = defineEmits<{ success: [] }>();
-  const { resetForm, isPending, onSubmit, isDirty, isValid } = useCommandForm(
-    props,
-    () => emit("success")
+  const {
+    resetForm,
+    isPending,
+    onSubmit,
+    isDirty,
+    isValid,
+    values,
+    setFieldValue,
+  } = useCommandForm(props, () => emit("success"));
+
+  const { combined, onCombinedChange } = useCommandLineSync(
+    values,
+    setFieldValue
   );
+
   defineExpose({ resetForm, isPending, isValid, isDirty });
 </script>
 
@@ -40,33 +53,49 @@
           <Input placeholder="Command Name" />
         </FormField>
 
-        <FormField
-          name="command"
-          :form-id="COMMAND_FORM_ID"
-          label="Command Text"
-        >
-          <Input placeholder="Command to execute" autofocus />
-        </FormField>
+	      <FieldGroup>
 
-        <ArrayInput
-          fieldName="arguments"
-          label="Arguments"
-          placeholder="Add Argument"
-          addButtonText="Add Argument"
-        />
+	      <Field>
+	      <FieldLabel>Command Text</FieldLabel>
+		      <FieldDescription>
+			      Type the full command here, or use the fields below.
+		      </FieldDescription>
+		      <Input
+				      v-model="combined"
+				      placeholder='e.g. echo "hello world" or git commit -m "msg"'
+				      @blur="onCombinedChange"
+		      />
+				<!--		      <FieldError>{{show parsing error}}</FieldError>-->
+	      </Field>
 
-        <FormField
-          name="workingDirectory"
-          :form-id="COMMAND_FORM_ID"
-          label="Working Directory"
-        >
-          <template #default="{ bindings }">
-            <DirectoryPicker
-              v-bind="bindings"
-              placeholder="Select the location where you want to execute the command"
-            />
-          </template>
-        </FormField>
+		      <div class="grid grid-cols-2 gap-4">
+
+		      <FormField name="command" :form-id="COMMAND_FORM_ID" label="Executable">
+			      <Input placeholder="Executable, e.g. echo" />
+		      </FormField>
+
+		      <ArrayInput
+				      fieldName="arguments"
+				      label="Arguments"
+				      placeholder="Add Argument"
+				      addButtonText="Add Argument"
+		      />
+		      </div>
+	      </FieldGroup>
+
+	      <Separator/>
+	      <FormField
+			      name="workingDirectory"
+			      :form-id="COMMAND_FORM_ID"
+			      label="Working Directory"
+	      >
+		      <template #default="{ bindings }">
+			      <DirectoryPicker
+					      v-bind="bindings"
+					      placeholder="Select the location where you want to execute the command"
+			      />
+		      </template>
+	      </FormField>
 
         <FormField name="groupId" :form-id="COMMAND_FORM_ID" label="Group">
           <template #default="{ bindings }">

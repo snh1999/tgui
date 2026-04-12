@@ -3,8 +3,6 @@ import { useActiveElement, useMagicKeys, whenever } from "@vueuse/core";
 import { computed, type Ref, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { toast } from "vue-sonner";
-import { commandsApi } from "@/lib/api/api.tauri.ts";
-import type { ICommand } from "@/lib/api/api.types.ts";
 import { routePaths } from "@/router";
 
 export function createCommandHotKeys(dialogOpen: Ref<boolean>) {
@@ -12,7 +10,7 @@ export function createCommandHotKeys(dialogOpen: Ref<boolean>) {
   const keys = useMagicKeys();
   const activeElement = useActiveElement();
 
-  const command = ref<ICommand | undefined>();
+  const clipboardText = ref("");
 
   const isTyping = computed(() => {
     return ["INPUT", "TEXTAREA"].includes(activeElement.value?.tagName || "");
@@ -44,7 +42,7 @@ export function createCommandHotKeys(dialogOpen: Ref<boolean>) {
 
   watch(dialogOpen, () => {
     if (!dialogOpen.value) {
-      command.value = undefined;
+      clipboardText.value = "";
     }
   });
 
@@ -54,13 +52,7 @@ export function createCommandHotKeys(dialogOpen: Ref<boolean>) {
       if (!text?.trim()) {
         return;
       }
-      const result = await commandsApi.explain(text);
-      command.value = {
-        position: 0,
-        id: 0,
-        name: result.summary,
-        command: text,
-      };
+      clipboardText.value = text;
       toast.success("Copied from clipboard");
     } catch (error) {
       toast.error("Something went wrong");
@@ -71,5 +63,5 @@ export function createCommandHotKeys(dialogOpen: Ref<boolean>) {
     dialogOpen.value = true;
   });
 
-  return { command };
+  return { clipboardText };
 }
