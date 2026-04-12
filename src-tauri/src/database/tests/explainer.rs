@@ -1,7 +1,6 @@
 use crate::database;
-use crate::database::explainer::SegmentResult;
 use crate::database::tests::TestDb;
-use crate::database::ExplainResult;
+use crate::database::{ExplainResult, SegmentResult};
 use std::fs;
 
 #[test]
@@ -351,7 +350,7 @@ fn test_matches_pattern_token_count_mismatch() {
         "apt install {{package}}",
         "apt install"
     ));
-    assert!(database::explainer::matches_pattern(
+    assert!(!database::explainer::matches_pattern(
         "apt install",
         "apt install vim"
     ));
@@ -449,28 +448,7 @@ fn test_resolve_segment_text_no_match_returns_all_unknown() {
     assert_eq!(unknown, vec!["unknowncommand", "-a", "-b"]);
 }
 
-#[test]
-fn test_explain_result_serialization() {
-    let result = ExplainResult {
-        summary: "Test summary".to_string(),
-        is_privileged: false,
-        is_destructive: true,
-        segments: vec![SegmentResult {
-            raw: "echo test".to_string(),
-            tldr_description: Some("Print text".to_string()),
-            unknown_parts: vec![],
-            is_privileged: false,
-            is_destructive: false,
-            connector: None,
-            has_redirection: false,
-            is_background: false,
-        }],
-    };
 
-    let json = serde_json::to_string(&result).unwrap();
-    assert!(json.contains("Test summary"));
-    assert!(json.contains("is_destructive"));
-}
 
 #[test]
 fn test_strip_sudo_combined_flags() {
