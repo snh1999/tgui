@@ -125,3 +125,11 @@ export function useMoveCommand() {
     },
   });
 }
+
+export function useExplainCommand(input: MaybeRef<string>) {
+  return useQuery(() => ({
+    queryKey: [unref(input)] as const,
+    queryFn: () => commandsApi.explain(unref(input)),
+    enabled: () => unref(input).length > 0,
+  }));
+}

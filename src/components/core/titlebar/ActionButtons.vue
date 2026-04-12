@@ -16,7 +16,7 @@
   const createCommandOpen = ref(false);
   const createGroupOpen = ref(false);
   const createCategoryOpen = ref(false);
-  const { command } = createCommandHotKeys(createCommandOpen);
+  const { clipboardText } = createCommandHotKeys(createCommandOpen);
 </script>
 
 <template>
@@ -39,7 +39,10 @@
     </DropdownMenuContent>
   </DropdownMenu>
 
-  <CreateCommandsDialog v-model:open="createCommandOpen" />
+  <CreateCommandsDialog
+    v-model:open="createCommandOpen"
+    :commandText="clipboardText"
+  />
   <CreateGroupDialog v-model:open="createGroupOpen" />
   <CreateCategoryDialog v-model:open="createCategoryOpen" />
 </template>
