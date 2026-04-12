@@ -50,7 +50,7 @@
     isPending,
     handleFormSubmit,
     isDirty,
-    isValid,
+    isValid: isFormValid,
     values,
     setFieldValue,
   } = useCommandForm(props, () => emit("success"), commandName);
@@ -60,6 +60,8 @@
     setFieldValue,
     props.commandText
   );
+
+	const isValid = computed(() => isFormValid.value && !error.value)
 
   defineExpose({ resetForm, isPending, isValid, isDirty });
 </script>
