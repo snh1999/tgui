@@ -1,12 +1,9 @@
 use std::fs;
-use std::path::{Path};
+use std::path::Path;
 
 use super::{Database, DatabaseError, ExplainResult, Result, SegmentResult};
-use tracing::{debug};
 use rusqlite::params;
-use serde::Serialize;
-
-
+use tracing::debug;
 
 #[derive(Debug)]
 struct RawSegment {
@@ -44,7 +41,6 @@ impl Database {
 
     /// save tldr fetched entries to database
     pub fn populate_tldr_from_folder(&self, folder_path: &str) -> Result<()> {
-        // Collect all file paths before acquiring the DB lock.
         let files = collect_tldr_files(Path::new(folder_path));
 
         let mut conn = self.conn()?;
@@ -124,36 +120,36 @@ impl Database {
     /// One DB call fetches all candidates for the first token; length iteration
     /// and placeholder matching then happen entirely in memory.
     pub(crate) fn resolve_segment_text(&self, text: &str) -> (Option<String>, Vec<String>) {
-        let tokens: Vec<&str> = text.split_whitespace().collect();
+        let tokens: Vec<String> = shlex::split(text)
+            .unwrap_or_else(|| text.split_whitespace().map(String::from).collect());
         if tokens.is_empty() {
             return (None, Vec::new());
         }
 
-        // Fetch pattern candidates once up front (needed for pass 2 at each length).
-        let candidates = match self.get_tldr_candidates_for(tokens[0]) {
+        let candidates = match self.get_tldr_candidates_for(&tokens[0]) {
             Ok(c) => c,
-            Err(_) => return (None, tokens.iter().map(|s| s.to_string()).collect()),
+            Err(_) => return (None, tokens),
         };
 
         for len in (1..=tokens.len()).rev() {
             let candidate = tokens[..len].join(" ");
-            let unknown: Vec<String> = tokens[len..].iter().map(|s| s.to_string()).collect();
+            let unknown: Vec<String> = tokens[len..].to_vec();
 
-            // Exact DB match first (catches literal examples + page fallback rows).
             if let Ok(Some(desc)) = self.get_tldr_exact(&candidate) {
                 return (Some(desc), unknown);
             }
 
-            // Pattern match at this same length before trying a shorter prefix.
+            // Convert String refs to &str for matches_pattern_tokens
+            let token_refs: Vec<&str> = tokens[..len].iter().map(|s| s.as_str()).collect();
             if let Some((_, desc)) = candidates
                 .iter()
-                .find(|(cmd, _)| matches_pattern(cmd, &candidate))
+                .find(|(cmd, _)| matches_pattern_tokens(cmd, &token_refs))
             {
                 return (Some(desc.clone()), unknown);
             }
         }
 
-        (None, tokens.iter().map(|s| s.to_string()).collect())
+        (None, tokens)
     }
 
     /// the rank hack is necessary because for some entries, tldr has duplicate values
@@ -174,19 +170,6 @@ impl Database {
     }
 
     /// Explain a raw shell command string in plain English.
-    ///
-    /// let r = db.explain_command("sudo apt update -y")?;
-    /// r.summary = "[sudo] Refresh the local package index (`-y` unrecognized)"
-    /// r.is_privileged = true; r.risk_level = 3
-    ///
-    /// let r = db.explain_command("cat /etc/passwd | grep root")?;
-    /// // r.summary → "Print the contents of a file, piped to search for a pattern in input"
-    ///
-    /// let r = db.explain_command("rm -rf /tmp/build && echo done > out.txt")?;
-    /// // r.summary        → " Remove files or directories, then print a message [output redirected]"
-    /// // r.is_destructive → true
-    /// // r.risk_level     → 7
-    ///
     pub fn explain_command(&self, input: &str) -> Result<ExplainResult> {
         let raw_segments = parse_into_segments(input);
         let mut segment_results: Vec<SegmentResult> = Vec::new();
@@ -241,21 +224,20 @@ const DESTRUCTIVE_TOKEN_PATTERNS: &[&[&str]] = &[
 ];
 const OPS: &[&str] = &["&&", "||", "|", ";"];
 
-
 /// Pattern tokens that appear contiguously at the start; additional args after are fine
 pub(crate) fn is_destructive(raw: &str) -> bool {
-    // Fork bomb pattern doesn't tokenize cleanly.
     if raw.contains(":(){:|:&};:") {
         return true;
     }
-    let tokens: Vec<&str> = raw.split_whitespace().collect();
+    let tokens: Vec<String> = shlex::split(raw)
+        .unwrap_or_else(|| raw.split_whitespace().map(String::from).collect());
 
     'outer: for pattern in DESTRUCTIVE_TOKEN_PATTERNS {
         if tokens.len() < pattern.len() {
             continue;
         }
         for (p, t) in pattern.iter().zip(tokens.iter()) {
-            if *p != *t {
+            if *p != t.as_str() {
                 continue 'outer;
             }
         }
@@ -298,7 +280,7 @@ fn parse_tldr_page_description(content: &str) -> Option<String> {
 }
 
 /// Find the first shell operator in `s`. Longer operators win at the same position (so || beats |, && beats &).
-fn find_next_operator<'a>(s: &'a str) -> (&'a str, Option<&'static str>, &'a str) {
+fn find_next_operator(s: &str) -> (&str, Option<&'static str>, &str) {
     let mut earliest: Option<(usize, &'static str)> = None;
 
     for &op in OPS {
@@ -319,7 +301,7 @@ fn find_next_operator<'a>(s: &'a str) -> (&'a str, Option<&'static str>, &'a str
     }
 }
 
-/// Strip surrounding quotes from a token so `"hello world"` and `'file.txt'`match tldr placeholders.
+/// Strip surrounding quotes from a token so `"hello world"` and `'file.txt'` match tldr placeholders.
 fn strip_quotes(s: &str) -> &str {
     if s.len() >= 2
         && ((s.starts_with('"') && s.ends_with('"')) || (s.starts_with('\'') && s.ends_with('\'')))
@@ -335,7 +317,9 @@ fn build_segment(text: &str, connector: Option<String>) -> RawSegment {
     let mut has_redirection = false;
     let mut is_background = false;
     let mut clean: Vec<String> = Vec::new();
-    let tokens: Vec<&str> = text.split_whitespace().collect();
+
+    let tokens: Vec<String> = shlex::split(text)
+        .unwrap_or_else(|| text.split_whitespace().map(String::from).collect());
     let mut skip_next = false;
 
     for token in &tokens {
@@ -344,7 +328,7 @@ fn build_segment(text: &str, connector: Option<String>) -> RawSegment {
             continue;
         }
         // Standalone redirection operator followed by a filename
-        if matches!(*token, ">" | ">>" | "2>" | "&>" | "1>") {
+        if matches!(token.as_str(), ">" | ">>" | "2>" | "&>" | "1>") {
             has_redirection = true;
             skip_next = true;
             continue;
@@ -359,17 +343,17 @@ fn build_segment(text: &str, connector: Option<String>) -> RawSegment {
             continue;
         }
         // Standalone background operator
-        if *token == "&" {
+        if token == "&" {
             is_background = true;
             continue;
         }
-        // Trailing & glued to a token (rare, but defensive)
+        // Trailing & glued to a token
         if token.ends_with('&') && token.len() > 1 {
             is_background = true;
-            clean.push(strip_quotes(&token[..token.len() - 1]).to_string());
+            clean.push(token[..token.len() - 1].to_string());
             continue;
         }
-        clean.push(strip_quotes(token).to_string());
+        clean.push(token.clone());
     }
 
     RawSegment {
@@ -379,8 +363,7 @@ fn build_segment(text: &str, connector: Option<String>) -> RawSegment {
         is_background,
     }
 }
-
-/// Strip a leading `sudo` and all its flags (`sudo`, `sudo -E`, `sudo -u`, `sudo -E -u`) from a command string.
+/// Strip a leading `sudo` and all its flags from a command string.
 /// Returns `(is_privileged, remaining_command)`.
 pub(crate) fn strip_sudo(text: &str) -> (bool, String) {
     let tokens: Vec<&str> = text.split_whitespace().collect();
@@ -411,11 +394,10 @@ pub(crate) fn strip_sudo(text: &str) -> (bool, String) {
                 | "-T"
                 | "--command-timeout"
         ) {
-            i += 2; // skip flag + its argument
+            i += 2;
             continue;
         }
 
-        // Any other flag token (e.g. -E, -i, -s, -n, -v, -k …)
         if token.starts_with('-') {
             i += 1;
             continue;
@@ -429,26 +411,56 @@ pub(crate) fn strip_sudo(text: &str) -> (bool, String) {
     (true, String::new())
 }
 
-/// Return true when `pattern` (a tldr command name, possibly with {{placeholders}})
-/// positionally matches every token in `input`.
-pub(crate) fn matches_pattern(pattern: &str, input: &str) -> bool {
+/// Token-slice version used internally. The last free `{{placeholder}}` is
+/// greedy — absorbs any number of remaining tokens — so `echo {{text}}`
+/// matches both `echo hello` and `echo hello world`.
+pub(crate) fn matches_pattern_tokens(pattern: &str, tokens: &[&str]) -> bool {
     let pt: Vec<&str> = pattern.split_whitespace().collect();
-    let it: Vec<&str> = input.split_whitespace().collect();
-    if pt.len() != it.len() {
+    if pt.is_empty() || tokens.is_empty() || pt.len() > tokens.len() {
         return false;
     }
-    pt.iter().zip(it.iter()).all(|(p, i)| {
-        if p.starts_with("{{") && p.ends_with("}}") {
-            let inner = &p[2..p.len() - 2];
-            // {{[-a|--option]}} is constrained, not a free wildcard
-            if inner.starts_with('[') && inner.ends_with(']') {
-                let alts = &inner[1..inner.len() - 1];
-                return alts.split('|').any(|alt| alt.trim() == *i);
-            }
-            return true;
+    for (idx, p) in pt[..pt.len() - 1].iter().enumerate() {
+        if !pattern_token_matches(p, tokens[idx]) {
+            return false;
         }
-        p == i
-    })
+    }
+    let last_p = pt[pt.len() - 1];
+    let is_free_placeholder = last_p.starts_with("{{")
+        && last_p.ends_with("}}")
+        && !{
+            let inner = &last_p[2..last_p.len() - 2];
+            inner.starts_with('[') && inner.ends_with(']')
+        };
+    if is_free_placeholder {
+        true
+    } else if pt.len() == tokens.len() {
+        pattern_token_matches(last_p, tokens[pt.len() - 1])
+    } else {
+        false
+    }
+}
+
+/// Public string-based entry point for external callers and tests.
+/// Shlex-splits input so quoted strings (e.g. `"hello world"`) count as one token.
+pub(crate) fn matches_pattern(pattern: &str, input: &str) -> bool {
+    let owned: Vec<String> =
+        shlex::split(input).unwrap_or_else(|| input.split_whitespace().map(String::from).collect());
+    let tokens: Vec<&str> = owned.iter().map(String::as_str).collect();
+    matches_pattern_tokens(pattern, &tokens)
+}
+
+#[inline]
+fn pattern_token_matches(p: &str, token: &str) -> bool {
+    if p.starts_with("{{") && p.ends_with("}}") {
+        let inner = &p[2..p.len() - 2];
+        if inner.starts_with('[') && inner.ends_with(']') {
+            return inner[1..inner.len() - 1]
+                .split('|')
+                .any(|alt| alt.trim() == token);
+        }
+        return true;
+    }
+    p == token
 }
 
 /// Build ExplainResult summary from segments

@@ -120,6 +120,22 @@ impl ManagedProcess {
         let status_clone = status.clone();
         let event_sender_clone = event_sender.clone();
 
+        // Sending has to be here (before spawn) to ensuse the order started → log → stopped for fast exiting processes
+        // As it is already in the mpsc channel queue when the monitor task starts, so the consumer always sees it first.
+        // The logs→stopped invariant is preserved by `streaming_handle.await` inside the monitor task.
+        if let Err(e) = event_sender
+            .send(ProcessEvent::Started(ProcessStartedEvent {
+                execution_id,
+                pid,
+                command_id: context.command_id,
+                command_name: context.name.clone(),
+                timestamp: start_time.clone(),
+            }))
+            .await
+        {
+            warn!(error = ?e, "Failed to send Started event");
+        }
+
         // Spawn monitor task that owns the child and kill_rx
         tokio::spawn(async move {
             let mut process_handle = ProcessHandle { pid, child };
@@ -253,19 +269,6 @@ impl ManagedProcess {
 
             debug!(execution_id, exit_code, "Process monitor completed");
         });
-
-        if let Err(e) = event_sender
-            .send(ProcessEvent::Started(ProcessStartedEvent {
-                execution_id,
-                pid,
-                command_id: context.command_id,
-                command_name: context.name.clone(),
-                timestamp: start_time.clone(),
-            }))
-            .await
-        {
-            warn!(error = ?e, "Failed to send Started event");
-        }
 
         Ok(Self {
             execution_id,
