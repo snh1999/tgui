@@ -10,6 +10,7 @@
   const props = defineProps<{
     viewTrigger?: boolean;
     command?: ICommand;
+    commandText?: string;
   }>();
 
   const createCommandFormRef = ref<InstanceType<
@@ -32,6 +33,7 @@
         @success="closeDialog"
         ref="createCommandFormRef"
         :command="command"
+        :commandText="commandText"
         isCreate
       />
     </template>
@@ -54,7 +56,6 @@
         variant="primary"
         :form="COMMAND_FORM_ID"
         :is-pending="createCommandFormRef?.isPending"
-        :disabled="!createCommandFormRef?.isValid"
       >
         Create
       </Button>

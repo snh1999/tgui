@@ -1,7 +1,7 @@
 import { toTypedSchema } from "@vee-validate/zod";
 import { split } from "shlex";
 import { type FormContext, useForm } from "vee-validate";
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, ComputedRef, nextTick, ref, watch } from "vue";
 import { z } from "zod";
 import {
   argumentSchema,
@@ -23,11 +23,13 @@ export const commandFormSchema = groupCommandFormSchema.extend({
 export interface IUpsertCommandForm {
   command?: ICommand;
   isCreate?: boolean;
+  commandText?: string;
 }
 
 export function useCommandForm(
   props: IUpsertCommandForm,
-  onSuccess: () => void
+  onSuccess: () => void,
+  commandName: ComputedRef<string>
 ) {
   const { handleSubmit, resetForm, meta, values, setFieldValue } = useForm({
     validationSchema: toTypedSchema(commandFormSchema),
@@ -61,8 +63,18 @@ export function useCommandForm(
       : isCreatePending.value
   );
 
+  function handleFormSubmit(e: Event) {
+    if (!values.name?.trim() && commandName.value) {
+      setFieldValue("name", commandName.value);
+    }
+    onSubmit(e);
+  }
+
   const onSubmit = handleSubmit((rawData) => {
-    const data = transformEnvVars(rawData);
+    const data = transformEnvVars({
+      ...rawData,
+      name: rawData.name?.trim() || commandName.value || rawData.name,
+    });
     if (props.command && !props.isCreate) {
       updateCommand(
         { id: props.command.id, payload: data },
@@ -81,7 +93,7 @@ export function useCommandForm(
   return {
     resetForm,
     isPending,
-    onSubmit,
+    handleFormSubmit,
     isDirty,
     isValid,
     values,
@@ -100,10 +112,12 @@ type TCommandFormInput = z.input<typeof commandFormSchema>;
  */
 export function useCommandLineSync(
   values: Partial<TCommandFormInput>,
-  setFieldValue: FormContext<TCommandFormInput>["setFieldValue"]
+  setFieldValue: FormContext<TCommandFormInput>["setFieldValue"],
+  initialValue: string = ""
 ) {
   const combined = ref<string>("");
   const isSyncing = ref(false);
+  const error = ref<string | null>(null);
 
   function buildCombined(cmd: string, args: string[]): string {
     return [cmd, ...(args ?? [])]
@@ -112,9 +126,22 @@ export function useCommandLineSync(
       .join(" ");
   }
 
-  combined.value = buildCombined(values.command ?? "", values.arguments ?? []);
+  combined.value =
+    buildCombined(values.command ?? "", values.arguments ?? []) || initialValue;
 
-  // fields → combined. (Deep-watch because arguments is an array)
+  if (initialValue && !values.command) {
+    try {
+      const [cmd = "", ...rest] = split(initialValue);
+      isSyncing.value = true;
+      setFieldValue("command", cmd);
+      setFieldValue("arguments", rest);
+      nextTick(() => {
+        isSyncing.value = false;
+      });
+    } catch {}
+  }
+
+  // fields → combined (when user edits executable/args manually)
   watch(
     () => [values.command, values.arguments] as [string, string[]],
     ([cmd, args]) => {
@@ -123,24 +150,31 @@ export function useCommandLineSync(
       }
       combined.value = buildCombined(cmd ?? "", args ?? []);
     },
-    { deep: true }
+    { deep: true } // because args an array
   );
 
-  // combined → fields
+  // combined → fields (every keystroke)
   function onCombinedChange() {
     const input = combined.value.trim();
+    error.value = "";
 
-    if (!input) {
+    if (!input.trim()) {
+      isSyncing.value = true;
       setFieldValue("command", "");
       setFieldValue("arguments", []);
+      nextTick(() => (isSyncing.value = false));
       return;
     }
 
     let tokens: string[];
     try {
       tokens = split(input);
-    } catch {
-      tokens = input.split(/\s+/);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "parse error";
+      error.value = msg.includes("quote")
+        ? "Unclosed quote"
+        : "Invalid shell syntax";
+      return;
     }
 
     const [cmd = "", ...rest] = tokens;
@@ -149,12 +183,10 @@ export function useCommandLineSync(
     setFieldValue("command", cmd);
     setFieldValue("arguments", rest);
 
-    combined.value = buildCombined(cmd, rest);
-
     nextTick(() => {
       isSyncing.value = false;
     });
   }
 
-  return { combined, onCombinedChange };
+  return { combined, onCombinedChange, error };
 }
