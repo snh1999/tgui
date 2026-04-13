@@ -452,6 +452,45 @@ await invoke('move_command_between', {
 await invoke('toggle_favorite', {id: 5})
 ```
 
+### Explain Command
+
+`explain_command(input: &str) -> Result<ExplainResult>`
+
+**Description**: Explain a raw shell command string in plain English.
+
+**Parameters**:
+
+- `input`: Command text
+
+**Returns**:
+
+- `Ok(ExplainResult)`: formtted result from 
+
+```rust
+pub struct ExplainResult {
+    pub summary: String, // constructed from segments tldr_description
+    pub is_privileged: bool, // is called with sudo
+    pub is_destructive: bool, 
+    pub segments: Vec<SegmentResult>, // One entry per segment (split by &&, ||, |, ;). 
+}
+
+pub struct SegmentResult {
+    pub raw: String, // The cleaned segment text (redirections/background/sudo stripped).
+    pub tldr_description: Option<String>, // from stored tldr pages entries
+    pub unknown_parts: Vec<String>, // part of command not exactly matching
+    pub is_privileged: bool,
+    pub is_destructive: bool,
+    pub has_redirection: bool,
+    pub is_background: bool,
+    pub connector: Option<String>,  // Operator that preceded this segment in the original string: &&, ||, |, ;
+}
+```
+
+**Usage**:
+```typescript
+await invoke('explain_command', {input: "git clone"})
+```
+
 ---
 
 ## 6.2 Group Management
