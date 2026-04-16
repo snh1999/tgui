@@ -3,6 +3,7 @@ use crate::database::Database;
 use rusqlite::params;
 use serde_json::Error;
 use std::collections::HashMap;
+use std::path::Path;
 use tracing::{debug, error, info, warn};
 
 pub(crate) struct QueryBuilder {
@@ -178,7 +179,23 @@ impl Database {
         parent_column: Option<&'static str>,
         parent_id: Option<i64>,
     ) -> Result<i64> {
-        let mut query = format!("SELECT COALESCE(MAX(position), 0) FROM {table} ");
+        let conn = self.conn()?;
+        let position = Self::get_position_with_conn(&conn, table, parent_column, parent_id)?;
+        debug!(
+            calculated_position = position,
+            called_by = table,
+            "Command position"
+        );
+        Ok(position)
+    }
+
+    pub(crate) fn get_position_with_conn(
+        conn: &rusqlite::Connection,
+        table: &'static str,
+        parent_column: Option<&'static str>,
+        parent_id: Option<i64>,
+    ) -> Result<i64> {
+        let mut query = format!("SELECT COALESCE(MAX(position), 0) FROM {table}");
 
         if let Some(parent_column) = parent_column {
             query.push_str(&format!(" WHERE {parent_column} IS ?1"));
@@ -190,16 +207,8 @@ impl Database {
             params![]
         };
 
-        let position = Self::POSITION_GAP
-            + (self
-                .conn()?
-                .query_row(&query, params, |row| row.get::<_, i64>(0))?);
-
-        debug!(
-            calculated_position = position,
-            called_by = table,
-            "Command position"
-        );
+        let position =
+            Self::POSITION_GAP + conn.query_row(&query, params, |row| row.get::<_, i64>(0))?;
 
         Ok(position)
     }
@@ -382,5 +391,90 @@ impl Database {
             .next()
             .ok_or_else(|| rusqlite::Error::QueryReturnedNoRows)?;
         Ok(count)
+    }
+
+    pub(crate) fn normalize_path(&self, path: &str) -> Result<String> {
+        if path.is_empty() {
+            return Ok(String::new());
+        }
+
+        let expanded: String = if path.starts_with('~') {
+            let home = dirs::home_dir().ok_or(DatabaseError::InvalidData {
+                field: "working_directory",
+                reason: "Could not determine home directory".to_string(),
+            })?;
+            home.join(&path[1..]).to_string_lossy().into_owned() // owned String, no borrow of dir
+        } else {
+            path.to_owned()
+        };
+
+        Path::new(&expanded)
+            .canonicalize()
+            .map(|p| p.to_string_lossy().into_owned())
+            .map_err(|e| DatabaseError::InvalidData {
+                field: "working_directory",
+                reason: format!("Invalid path '{}': {}", path, e),
+            })
+    }
+
+    pub(crate) fn validate_batch_query_ids(
+        &self,
+        conn: &rusqlite::Connection,
+        ids: &Vec<i64>,
+        table: &'static str,
+    )-> Result<()> {
+        let id_str = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+        let query = format!("SELECT COUNT(*) FROM {table} WHERE id IN ({})", id_str);
+        let count: i64 = conn.query_row(
+            &query,
+            rusqlite::params_from_iter(ids),
+            |row| row.get(0),
+        )?;
+
+        if count != ids.len() as i64 {
+            Err(DatabaseError::InvalidData {
+                field: "ids",
+                reason: "One or more command IDs do not exist".to_string(),
+            })?
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn replace_directory(
+        &self,
+        ids: Vec<i64>,
+        new_directory: Option<&str>,
+        table_name: &'static str,
+    ) -> Result<usize> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+
+        let normalized_path = if let Some(dir) = new_directory {
+            Some(self.normalize_path(dir)?)
+        } else {
+            None
+        };
+        let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+
+        let mut conn = self.conn()?;
+        let tx = conn.transaction()?;
+
+        self.validate_batch_query_ids(&tx, &ids, table_name)?;
+
+        let mut params: Vec<&dyn rusqlite::ToSql> = vec![&normalized_path];
+        params.extend(ids.iter().map(|i| i as &dyn rusqlite::ToSql));
+
+        let affected = tx.execute(
+            &format!(
+                "UPDATE {table_name} SET working_directory = ?1 WHERE id IN ({})",
+                placeholders
+            ),
+            params.as_slice(),
+        )?;
+
+        tx.commit()?;
+        Ok(affected)
     }
 }

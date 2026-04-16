@@ -1,6 +1,5 @@
 use crate::database;
 use crate::database::tests::TestDb;
-use crate::database::{ExplainResult, SegmentResult};
 use std::fs;
 
 #[test]

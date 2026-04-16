@@ -254,16 +254,10 @@ impl ProcessManager {
             .working_directory
             .clone()
             .or_else(|| ancestors.iter().find_map(|g| g.working_directory.clone()))
-            .and_then(|wd| {
-                if wd.starts_with("~/") {
-                    dirs::home_dir().map(|home| home.join(&wd[2..]))
-                } else {
-                    Some(PathBuf::from(wd))
-                }
-            })
+            .map(PathBuf::from)
             .or_else(|| dirs::home_dir())
             .unwrap_or_else(|| PathBuf::from("/"));
-
+        
         if !working_directory.exists() {
             return Err(SerializableError {
                 code: "INVALID_DIRECTORY".to_string(),

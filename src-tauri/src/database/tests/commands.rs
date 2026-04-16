@@ -8,7 +8,8 @@ fn test_command_builder_pattern() {
     let test_db = TestDb::setup_test_db();
     let group_id = test_db.create_test_group("Test");
     let category_id = test_db.create_test_category("Test Category");
-
+    let temp_dir = TestDb::get_temp_dir();
+    
     let mut cmd = CommandBuilder::new("Test", "cargo")
         .with_group(group_id)
         .with_args(vec!["test", "--release"])
@@ -18,7 +19,7 @@ fn test_command_builder_pattern() {
 
     cmd.shell = Some("test".to_string());
     cmd.position = 11;
-    cmd.working_directory = Some("~/dir".to_string());
+    cmd.working_directory = Some(temp_dir);
     let id = test_db.db.create_command(&cmd).unwrap();
 
     let retrieved_cmd = test_db.db.get_command(id).unwrap();
@@ -73,7 +74,7 @@ fn test_create_command_with_all_fields() {
         .build();
 
     command.description = Some("Run tests in release mode".to_string());
-    command.working_directory = Some("/tmp".to_string());
+    command.working_directory = Some(TestDb::get_temp_dir());
     command.shell = Some("/bin/zsh".to_string());
     command.is_favorite = true;
 
@@ -1926,5 +1927,427 @@ fn test_row_to_execution_history_unknown_status() {
             params![cmd_id],
         );
 
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_get_commands_by_directory_basic() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+
+    let mut cmd = CommandBuilder::new("Test", "echo test").build();
+    cmd.working_directory = Some(TestDb::get_temp_dir());
+    let cmd_id = test_db.db.create_command(&cmd).unwrap();
+
+    test_db.create_test_command("Other", "echo other", Some(group_id));
+
+    let result = test_db.db.get_commands_by_directory(Some(&TestDb::get_temp_dir())).unwrap();
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].id, cmd_id);
+    assert_eq!(result[0].working_directory, Some(TestDb::get_temp_dir()));
+}
+
+#[test]
+fn test_get_commands_by_directory_empty_directory() {
+    let test_db = TestDb::setup_test_db();
+    let result = test_db.db.get_commands_by_directory(Some("/nonexistent/path"));
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_get_commands_by_directory_multiple_commands() {
+    let test_db = TestDb::setup_test_db();
+
+    let shared_dir = TestDb::get_temp_dir();
+    let another_dir = "~";
+
+    let mut cmd1 = CommandBuilder::new("Cmd1", "echo 1").build();
+    cmd1.working_directory = Some(shared_dir.to_string());
+
+    let mut cmd2 = CommandBuilder::new("Cmd2", "echo 2").build();
+    cmd2.working_directory = Some(shared_dir.to_string());
+
+    let mut cmd3 = CommandBuilder::new("Cmd3", "echo 3").build();
+    cmd3.working_directory = Some(another_dir.to_string());
+
+    let id1 = test_db.db.create_command(&cmd1).unwrap();
+    let id2 = test_db.db.create_command(&cmd2).unwrap();
+    test_db.db.create_command(&cmd3).unwrap();
+
+    let result = test_db.db.get_commands_by_directory(Some(&shared_dir)).unwrap();
+    assert_eq!(result.len(), 2);
+    let ids: Vec<i64> = result.iter().map(|c| c.id).collect();
+    assert!(ids.contains(&id1));
+    assert!(ids.contains(&id2));
+}
+
+#[test]
+fn test_get_commands_by_null_directory() {
+    let test_db = TestDb::setup_test_db();
+
+    let cmd1 = CommandBuilder::new("Cmd1", "echo 1").build();
+    let cmd2 = CommandBuilder::new("Cmd2", "echo 2").build();
+
+    let mut cmd3 = CommandBuilder::new("Cmd3", "echo 3").build();
+    cmd3.working_directory = Some(TestDb::get_temp_dir());
+
+    let id1 = test_db.db.create_command(&cmd1).unwrap();
+    let id2 = test_db.db.create_command(&cmd2).unwrap();
+    test_db.db.create_command(&cmd3).unwrap();
+
+    let result = test_db.db.get_commands_by_directory(None).unwrap();
+    assert_eq!(result.len(), 2);
+    let ids: Vec<i64> = result.iter().map(|c| c.id).collect();
+    assert!(ids.contains(&id1));
+    assert!(ids.contains(&id2));
+}
+
+#[test]
+fn test_get_commands_by_directory_orders_by_position() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+    let temp_dir = TestDb::get_temp_dir();
+
+    let mut cmd1 = CommandBuilder::new("A", "echo a").build();
+    cmd1.working_directory = Some(temp_dir.clone());
+    cmd1.group_id = Some(group_id);
+
+    let mut cmd2 = CommandBuilder::new("B", "echo b").build();
+    cmd2.working_directory = Some(temp_dir.clone());
+    cmd2.group_id = Some(group_id);
+
+    test_db.db.create_command(&cmd1).unwrap();
+    test_db.db.create_command(&cmd2).unwrap();
+
+    let result = test_db.db.get_commands_by_directory(Some(&temp_dir)).unwrap();
+    assert_eq!(result.len(), 2);
+    assert!(result[0].position < result[1].position);
+}
+
+#[test]
+fn test_replace_commands_directory_basic() {
+    let test_db = TestDb::setup_test_db();
+
+    let mut cmd = CommandBuilder::new("Test", "echo test").build();
+    cmd.working_directory = Some("/home".to_string());
+    let cmd_id = test_db.db.create_command(&cmd).unwrap();
+
+    let affected = test_db.db.replace_commands_directory([cmd_id].to_vec(), Some("/home")).unwrap();
+    assert_eq!(affected, 1);
+
+    let updated = test_db.db.get_command(cmd_id).unwrap();
+    assert_eq!(updated.working_directory, Some("/home".to_string()));
+}
+
+#[test]
+fn test_replace_commands_directory_multiple_ids() {
+    let test_db = TestDb::setup_test_db();
+
+    let mut cmd = CommandBuilder::new("Cmd1", "echo 1").build();
+    cmd.working_directory = Some(TestDb::get_temp_dir());
+
+    let mut cmd2 = CommandBuilder::new("Cmd2", "echo 2").build();
+    cmd2.working_directory = Some(TestDb::get_temp_dir());
+
+    let id1 = test_db.db.create_command(&cmd).unwrap();
+    let id2 = test_db.db.create_command(&cmd2).unwrap();
+
+    cmd.working_directory = Some("/home".to_string());
+    let id3 = test_db.db.create_command(&cmd).unwrap();
+
+    let affected = test_db.db.replace_commands_directory([id1, id2, id3].to_vec(), Some("/home")).unwrap();
+    assert_eq!(affected, 3);
+
+    assert_eq!(test_db.db.get_command(id1).unwrap().working_directory, Some("/home".to_string()));
+    assert_eq!(test_db.db.get_command(id2).unwrap().working_directory, Some("/home".to_string()));
+    assert_eq!(test_db.db.get_command(id2).unwrap().working_directory, Some("/home".to_string()));
+}
+
+#[test]
+fn test_replace_commands_directory_empty_ids() {
+    let test_db = TestDb::setup_test_db();
+    let affected = test_db.db.replace_commands_directory([].to_vec(), Some("~")).unwrap();
+    assert_eq!(affected, 0);
+}
+
+#[test]
+fn test_replace_commands_directory_invalid_id_fails_all() {
+    let test_db = TestDb::setup_test_db();
+    let temp_dir =TestDb::get_temp_dir();
+    
+    let mut cmd = CommandBuilder::new("Test", "echo test").build();
+    cmd.working_directory = Some(temp_dir.clone());
+    let valid_id = test_db.db.create_command(&cmd).unwrap();
+
+    let result = test_db.db.replace_commands_directory([valid_id, 99999].to_vec(), Some("~"));
+    assert!(result.is_err());
+
+    let unchanged = test_db.db.get_command(valid_id).unwrap();
+    assert_eq!(unchanged.working_directory, Some(temp_dir));
+}
+
+#[test]
+fn test_replace_commands_directory_updates_timestamp() {
+    let test_db = TestDb::setup_test_db();
+
+    let mut cmd = CommandBuilder::new("Test", "echo test").build();
+    cmd.working_directory = Some(TestDb::get_temp_dir());
+    let cmd_id = test_db.db.create_command(&cmd).unwrap();
+
+    let original = test_db.db.get_command(cmd_id).unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(1000));
+
+    test_db.db.replace_commands_directory([cmd_id].to_vec(), Some("~")).unwrap();
+
+    let updated = test_db.db.get_command(cmd_id).unwrap();
+    assert_ne!(original.updated_at, updated.updated_at);
+}
+
+#[test]
+fn test_replace_commands_directory_preserves_other_fields() {
+    let test_db = TestDb::setup_test_db();
+    let category_id = test_db.create_test_category("Test Category");
+
+    let mut cmd = CommandBuilder::new("Test", "echo test")
+        .with_category(category_id)
+        .with_env("KEY", "value")
+        .build();
+    cmd.working_directory = Some(TestDb::get_temp_dir());
+    cmd.description = Some("Description".to_string());
+    cmd.shell = Some("/bin/zsh".to_string());
+    let cmd_id = test_db.db.create_command(&cmd).unwrap();
+
+    test_db.db.replace_commands_directory([cmd_id].to_vec(), Some("~")).unwrap();
+
+    let updated = test_db.db.get_command(cmd_id).unwrap();
+    assert_eq!(updated.name, "Test");
+    assert_eq!(updated.command, "echo test");
+    assert_eq!(updated.category_id, Some(category_id));
+    assert_eq!(updated.env_vars, Some(HashMap::from([("KEY".to_string(), "value".to_string())])));
+    assert_eq!(updated.description, Some("Description".to_string()));
+    assert_eq!(updated.shell, Some("/bin/zsh".to_string()));
+}
+
+#[test]
+fn test_replace_commands_directory_nonexistent_path_fails() {
+    let test_db = TestDb::setup_test_db();
+
+    let mut cmd = CommandBuilder::new("Test", "echo test").build();
+    cmd.working_directory = Some(TestDb::get_temp_dir());
+    let cmd_id = test_db.db.create_command(&cmd).unwrap();
+
+    let result = test_db.db.replace_commands_directory([cmd_id].to_vec(), Some("/this/path/does/not/exist/anywhere"));
+    assert!(matches!(
+        result,
+        Err(DatabaseError::InvalidData {
+            field: "working_directory",
+            ..
+        })
+    ));
+}
+
+
+#[test]
+fn test_duplicate_commands_empty_ids() {
+    let test_db = TestDb::setup_test_db();
+    let new_ids = test_db.db.duplicate_commands([].to_vec(), "Copy of ").unwrap();
+    assert!(new_ids.is_empty());
+}
+
+#[test]
+fn test_duplicate_commands_preserves_all_fields() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+    let category_id = test_db.create_test_category("Test Category");
+    let temp_dir = TestDb::get_temp_dir();
+
+    
+    let mut cmd = CommandBuilder::new("Full", "echo full")
+        .with_group(group_id)
+        .with_category(category_id)
+        .with_args(vec!["arg1", "arg2"])
+        .with_env("KEY", "value")
+        .build();
+    cmd.description = Some("Description".to_string());
+    cmd.working_directory = Some(temp_dir);
+    cmd.shell = Some("/bin/bash".to_string());
+
+    let original_id = test_db.db.create_command(&cmd).unwrap();
+    let new_ids = test_db.db.duplicate_commands([original_id].to_vec(), "").unwrap();
+
+    let duplicate = test_db.db.get_command(new_ids[0]).unwrap();
+    assert_eq!(duplicate.command, cmd.command);
+    assert_eq!(duplicate.group_id, cmd.group_id);
+    assert_eq!(duplicate.category_id, cmd.category_id);
+    assert_eq!(duplicate.arguments, cmd.arguments);
+    assert_eq!(duplicate.env_vars, Some(HashMap::from([("KEY".to_string(), "value".to_string())])));
+    assert_eq!(duplicate.description, cmd.description);
+    assert_eq!(duplicate.working_directory, cmd.working_directory);
+    assert_eq!(duplicate.shell, cmd.shell);
+}
+
+#[test]
+fn test_duplicate_commands_resets_favorite() {
+    let test_db = TestDb::setup_test_db();
+
+    let mut cmd = CommandBuilder::new("Fav", "echo fav").build();
+    cmd.is_favorite = true;
+    let original_id = test_db.db.create_command(&cmd).unwrap();
+
+    let new_ids = test_db.db.duplicate_commands([original_id].to_vec(), "Copy ").unwrap();
+
+    let duplicate = test_db.db.get_command(new_ids[0]).unwrap();
+    assert!(!duplicate.is_favorite);
+}
+
+#[test]
+fn test_duplicate_commands_assigns_new_position() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+
+    let mut cmd = CommandBuilder::new("Test", "echo test").build();
+    cmd.group_id = Some(group_id);
+    let original_id = test_db.db.create_command(&cmd).unwrap();
+
+    let new_ids = test_db.db.duplicate_commands([original_id].to_vec(), "Copy ").unwrap();
+
+    let original = test_db.db.get_command(original_id).unwrap();
+    let duplicate = test_db.db.get_command(new_ids[0]).unwrap();
+
+    assert_ne!(original.position, duplicate.position);
+    assert!(duplicate.position > original.position);
+}
+
+#[test]
+fn test_duplicate_commands_multiple() {
+    let test_db = TestDb::setup_test_db();
+
+    let cmd1 = CommandBuilder::new("Cmd1", "echo 1").build();
+    let cmd2 = CommandBuilder::new("Cmd2", "echo 2").build();
+    let cmd3 = CommandBuilder::new("Cmd3", "echo 3").build();
+
+    let id1 = test_db.db.create_command(&cmd1).unwrap();
+    let id2 = test_db.db.create_command(&cmd2).unwrap();
+    let id3 = test_db.db.create_command(&cmd3).unwrap();
+
+    let new_ids = test_db.db.duplicate_commands([id1, id2, id3].to_vec(), "Backup ").unwrap();
+    assert_eq!(new_ids.len(), 3);
+
+    assert_eq!(test_db.db.get_command(new_ids[0]).unwrap().name, "Backup Cmd1");
+    assert_eq!(test_db.db.get_command(new_ids[1]).unwrap().name, "Backup Cmd2");
+    assert_eq!(test_db.db.get_command(new_ids[2]).unwrap().name, "Backup Cmd3");
+}
+
+#[test]
+fn test_duplicate_commands_invalid_id_fails_all() {
+    let test_db = TestDb::setup_test_db();
+
+    let cmd = CommandBuilder::new("Valid", "echo valid").build();
+    let valid_id = test_db.db.create_command(&cmd).unwrap();
+
+    let result = test_db.db.duplicate_commands([valid_id, 99999].to_vec(), "Copy ");
+    assert!(result.is_err());
+
+    // Verify no duplicate was created for valid_id
+    let count = test_db.db.get_commands_count(None, None, false).unwrap();
+    assert_eq!(count, 1);
+}
+
+#[test]
+fn test_duplicate_commands_empty_prefix() {
+    let test_db = TestDb::setup_test_db();
+
+    let cmd = CommandBuilder::new("Original", "echo test").build();
+    let original_id = test_db.db.create_command(&cmd).unwrap();
+
+    let new_ids = test_db.db.duplicate_commands([original_id].to_vec(), "").unwrap();
+
+    let duplicate = test_db.db.get_command(new_ids[0]).unwrap();
+    assert_eq!(duplicate.name, "Original");
+}
+
+#[test]
+fn test_duplicate_commands_with_special_chars_in_prefix() {
+    let test_db = TestDb::setup_test_db();
+
+    let cmd = CommandBuilder::new("Test", "echo test").build();
+    let original_id = test_db.db.create_command(&cmd).unwrap();
+
+    let new_ids = test_db.db.duplicate_commands([original_id].to_vec(), "[BACKUP] ").unwrap();
+
+    let duplicate = test_db.db.get_command(new_ids[0]).unwrap();
+    assert_eq!(duplicate.name, "[BACKUP] Test");
+}
+
+#[test]
+fn test_duplicate_commands_preserves_created_at_semantics() {
+    let test_db = TestDb::setup_test_db();
+
+    let cmd = CommandBuilder::new("Original", "echo original").build();
+    let original_id = test_db.db.create_command(&cmd).unwrap();
+
+    std::thread::sleep(std::time::Duration::from_millis(1000));
+
+    let new_ids = test_db.db.duplicate_commands([original_id].to_vec(), "Copy ").unwrap();
+
+    let original = test_db.db.get_command(original_id).unwrap();
+    let duplicate = test_db.db.get_command(new_ids[0]).unwrap();
+
+    // Duplicate should have new created_at (default behavior)
+    assert_ne!(original.created_at, duplicate.created_at);
+}
+
+#[test]
+fn test_duplicate_commands_root_level() {
+    let test_db = TestDb::setup_test_db();
+
+    let cmd = CommandBuilder::new("RootCmd", "echo root").build();
+    let original_id = test_db.db.create_command(&cmd).unwrap();
+
+    let new_ids = test_db.db.duplicate_commands([original_id].to_vec(), "Copy ").unwrap();
+
+    let duplicate = test_db.db.get_command(new_ids[0]).unwrap();
+    assert_eq!(duplicate.group_id, None);
+    assert_eq!(duplicate.name, "Copy RootCmd");
+}
+
+#[test]
+fn test_duplicate_commands_in_group() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+
+    let mut cmd = CommandBuilder::new("Grouped", "echo grouped").build();
+    cmd.group_id = Some(group_id);
+    let original_id = test_db.db.create_command(&cmd).unwrap();
+
+    let new_ids = test_db.db.duplicate_commands([original_id].to_vec(), "Copy ").unwrap();
+
+    let duplicate = test_db.db.get_command(new_ids[0]).unwrap();
+    assert_eq!(duplicate.group_id, Some(group_id));
+}
+
+#[test]
+fn test_normalize_path_trailing_slash() {
+    let test_db = TestDb::setup_test_db();
+    let temp_str = TestDb::get_temp_dir();
+
+    let mut cmd = CommandBuilder::new("Test", "echo test").build();
+    cmd.working_directory = Some(temp_str.clone());
+    test_db.db.create_command(&cmd).unwrap();
+
+    // Query with exact path should match
+    let result = test_db.db.get_commands_by_directory(Some(&temp_str)).unwrap();
+    assert!(!result.is_empty());
+}
+
+#[test]
+fn test_replace_commands_directory_validates_path_exists() {
+    let test_db = TestDb::setup_test_db();
+
+    let mut cmd = CommandBuilder::new("Test", "echo test").build();
+    cmd.working_directory = Some(TestDb::get_temp_dir());
+    let cmd_id = test_db.db.create_command(&cmd).unwrap();
+
+    let result = test_db.db.replace_commands_directory([cmd_id].to_vec(), Some("/definitely/not/real"));
     assert!(result.is_err());
 }

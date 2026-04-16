@@ -1,6 +1,6 @@
 use super::{
-    CategoryFilter, Command, Database, ExecutionHistory, ExecutionStatus, GroupFilter, Result,
-    TriggeredBy, WithHistory,
+    CategoryFilter, Command, Database, ExecutionHistory, ExecutionStatus,
+    GroupFilter, Result, TriggeredBy, WithHistory,
 };
 use crate::constants::{COMMANDS_TABLE, COMMAND_GROUP_COLUMN};
 use crate::database::helpers::QueryBuilder;
@@ -26,6 +26,12 @@ impl Database {
         let position =
             self.get_position(COMMANDS_TABLE, Some(COMMAND_GROUP_COLUMN), cmd.group_id)?;
 
+        let working_directory = if let Some(dir) = &cmd.working_directory {
+            Some(self.normalize_path(dir)?)
+        } else {
+            None
+        };
+
         self.create(
             COMMANDS_TABLE,
             "INSERT INTO
@@ -38,7 +44,7 @@ impl Database {
                 ":description": cmd.description,
                 ":group_id": cmd.group_id,
                 ":position": position,
-                ":working_directory": cmd.working_directory,
+                ":working_directory": working_directory,
                 ":env_vars": env_vars_json,
                 ":shell": cmd.shell,
                 ":category_id": cmd.category_id,
@@ -231,6 +237,11 @@ impl Database {
 
         let arguments = serde_json::to_string(&cmd.arguments)?;
         let env_vars = Self::hashmap_to_string(&cmd.env_vars)?;
+        let working_directory = if let Some(dir) = &cmd.working_directory {
+            Some(self.normalize_path(dir)?)
+        } else {
+            None
+        };
 
         debug!(
             command_id = cmd.id,
@@ -257,7 +268,7 @@ impl Database {
                 ":command": cmd.command,
                 ":arguments": arguments,
                 ":description": cmd.description,
-                ":working_directory": cmd.working_directory,
+                ":working_directory": working_directory,
                 ":env_vars": env_vars,
                 ":shell": cmd.shell,
                 ":category_id": cmd.category_id,
@@ -322,7 +333,7 @@ impl Database {
     /// -- FE requires updating to even view the command, and to view the command we require fetching the command
     /// -- If the default value is returned, user at least can retrieve the command/update with new value
     /// -- NOTE: we have to check before running the commands
-    fn row_to_command(row: &rusqlite::Row) -> rusqlite::Result<Command> {
+    pub(crate) fn row_to_command(row: &rusqlite::Row) -> rusqlite::Result<Command> {
         let args_str: String = row.get("arguments")?;
         let env_vars_str: Option<String> = row.get("env_vars")?;
 
@@ -363,4 +374,93 @@ impl Database {
         self.validate_env_var_keys(&cmd.env_vars)?;
         Ok(())
     }
+
+    #[instrument(skip(self))]
+    pub fn get_commands_by_directory(&self, directory: Option<&str>) -> Result<Vec<Command>> {
+        let normalized_path = if let Some(dir) = directory {
+            Some(self.normalize_path(dir)?)
+        } else {
+            None
+        };
+        self.query_database(
+            "SELECT * FROM commands WHERE working_directory IS ?1 ORDER BY position",
+            params![normalized_path],
+            Self::row_to_command,
+        )
+    }
+
+    #[instrument(skip(self, ids))]
+    pub fn replace_commands_directory(
+        &self,
+        ids: Vec<i64>,
+        new_directory: Option<&str>,
+    ) -> Result<usize> {
+        self.replace_directory(ids, new_directory, COMMANDS_TABLE)
+    }
+
+    #[instrument(skip(self, tx, originals))]
+    pub fn duplicate_commands_under_parents(&self, tx: &rusqlite::Transaction, originals: Vec<Command>,  parent_id: Option<i64>, name_prefix: &str) -> Result<Vec<i64>> {
+        let mut new_ids = Vec::with_capacity(originals.len());
+        for original in &originals {
+            let new_name = format!("{}{}", name_prefix, original.name);
+            let group_id = if let Some(parent) = parent_id { Some(parent)} else { original.group_id };
+            let new_position = Self::get_position_with_conn(
+                &tx,
+                COMMANDS_TABLE,
+                Some(COMMAND_GROUP_COLUMN),
+                group_id,
+            )?;
+            let arguments = serde_json::to_string(&original.arguments)?;
+            let env_vars = Self::hashmap_to_string(&original.env_vars)?;
+
+            {
+                let mut stmt = tx.prepare_cached(
+                    "INSERT INTO commands
+                 (name, command, arguments, description, group_id, position, working_directory, env_vars, shell, category_id, is_favorite)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                )?;
+                stmt.execute(params![
+                    new_name,
+                    original.command,
+                    arguments,
+                    original.description,
+                    group_id,
+                    new_position,
+                    original.working_directory,
+                    env_vars,
+                    original.shell,
+                    original.category_id,
+                    false,
+                ])?;
+            }
+
+            new_ids.push(tx.last_insert_rowid());
+        }
+        Ok(new_ids)
+    }
+
+    #[instrument(skip(self, ids))]
+    pub fn duplicate_commands(&self, ids: Vec<i64>, name_prefix: &str) -> Result<Vec<i64>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut conn = self.conn()?;
+        let tx = conn.transaction()?;
+
+        self.validate_batch_query_ids(&tx, &ids, COMMANDS_TABLE)?;
+
+        let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+        let query = format!("SELECT * FROM commands WHERE id IN ({})", placeholders);
+        let originals = tx
+            .prepare(&query)?
+            .query_map(rusqlite::params_from_iter(ids), Self::row_to_command)?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+
+        let new_ids = self.duplicate_commands_under_parents(&tx, originals, None, name_prefix )?;
+
+        tx.commit()?;
+        Ok(new_ids)
+    }
+
 }
