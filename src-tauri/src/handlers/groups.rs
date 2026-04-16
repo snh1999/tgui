@@ -64,3 +64,28 @@ pub fn get_group_path(
 pub fn toggle_group_favorite(db: State<'_, Database>, id: i64) -> Result<(), SerializableError> {
     db.toggle_group_favorite(id).map_err(|err| err.into())
 }
+
+
+#[tauri::command]
+pub fn get_groups_by_directory(db: State<'_, Database>, directory: Option<&str>) -> Result<Vec<Group>, SerializableError> {
+   db.get_groups_by_directory(directory).map_err(|err| err.into())
+    }
+
+#[tauri::command]
+pub fn replace_groups_directory(
+    db: State<'_, Database>,
+    ids: Vec<i64>,
+    new_directory: Option<&str>,
+) -> Result<usize, SerializableError> {
+    db.replace_groups_directory(ids, new_directory).map_err(|err| err.into())
+}
+
+#[tauri::command]
+pub fn duplicate_groups(
+    db: State<'_, Database>,
+    ids: Vec<i64>,
+    name_prefix: &str,
+    recursive: bool,
+) -> Result<Vec<i64>, SerializableError> {
+    db.duplicate_groups(ids, name_prefix, recursive).map_err(|err| err.into())
+}
