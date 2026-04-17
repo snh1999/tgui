@@ -2,6 +2,7 @@ use super::*;
 use crate::database::errors::DatabaseError;
 use crate::database::helpers::QueryBuilder;
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 #[test]
 fn query_builder_empty_produces_no_where_clause() {
@@ -282,4 +283,343 @@ fn renumber_produces_gap_spaced_positions_after_exhaustion() {
     for pair in positions.windows(2) {
         assert!(pair[1] - pair[0] >= Database::POSITION_GAP / 2);
     }
+}
+
+fn remove_dir(dirs: &Vec<PathBuf>) {
+    for dir in dirs {
+        fs::remove_dir(dir).unwrap();
+    }
+}
+
+fn create_dirs(dirs: &Vec<PathBuf>) {
+    for dir in dirs {
+        fs::create_dir(dir).unwrap();
+    }
+}
+
+#[test]
+fn test_get_unique_directories_empty_db() {
+    let test_db = TestDb::setup_test_db();
+    let result = test_db.db.get_unique_directories().unwrap();
+    assert!(result.is_empty());
+}
+
+#[test]
+fn test_get_unique_directories_commands_only() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+
+    // Create real temp directories
+    let dir1 = std::env::temp_dir().join("projectz");
+    let dir2 = std::env::temp_dir().join("logz");
+
+    let dirs = vec![dir1.clone(), dir2.clone()];
+    create_dirs(&dirs);
+
+    let mut cmd1 = CommandBuilder::new("Cmd1", "echo 1").build();
+    cmd1.working_directory = Some(dir1.to_string_lossy().to_string());
+    cmd1.group_id = Some(group_id);
+    test_db.db.create_command(&cmd1).unwrap();
+
+    let mut cmd2 = CommandBuilder::new("Cmd2", "echo 2").build();
+    cmd2.working_directory = Some(dir2.to_string_lossy().to_string());
+    cmd2.group_id = Some(group_id);
+    test_db.db.create_command(&cmd2).unwrap();
+
+    let result = test_db.db.get_unique_directories().unwrap();
+    assert_eq!(result.len(), 2);
+
+    remove_dir(&dirs);
+}
+
+#[test]
+fn test_get_unique_directories_groups_only() {
+    let test_db = TestDb::setup_test_db();
+
+    let dir1 = std::env::temp_dir().join("app");
+    let dir2 = std::env::temp_dir().join("config");
+    let dirs = vec![dir1.clone(), dir2.clone()];
+    create_dirs(&dirs);
+
+    let mut g1 = GroupBuilder::new("Group1").build();
+    g1.working_directory = Some(dir1.to_string_lossy().to_string());
+    test_db.db.create_group(&g1).unwrap();
+
+    let mut g2 = GroupBuilder::new("Group2").build();
+    g2.working_directory = Some(dir2.to_string_lossy().to_string());
+    test_db.db.create_group(&g2).unwrap();
+
+    let result = test_db.db.get_unique_directories().unwrap();
+    assert_eq!(result.len(), 2);
+
+    remove_dir(&dirs);
+}
+
+#[test]
+fn test_get_unique_directories_combined_commands_and_groups() {
+    let test_db = TestDb::setup_test_db();
+
+    let shared_dir = std::env::temp_dir().join("shared");
+    fs::create_dir(&shared_dir).unwrap();
+
+    let mut cmd = CommandBuilder::new("Cmd1", "echo 1").build();
+    cmd.working_directory = Some(shared_dir.to_string_lossy().to_string());
+    test_db.db.create_command(&cmd).unwrap();
+
+    let mut group = GroupBuilder::new("Group1").build();
+    group.working_directory = Some(shared_dir.to_string_lossy().to_string());
+    test_db.db.create_group(&group).unwrap();
+
+    let result = test_db.db.get_unique_directories().unwrap();
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0], shared_dir.to_string_lossy().to_string());
+
+    fs::remove_dir(&shared_dir).unwrap();
+}
+
+#[test]
+fn test_get_unique_directories_deduplicates_across_tables() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+
+    let project_dir = std::env::temp_dir().join("project");
+    fs::create_dir(&project_dir).unwrap();
+
+    let mut cmd1 = CommandBuilder::new("Cmd1", "echo 1").build();
+    cmd1.working_directory = Some(project_dir.to_string_lossy().to_string());
+    cmd1.group_id = Some(group_id);
+    test_db.db.create_command(&cmd1).unwrap();
+
+    let mut cmd2 = CommandBuilder::new("Cmd2", "echo 2").build();
+    cmd2.working_directory = Some(project_dir.to_string_lossy().to_string());
+    cmd2.group_id = Some(group_id);
+    test_db.db.create_command(&cmd2).unwrap();
+
+    let mut g1 = GroupBuilder::new("Group1").with_parent(group_id).build();
+    g1.working_directory = Some(project_dir.to_string_lossy().to_string());
+    test_db.db.create_group(&g1).unwrap();
+
+    let result = test_db.db.get_unique_directories().unwrap();
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0], project_dir.to_string_lossy().to_string());
+
+    fs::remove_dir(&project_dir).unwrap();
+}
+
+#[test]
+fn test_get_unique_directories_excludes_null_working_directory() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+
+    let some_dir = std::env::temp_dir().join("some");
+    fs::create_dir(&some_dir).unwrap();
+
+    let cmd1 = CommandBuilder::new("Cmd1", "echo 1")
+        .with_group(group_id)
+        .build();
+    test_db.db.create_command(&cmd1).unwrap();
+
+    let mut cmd2 = CommandBuilder::new("Cmd2", "echo 2").build();
+    cmd2.working_directory = Some(some_dir.to_string_lossy().to_string());
+    cmd2.group_id = Some(group_id);
+    test_db.db.create_command(&cmd2).unwrap();
+
+    let group = GroupBuilder::new("Group1").build();
+    test_db.db.create_group(&group).unwrap();
+
+    let result = test_db.db.get_unique_directories().unwrap();
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0], some_dir.to_string_lossy().to_string());
+
+    fs::remove_dir(&some_dir).unwrap();
+}
+
+#[test]
+fn test_get_unique_directories_orders_alphabetically() {
+    let test_db = TestDb::setup_test_db();
+
+    let zebra = std::env::temp_dir().join("zebra");
+    let alpha = std::env::temp_dir().join("alpha");
+    let mango = std::env::temp_dir().join("mango");
+    let dirs = vec![zebra.clone(), alpha.clone(), mango.clone()];
+
+    create_dirs(&dirs);
+
+    let mut cmd1 = CommandBuilder::new("Cmd1", "echo 1").build();
+    cmd1.working_directory = Some(zebra.to_string_lossy().to_string());
+    test_db.db.create_command(&cmd1).unwrap();
+
+    let mut cmd2 = CommandBuilder::new("Cmd2", "echo 2").build();
+    cmd2.working_directory = Some(alpha.to_string_lossy().to_string());
+    test_db.db.create_command(&cmd2).unwrap();
+
+    let mut cmd3 = CommandBuilder::new("Cmd3", "echo 3").build();
+    cmd3.working_directory = Some(mango.to_string_lossy().to_string());
+    test_db.db.create_command(&cmd3).unwrap();
+
+    let result = test_db.db.get_unique_directories().unwrap();
+    assert_eq!(result.len(), 3);
+    assert!(result[0].contains("alpha"));
+    assert!(result[1].contains("mango"));
+    assert!(result[2].contains("zebra"));
+
+    remove_dir(&dirs);
+}
+
+#[test]
+fn test_get_unique_directories_case_sensitive() {
+    let test_db = TestDb::setup_test_db();
+
+    let project_upper = std::env::temp_dir().join("Projectz");
+    let project_lower = std::env::temp_dir().join("projectz");
+    let dirs = vec![project_upper.clone(), project_lower.clone()];
+    create_dirs(&dirs);
+
+    let mut cmd = CommandBuilder::new("Cmd1", "echo 1").build();
+    cmd.working_directory = Some(project_upper.to_string_lossy().to_string());
+    test_db.db.create_command(&cmd).unwrap();
+
+    let mut group = GroupBuilder::new("Group1").build();
+    group.working_directory = Some(project_lower.to_string_lossy().to_string());
+    test_db.db.create_group(&group).unwrap();
+
+    let result = test_db.db.get_unique_directories().unwrap();
+    assert_eq!(result.len(), 2);
+    remove_dir(&dirs);
+}
+
+#[test]
+fn test_get_unique_directories_with_special_characters() {
+    let test_db = TestDb::setup_test_db();
+
+    let spaces = std::env::temp_dir().join("path with spaces");
+    let dashes = std::env::temp_dir().join("path-with-dashes");
+    let dirs = vec![spaces.clone(), dashes.clone()];
+    create_dirs(&dirs);
+
+    let mut cmd = CommandBuilder::new("Cmd1", "echo 1").build();
+    cmd.working_directory = Some(spaces.to_string_lossy().to_string());
+    test_db.db.create_command(&cmd).unwrap();
+
+    let mut group = GroupBuilder::new("Group1").build();
+    group.working_directory = Some(dashes.to_string_lossy().to_string());
+    test_db.db.create_group(&group).unwrap();
+
+    let result = test_db.db.get_unique_directories().unwrap();
+    assert_eq!(result.len(), 2);
+    assert!(result.iter().any(|d| d.contains("path with spaces")));
+    assert!(result.iter().any(|d| d.contains("path-with-dashes")));
+    remove_dir(&dirs);
+}
+
+#[test]
+fn test_get_unique_directories_with_many_items() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+    let mut dirs: Vec<PathBuf> = vec![];
+
+    for i in 0..10 {
+        let dir = std::env::temp_dir().join(format!("dir{}", i));
+        dirs.push(dir.clone());
+        fs::create_dir(&dir).unwrap();
+
+        let mut cmd = CommandBuilder::new(&format!("Cmd{}", i), "echo").build();
+        cmd.working_directory = Some(dir.to_string_lossy().to_string());
+        cmd.group_id = Some(group_id);
+        test_db.db.create_command(&cmd).unwrap();
+    }
+
+    let result = test_db.db.get_unique_directories().unwrap();
+    assert_eq!(result.len(), 10);
+
+    remove_dir(&dirs);
+}
+
+#[test]
+fn test_get_unique_directories_mixed_null_and_values() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+
+    let has_dir = std::env::temp_dir().join("has");
+    fs::create_dir(&has_dir).unwrap();
+
+    let cmd1 = CommandBuilder::new("Cmd1", "echo 1")
+        .with_group(group_id)
+        .build();
+    test_db.db.create_command(&cmd1).unwrap();
+
+    let mut cmd2 = CommandBuilder::new("Cmd2", "echo 2").build();
+    cmd2.working_directory = Some(has_dir.to_string_lossy().to_string());
+    cmd2.group_id = Some(group_id);
+    test_db.db.create_command(&cmd2).unwrap();
+
+    let g1 = GroupBuilder::new("Group1").build();
+    test_db.db.create_group(&g1).unwrap();
+
+    let mut g2 = GroupBuilder::new("Group2").build();
+    g2.working_directory = Some(has_dir.to_string_lossy().to_string());
+    test_db.db.create_group(&g2).unwrap();
+
+    let result = test_db.db.get_unique_directories().unwrap();
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0], has_dir.to_string_lossy().to_string());
+
+    fs::remove_dir(&has_dir).unwrap();
+}
+
+#[test]
+fn test_get_unique_directories_single_command_single_group_different_dirs() {
+    let test_db = TestDb::setup_test_db();
+
+    let cmd_dir = std::env::temp_dir().join("cmd");
+    let group_dir = std::env::temp_dir().join("group");
+    let dirs = vec![cmd_dir.clone(), group_dir.clone()];
+    create_dirs(&dirs);
+
+    let mut cmd = CommandBuilder::new("Cmd1", "echo 1").build();
+    cmd.working_directory = Some(cmd_dir.to_string_lossy().to_string());
+    test_db.db.create_command(&cmd).unwrap();
+
+    let mut group = GroupBuilder::new("Group1").build();
+    group.working_directory = Some(group_dir.to_string_lossy().to_string());
+    test_db.db.create_group(&group).unwrap();
+
+    let result = test_db.db.get_unique_directories().unwrap();
+    assert_eq!(result.len(), 2);
+
+    remove_dir(&dirs);
+}
+
+#[test]
+fn test_get_unique_directories_no_duplicates_from_same_table() {
+    let test_db = TestDb::setup_test_db();
+    let group_id = test_db.create_test_group("Test Group");
+
+    let same_dir = std::env::temp_dir().join("same");
+    fs::create_dir(&same_dir).unwrap();
+
+    for _ in 0..5 {
+        let mut cmd = CommandBuilder::new("Cmd", "echo").build();
+        cmd.working_directory = Some(same_dir.to_string_lossy().to_string());
+        cmd.group_id = Some(group_id);
+        test_db.db.create_command(&cmd).unwrap();
+    }
+
+    let result = test_db.db.get_unique_directories().unwrap();
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0], same_dir.to_string_lossy().to_string());
+    fs::remove_dir(&same_dir).unwrap();
+}
+
+#[test]
+fn test_get_unique_directories_root_path() {
+    let test_db = TestDb::setup_test_db();
+
+    let mut cmd = CommandBuilder::new("Cmd1", "echo 1").build();
+    cmd.working_directory = Some("/".to_string());
+    test_db.db.create_command(&cmd).unwrap();
+
+    let result = test_db.db.get_unique_directories().unwrap();
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0], "/");
 }

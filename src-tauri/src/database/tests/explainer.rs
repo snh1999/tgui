@@ -1,6 +1,5 @@
 use crate::database;
 use crate::database::tests::TestDb;
-use crate::database::{ExplainResult, SegmentResult};
 use std::fs;
 
 #[test]
@@ -447,8 +446,6 @@ fn test_resolve_segment_text_no_match_returns_all_unknown() {
     assert!(desc.is_none());
     assert_eq!(unknown, vec!["unknowncommand", "-a", "-b"]);
 }
-
-
 
 #[test]
 fn test_strip_sudo_combined_flags() {

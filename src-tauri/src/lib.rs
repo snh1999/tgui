@@ -11,9 +11,9 @@ use crate::handlers::{
 use crate::process::manager::ProcessManager;
 use handlers::logger;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tauri::Manager;
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 fn error_map(error_message: &str) -> &str {
     error!(error_message);
@@ -104,6 +104,9 @@ pub fn run() {
             groups::get_group_path,
             groups::get_group_tree,
             groups::toggle_group_favorite,
+            groups::get_groups_by_directory,
+            groups::replace_groups_directory,
+            groups::duplicate_groups,
             commands::create_command,
             commands::get_command,
             commands::get_commands,
@@ -114,7 +117,11 @@ pub fn run() {
             commands::move_command_between,
             commands::toggle_command_favorite,
             commands::get_latest_execution_for_command,
+            commands::get_commands_by_directory,
+            commands::replace_commands_directory,
+            commands::duplicate_commands,
             commands::explain_command,
+            commands::get_unique_directories,
             workflows::create_workflow,
             workflows::get_workflow,
             workflows::get_workflows,

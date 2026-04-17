@@ -17,6 +17,12 @@ impl Database {
             group.parent_group_id,
         )?;
 
+        let working_directory = if let Some(dir) = &group.working_directory {
+            Some(self.normalize_path(dir)?)
+        } else {
+            None
+        };
+
         self.create(
             GROUPS_TABLE,
             "INSERT INTO groups (name, description, parent_group_id, position, working_directory, env_vars, shell, category_id, is_favorite, icon, color)
@@ -26,7 +32,7 @@ impl Database {
                 ":description": group.description,
                 ":parent_group_id": group.parent_group_id,
                 ":position": position,
-                ":working_directory": group.working_directory,
+                ":working_directory": working_directory,
                 ":env_vars": env_vars,
                 ":shell": group.shell,
                 ":category_id": group.category_id,
@@ -129,6 +135,11 @@ impl Database {
         }
 
         let env_vars = Self::hashmap_to_string(&group.env_vars)?;
+        let working_directory = if let Some(dir) = &group.working_directory {
+            Some(self.normalize_path(dir)?)
+        } else {
+            None
+        };
 
         debug!(
             command_id = group.id,
@@ -152,7 +163,7 @@ impl Database {
             named_params! {
                 ":name": group.name,
                 ":description": group.description,
-                ":working_directory": group.working_directory,
+                ":working_directory": working_directory,
                 ":env_vars": env_vars,
                 ":shell": group.shell,
                 ":category_id": group.category_id,
@@ -365,5 +376,141 @@ impl Database {
         }
 
         Ok(())
+    }
+
+    pub fn get_groups_by_directory(&self, directory: Option<&str>) -> Result<Vec<Group>> {
+        let normalized_path = if let Some(dir) = directory {
+            Some(self.normalize_path(dir)?)
+        } else {
+            None
+        };
+        self.query_database(
+            "SELECT * FROM groups WHERE working_directory IS ?1 ORDER BY position",
+            params![normalized_path],
+            Self::row_to_group,
+        )
+    }
+
+    #[instrument(skip(self, ids))]
+    pub fn replace_groups_directory(
+        &self,
+        ids: Vec<i64>,
+        new_directory: Option<&str>,
+    ) -> Result<usize> {
+        self.replace_directory(ids, new_directory, GROUPS_TABLE)
+    }
+
+    #[instrument(skip(self, ids))]
+    pub fn duplicate_groups(
+        &self,
+        ids: Vec<i64>,
+        name_prefix: &str,
+        recursive: bool,
+    ) -> Result<Vec<i64>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut conn = self.conn()?;
+        let tx = conn.transaction()?;
+        self.validate_batch_query_ids(&tx, &ids, GROUPS_TABLE)?;
+
+        let mut all_groups: Vec<(Group, bool)> = Vec::new();
+        let mut queue: Vec<i64> = ids.to_vec();
+        let mut visited: HashSet<i64> = HashSet::new();
+        let mut is_root = true;
+
+        while !queue.is_empty() {
+            let current_ids = std::mem::take(&mut queue);
+            let placeholders = current_ids
+                .iter()
+                .map(|_| "?")
+                .collect::<Vec<_>>()
+                .join(",");
+            let groups: Vec<Group> = tx
+                .prepare(&format!(
+                    "SELECT * FROM groups WHERE id IN ({}) ORDER BY position",
+                    placeholders
+                ))?
+                .query_map(rusqlite::params_from_iter(&current_ids), Self::row_to_group)?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+
+            for group in groups {
+                if visited.insert(group.id) {
+                    if recursive {
+                        // Queue children
+                        let child_ids: Vec<i64> = tx
+                            .prepare("SELECT id FROM groups WHERE parent_group_id = ?1")?
+                            .query_map(params![group.id], |row| row.get(0))?
+                            .collect::<rusqlite::Result<Vec<_>>>()?;
+                        queue.extend(child_ids);
+                    }
+                    all_groups.push((group, is_root));
+                }
+            }
+            is_root = false; // Only first level are roots
+        }
+
+        let mut id_mapping = HashMap::<i64, i64>::new();
+
+        let mut new_ids = Vec::with_capacity(all_groups.len());
+
+        for (original, is_root) in &all_groups {
+            let new_name = if *is_root {
+                format!("{}{}", name_prefix, original.name)
+            } else {
+                original.name.clone()
+            };
+
+            // Remap parent: if parent was duplicated, point to new parent; else keep original
+            let new_parent = original
+                .parent_group_id
+                .map(|pid| id_mapping.get(&pid).copied().unwrap_or(pid));
+
+            let new_position = Self::get_position_with_conn(
+                &tx,
+                GROUPS_TABLE,
+                Some("parent_group_id"),
+                new_parent,
+            )?;
+
+            let env_vars = Self::hashmap_to_string(&original.env_vars)?;
+
+            {
+                let mut stmt = tx.prepare_cached(
+                    "INSERT INTO groups
+                 (name, description, parent_group_id, position, working_directory, env_vars, shell, category_id, is_favorite, icon, color)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                )?;
+                stmt.execute(params![
+                    new_name,
+                    original.description,
+                    new_parent,
+                    new_position,
+                    original.working_directory,
+                    env_vars,
+                    original.shell,
+                    original.category_id,
+                    false,
+                    original.icon,
+                    original.color,
+                ])?;
+            }
+
+            let new_id = tx.last_insert_rowid();
+            id_mapping.insert(original.id, new_id);
+            new_ids.push(new_id);
+
+            if recursive {
+                let mut stmt = tx.prepare("SELECT * FROM commands WHERE group_id = ?1")?;
+                let commands = stmt
+                    .query_map(params![original.id], Self::row_to_command)?
+                    .collect::<rusqlite::Result<Vec<_>>>()?;
+                self.duplicate_commands_under_parents(&tx, commands, Some(new_id), "")?;
+            }
+        }
+
+        tx.commit()?;
+        Ok(new_ids)
     }
 }

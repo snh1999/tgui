@@ -14,6 +14,33 @@ and Vue frontend.
 
 ## Common
 
+### Get Unique Directories
+
+`get_unique_directories() -&gt; Result&lt;Vec&lt;String&gt;, Error&gt;`
+
+**Description**: Returns all unique working directories currently used by commands and groups, ordered alphabetically.
+
+**Behavior**:
+
+- Queries both `commands` and `groups` tables for distinct `working_directory` values
+- Excludes `NULL` entries (items without an explicit working directory)
+- Results are deduplicated across both tables
+- Paths are returned in their canonicalized form (as stored in the database)
+- Ordering is alphabetical (`ORDER BY 1`)
+
+**Returns**: Array of unique canonical directory paths
+
+**Errors**:
+
+- `DatabaseError`: SQLite query failure
+
+**Usage**:
+
+```typescript
+const directories = await invoke('get_unique_directories')
+// Returns: ['/home/user/project', '/opt/app', '/var/log']
+```
+
 ### Row Deserialization Edge Cases
 
 **Arguments Parsing**:
@@ -493,6 +520,83 @@ await invoke('explain_command', {input: "git clone"})
 
 ---
 
+### Get Commands By Directory
+
+`get_commands_by_directory(directory: Option<String>) -> Result<Vec<Command>>`
+
+**Description**: Returns all commands whose `working_directory` matches the given path exactly (after normalization). Pass `None` to return commands with no working directory set.
+
+**Parameters**:
+
+- `directory`: Normalized path string, or `None` for unset
+
+**Returns**: Commands ordered by `position`
+
+**Usage**:
+
+```typescript
+const cmds = await invoke('get_commands_by_directory', { directory: '/home/user/project' })
+const rootCmds = await invoke('get_commands_by_directory', { directory: null })
+```
+
+---
+
+### Replace Commands Directory
+
+`replace_commands_directory(ids: Vec<i64>, new_directory: Option<String>) -> Result<usize>`
+
+**Description**: Bulk-updates `working_directory` for the given command IDs. Pass `None` to clear the directory.
+
+**Parameters**:
+
+- `ids`: Command IDs to update
+- `new_directory`: New path (normalized), or `None` to clear
+
+**Returns**: Count of updated rows
+
+**Errors**:
+
+- `InvalidData` — path normalization fails
+
+**Usage**:
+
+```typescript
+const count = await invoke('replace_commands_directory', {
+  ids: [1, 2, 3],
+  newDirectory: '/home/user/new-path'
+})
+```
+
+---
+
+### Duplicate Commands
+
+`duplicate_commands(ids: Vec<i64>, name_prefix: String) -> Result<Vec<i64>>`
+
+**Description**: Duplicates one or more commands within the same group. Each copy gets `name_prefix + original_name`. `is_favorite` is reset to `false` on all copies.
+
+**Parameters**:
+
+- `ids`: Command IDs to duplicate (empty = no-op, returns `[]`)
+- `name_prefix`: String prepended to each copy's name (e.g. `"Copy of "`)
+
+**Returns**: New command IDs in same order as input `ids`
+
+**Errors**:
+
+- `NotFound` — any ID in `ids` not found
+- Runs in single transaction; any failure rolls back all inserts
+
+**Usage**:
+
+```typescript
+const newIds = await invoke('duplicate_commands', {
+  ids: [5, 6],
+  namePrefix: 'Copy of '
+})
+```
+---
+
 ## 6.2 Group Management
 
 ### Create Group
@@ -836,6 +940,80 @@ const chain = await invoke('get_group_ancestor_chain', {groupId: productionId})
 ```typescript
 await invoke('toggle_group_favorite', {id: 5})
 ```
+
+---
+
+### Get Groups By Directory
+
+`get_groups_by_directory(directory: Option<String>) -> Result<Vec<Group>>`
+
+**Description**: Returns all groups whose `working_directory` matches the given path exactly. Pass `None` for groups with no directory set.
+
+**Parameters**:
+
+- `directory`: Path string or `None`
+
+**Returns**: Groups ordered by `position`
+
+**Usage**:
+
+```typescript
+const groups = await invoke('get_groups_by_directory', { directory: '/home/user/project' })
+```
+
+---
+
+### Replace Groups Directory
+
+`replace_groups_directory(ids: Vec<i64>, new_directory: Option<String>) -> Result<usize>`
+
+**Description**: Bulk-updates `working_directory` for the given group IDs. Same behavior as `replace_commands_directory`.
+
+**Parameters**:
+
+- `ids`: Group IDs to update
+- `new_directory`: New path or `None` to clear
+
+**Returns**: Count of updated rows
+
+---
+
+### Duplicate Groups
+
+`duplicate_groups(ids: Vec<i64>, name_prefix: String, recursive: bool) -> Result<Vec<i64>>`
+
+**Description**: Duplicates one or more groups. Root copies get `name_prefix + original_name`; descendant groups keep original names. `is_favorite` reset to `false` on all copies.
+
+**Parameters**:
+
+- `ids`: Root group IDs to duplicate
+- `name_prefix`: Prepended to root-level copies only
+- `recursive`: If `true`, also duplicates all child groups and their commands
+
+**Behavior**:
+
+- BFS traversal of group tree; processes level-by-level
+- Child group `parent_group_id` remapped to new parent ID
+- Commands within each group re-inserted under new group; `is_favorite` reset to `false`
+- Runs in single transaction; any failure rolls back all inserts
+
+**Returns**: New group IDs 
+
+**Errors**:
+
+- `NotFound` — any ID in `ids` not found
+
+**Usage**:
+
+```typescript
+// Shallow copy (group only, no children)
+const newIds = await invoke('duplicate_groups', {
+  ids: [3],
+  namePrefix: 'Copy of ',
+  recursive: false // use true for deep copy
+})
+```
+
 
 ---
 

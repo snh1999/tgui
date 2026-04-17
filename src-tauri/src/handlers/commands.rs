@@ -87,6 +87,43 @@ pub fn get_latest_execution_for_command(
 }
 
 #[tauri::command]
-pub fn explain_command(db: State<Database>, input: String) -> Result<ExplainResult, SerializableError> {
+pub fn explain_command(
+    db: State<Database>,
+    input: String,
+) -> Result<ExplainResult, SerializableError> {
     db.explain_command(&input).map_err(|e| e.into())
+}
+
+#[tauri::command]
+pub fn get_commands_by_directory(
+    db: State<Database>,
+    directory: Option<&str>,
+) -> Result<Vec<Command>, SerializableError> {
+    db.get_commands_by_directory(directory)
+        .map_err(|e| e.into())
+}
+
+#[tauri::command]
+pub fn replace_commands_directory(
+    db: State<Database>,
+    ids: Vec<i64>,
+    new_directory: Option<&str>,
+) -> Result<usize, SerializableError> {
+    db.replace_commands_directory(ids, new_directory)
+        .map_err(|e| e.into())
+}
+
+#[tauri::command]
+pub fn duplicate_commands(
+    db: State<Database>,
+    ids: Vec<i64>,
+    name_prefix: &str,
+) -> Result<Vec<i64>, SerializableError> {
+    db.duplicate_commands(ids, name_prefix)
+        .map_err(|e| e.into())
+}
+
+#[tauri::command]
+pub fn get_unique_directories(db: State<Database>) -> Result<Vec<String>, SerializableError> {
+    db.get_unique_directories().map_err(|e| e.into())
 }

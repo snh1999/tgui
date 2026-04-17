@@ -1172,7 +1172,7 @@ async fn resolve_spawn_context_tilde_expanded_to_home() {
     let db = create_test_db();
 
     let mut cmd = CommandBuilder::new("test", "echo test").build();
-    cmd.working_directory = Some("~/".to_string());
+    cmd.working_directory = Some("~".to_string());
     let cmd_id = db.create_command(&cmd).unwrap();
 
     let pm = ProcessManager::new(db, None);
@@ -1183,22 +1183,6 @@ async fn resolve_spawn_context_tilde_expanded_to_home() {
 
     let home = dirs::home_dir().expect("no home dir");
     assert_eq!(ctx.working_directory, home);
-}
-
-#[tokio::test]
-async fn resolve_spawn_context_nonexistent_working_dir_returns_error() {
-    let db = create_test_db();
-
-    let mut cmd = CommandBuilder::new("test", "echo test").build();
-    cmd.working_directory = Some("bla/bla/bla".to_string());
-    let cmd_id = db.create_command(&cmd).unwrap();
-
-    let pm = ProcessManager::new(db, None);
-    let result = pm.resolve_spawn_context(cmd_id).await;
-    assert!(
-        result.is_err(),
-        "Expected error for nonexistent working dir"
-    );
 }
 
 #[tokio::test]
