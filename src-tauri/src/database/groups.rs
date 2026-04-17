@@ -1,5 +1,5 @@
-use super::{CategoryFilter, Command, Database, DatabaseError, Group, GroupFilter, GroupNode, Result};
-use crate::constants::{COMMANDS_TABLE, COMMAND_GROUP_COLUMN, GROUPS_TABLE, GROUP_PARENT_GROUP_COLUMN};
+use super::{CategoryFilter, Database, DatabaseError, Group, GroupFilter, GroupNode, Result};
+use crate::constants::{GROUPS_TABLE, GROUP_PARENT_GROUP_COLUMN};
 use crate::database::helpers::QueryBuilder;
 use rusqlite::{named_params, params};
 use std::collections::{HashMap, HashSet};

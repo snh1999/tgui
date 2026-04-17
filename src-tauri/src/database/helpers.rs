@@ -2,7 +2,7 @@ pub use crate::database::errors::{DatabaseError, Result};
 use crate::database::Database;
 use rusqlite::params;
 use serde_json::Error;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use tracing::{debug, error, info, warn};
 
@@ -416,13 +416,21 @@ impl Database {
             path.to_owned()
         };
 
-        Path::new(&expanded)
+        let canonical = Path::new(&expanded)
             .canonicalize()
-            .map(|p| p.to_string_lossy().into_owned())
             .map_err(|e| DatabaseError::InvalidData {
                 field: "working_directory",
                 reason: format!("Invalid path '{}': {}", path, e),
-            })
+            })?;
+
+        if !canonical.is_dir() {
+            return Err(DatabaseError::InvalidData {
+                field: "working_directory",
+                reason: format!("Path is not a directory: '{}'", path),
+            });
+        }
+        
+        Ok(canonical.to_string_lossy().into_owned())
     }
 
     pub(crate) fn validate_batch_query_ids(
@@ -439,7 +447,9 @@ impl Database {
             |row| row.get(0),
         )?;
 
-        if count != ids.len() as i64 {
+        let id_set= HashSet::<i64>::from_iter(ids.iter().cloned());
+
+        if count != id_set.len() as i64 {
             Err(DatabaseError::InvalidData {
                 field: "ids",
                 reason: "One or more IDs do not exist".to_string(),
@@ -484,5 +494,24 @@ impl Database {
 
         tx.commit()?;
         Ok(affected)
+    }
+
+    pub fn get_unique_directories(&self) -> Result<Vec<String>> {
+        let conn = self.conn()?;
+
+        let mut stmt = conn.prepare(
+            "SELECT DISTINCT working_directory FROM commands
+         WHERE working_directory IS NOT NULL
+         UNION
+         SELECT DISTINCT working_directory FROM groups
+         WHERE working_directory IS NOT NULL
+         ORDER BY 1"
+        )?;
+
+        let dirs = stmt
+            .query_map([], |row| row.get(0))?
+            .collect::<rusqlite::Result<Vec<String>>>()?;
+
+        Ok(dirs)
     }
 }

@@ -110,3 +110,9 @@ pub fn replace_commands_directory(
 pub fn duplicate_commands(db: State<Database>, ids: Vec<i64>, name_prefix: &str) -> Result<Vec<i64>, SerializableError>{
     db.duplicate_commands(ids, name_prefix).map_err(|e| e.into())
 }
+
+
+#[tauri::command]
+pub fn get_unique_directories(db: State<Database>) -> Result<Vec<String>, SerializableError> {
+    db.get_unique_directories().map_err(|e| e.into())
+}

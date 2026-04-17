@@ -121,6 +121,7 @@ pub fn run() {
             commands::replace_commands_directory,
             commands::duplicate_commands,
             commands::explain_command,
+            commands::get_unique_directories,
             workflows::create_workflow,
             workflows::get_workflow,
             workflows::get_workflows,
