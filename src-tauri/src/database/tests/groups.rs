@@ -1422,8 +1422,8 @@ fn test_get_groups_by_directory_with_null_working_directory() {
     let group = GroupBuilder::new("NoDir").build();
     test_db.db.create_group(&group).unwrap();
 
-    let result = test_db.db.get_groups_by_directory(Some("")).unwrap();
-    assert!(result.is_empty());
+    let result = test_db.db.get_groups_by_directory(Some(""));
+    assert!(result.is_err());
 }
 
 #[test]

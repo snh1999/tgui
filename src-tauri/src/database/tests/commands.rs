@@ -2028,15 +2028,17 @@ fn test_get_commands_by_directory_orders_by_position() {
 fn test_replace_commands_directory_basic() {
     let test_db = TestDb::setup_test_db();
 
+    let dir = TestDb::get_temp_dir();
+
     let mut cmd = CommandBuilder::new("Test", "echo test").build();
-    cmd.working_directory = Some("/home".to_string());
+    cmd.working_directory = Some(dir.clone());
     let cmd_id = test_db.db.create_command(&cmd).unwrap();
 
-    let affected = test_db.db.replace_commands_directory([cmd_id].to_vec(), Some("/home")).unwrap();
+    let affected = test_db.db.replace_commands_directory([cmd_id].to_vec(), Some(&dir)).unwrap();
     assert_eq!(affected, 1);
 
     let updated = test_db.db.get_command(cmd_id).unwrap();
-    assert_eq!(updated.working_directory, Some("/home".to_string()));
+    assert_eq!(updated.working_directory, Some(dir));
 }
 
 #[test]
@@ -2335,7 +2337,6 @@ fn test_normalize_path_trailing_slash() {
     cmd.working_directory = Some(temp_str.clone());
     test_db.db.create_command(&cmd).unwrap();
 
-    // Query with exact path should match
     let result = test_db.db.get_commands_by_directory(Some(&temp_str)).unwrap();
     assert!(!result.is_empty());
 }

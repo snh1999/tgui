@@ -403,7 +403,7 @@ impl Database {
         let mut new_ids = Vec::with_capacity(originals.len());
         for original in &originals {
             let new_name = format!("{}{}", name_prefix, original.name);
-            let group_id = if let Some(parent) = parent_id { Some(parent)} else { original.group_id };
+            let group_id = parent_id.or(original.group_id);
             let new_position = Self::get_position_with_conn(
                 &tx,
                 COMMANDS_TABLE,
@@ -451,7 +451,7 @@ impl Database {
         self.validate_batch_query_ids(&tx, &ids, COMMANDS_TABLE)?;
 
         let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
-        let query = format!("SELECT * FROM commands WHERE id IN ({})", placeholders);
+        let query = format!("SELECT * FROM commands WHERE id IN ({}) ORDER BY position", placeholders);
         let originals = tx
             .prepare(&query)?
             .query_map(rusqlite::params_from_iter(ids), Self::row_to_command)?

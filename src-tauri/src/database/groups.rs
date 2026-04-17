@@ -424,7 +424,7 @@ impl Database {
             let current_ids = std::mem::take(&mut queue);
             let placeholders = current_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
             let groups: Vec<Group> = tx
-                .prepare(&format!("SELECT * FROM groups WHERE id IN ({})", placeholders))?
+                .prepare(&format!("SELECT * FROM groups WHERE id IN ({}) ORDER BY position", placeholders))?
                 .query_map(rusqlite::params_from_iter(&current_ids), Self::row_to_group)?
                 .collect::<rusqlite::Result<Vec<_>>>()?;
 
@@ -494,23 +494,16 @@ impl Database {
             id_mapping.insert(original.id, new_id);
             new_ids.push(new_id);
 
-
-
             if recursive {
-                let commands = self.get_commands_in_tx(&tx, original.id)?;
+                let mut stmt = tx.prepare("SELECT * FROM commands WHERE group_id = ?1")?;
+                let commands = stmt
+                    .query_map(params![original.id], Self::row_to_command)?
+                    .collect::<rusqlite::Result<Vec<_>>>()?;
                 self.duplicate_commands_under_parents(&tx, commands, Some(new_id), "")?;
             }
         }
 
         tx.commit()?;
         Ok(new_ids)
-    }
-
-    fn get_commands_in_tx(&self, tx: &rusqlite::Transaction, group_id: i64) -> Result<Vec<Command>> {
-        let mut stmt = tx.prepare("SELECT * FROM commands WHERE group_id = ?1")?;
-        let commands = stmt
-            .query_map(params![group_id], Self::row_to_command)?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        Ok(commands)
     }
 }

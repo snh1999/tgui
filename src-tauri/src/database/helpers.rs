@@ -395,7 +395,10 @@ impl Database {
 
     pub(crate) fn normalize_path(&self, path: &str) -> Result<String> {
         if path.is_empty() {
-            return Ok(String::new());
+            return Err(DatabaseError::InvalidData {
+                field: "path",
+                reason: "path must not be empty".to_string(),
+            });
         }
 
         let expanded: String = if path.starts_with('~') {
@@ -403,7 +406,12 @@ impl Database {
                 field: "working_directory",
                 reason: "Could not determine home directory".to_string(),
             })?;
-            home.join(&path[1..]).to_string_lossy().into_owned() // owned String, no borrow of dir
+            let rest = path.strip_prefix("~/").unwrap_or("");
+            if rest.is_empty() {
+                home.to_string_lossy().into_owned()
+            } else {
+                home.join(rest).to_string_lossy().into_owned()
+            }
         } else {
             path.to_owned()
         };
@@ -434,7 +442,7 @@ impl Database {
         if count != ids.len() as i64 {
             Err(DatabaseError::InvalidData {
                 field: "ids",
-                reason: "One or more command IDs do not exist".to_string(),
+                reason: "One or more IDs do not exist".to_string(),
             })?
         }
 

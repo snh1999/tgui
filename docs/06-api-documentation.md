@@ -970,7 +970,7 @@ const groups = await invoke('get_groups_by_directory', { directory: '/home/user/
 - Commands within each group re-inserted under new group; `is_favorite` reset to `false`
 - Runs in single transaction; any failure rolls back all inserts
 
-**Returns**: New group IDs (root-level copies only, same order as input `ids`)
+**Returns**: New group IDs 
 
 **Errors**:
 
