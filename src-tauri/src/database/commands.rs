@@ -1,6 +1,6 @@
 use super::{
-    CategoryFilter, Command, Database, ExecutionHistory, ExecutionStatus,
-    GroupFilter, Result, TriggeredBy, WithHistory,
+    CategoryFilter, Command, Database, ExecutionHistory, ExecutionStatus, GroupFilter, Result,
+    TriggeredBy, WithHistory,
 };
 use crate::constants::{COMMANDS_TABLE, COMMAND_GROUP_COLUMN};
 use crate::database::helpers::QueryBuilder;
@@ -399,7 +399,13 @@ impl Database {
     }
 
     #[instrument(skip(self, tx, originals))]
-    pub fn duplicate_commands_under_parents(&self, tx: &rusqlite::Transaction, originals: Vec<Command>,  parent_id: Option<i64>, name_prefix: &str) -> Result<Vec<i64>> {
+    pub fn duplicate_commands_under_parents(
+        &self,
+        tx: &rusqlite::Transaction,
+        originals: Vec<Command>,
+        parent_id: Option<i64>,
+        name_prefix: &str,
+    ) -> Result<Vec<i64>> {
         let mut new_ids = Vec::with_capacity(originals.len());
         for original in &originals {
             let new_name = format!("{}{}", name_prefix, original.name);
@@ -451,16 +457,18 @@ impl Database {
         self.validate_batch_query_ids(&tx, &ids, COMMANDS_TABLE)?;
 
         let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
-        let query = format!("SELECT * FROM commands WHERE id IN ({}) ORDER BY position", placeholders);
+        let query = format!(
+            "SELECT * FROM commands WHERE id IN ({}) ORDER BY position",
+            placeholders
+        );
         let originals = tx
             .prepare(&query)?
             .query_map(rusqlite::params_from_iter(ids), Self::row_to_command)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
 
-        let new_ids = self.duplicate_commands_under_parents(&tx, originals, None, name_prefix )?;
+        let new_ids = self.duplicate_commands_under_parents(&tx, originals, None, name_prefix)?;
 
         tx.commit()?;
         Ok(new_ids)
     }
-
 }

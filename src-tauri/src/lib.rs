@@ -13,7 +13,7 @@ use handlers::logger;
 use std::fs;
 use std::path::PathBuf;
 use tauri::Manager;
-use tracing::{ error, info};
+use tracing::{error, info};
 
 fn error_map(error_message: &str) -> &str {
     error!(error_message);

@@ -285,14 +285,14 @@ fn renumber_produces_gap_spaced_positions_after_exhaustion() {
     }
 }
 
-fn remove_dir(dirs: &Vec<PathBuf>){
-    for dir in dirs{
+fn remove_dir(dirs: &Vec<PathBuf>) {
+    for dir in dirs {
         fs::remove_dir(dir).unwrap();
     }
 }
 
 fn create_dirs(dirs: &Vec<PathBuf>) {
-    for dir in dirs{
+    for dir in dirs {
         fs::create_dir(dir).unwrap();
     }
 }
@@ -375,7 +375,6 @@ fn test_get_unique_directories_combined_commands_and_groups() {
     assert_eq!(result[0], shared_dir.to_string_lossy().to_string());
 
     fs::remove_dir(&shared_dir).unwrap();
-
 }
 
 #[test]
@@ -405,7 +404,6 @@ fn test_get_unique_directories_deduplicates_across_tables() {
     assert_eq!(result[0], project_dir.to_string_lossy().to_string());
 
     fs::remove_dir(&project_dir).unwrap();
-
 }
 
 #[test]
@@ -434,7 +432,6 @@ fn test_get_unique_directories_excludes_null_working_directory() {
     assert_eq!(result[0], some_dir.to_string_lossy().to_string());
 
     fs::remove_dir(&some_dir).unwrap();
-
 }
 
 #[test]
@@ -473,8 +470,8 @@ fn test_get_unique_directories_orders_alphabetically() {
 fn test_get_unique_directories_case_sensitive() {
     let test_db = TestDb::setup_test_db();
 
-    let project_upper = std::env::temp_dir().join("Project");
-    let project_lower = std::env::temp_dir().join("project");
+    let project_upper = std::env::temp_dir().join("Projectz");
+    let project_lower = std::env::temp_dir().join("projectz");
     let dirs = vec![project_upper.clone(), project_lower.clone()];
     create_dirs(&dirs);
 
@@ -612,10 +609,7 @@ fn test_get_unique_directories_no_duplicates_from_same_table() {
     assert_eq!(result.len(), 1);
     assert_eq!(result[0], same_dir.to_string_lossy().to_string());
     fs::remove_dir(&same_dir).unwrap();
-
 }
-
-
 
 #[test]
 fn test_get_unique_directories_root_path() {

@@ -406,22 +406,29 @@ impl Database {
                 field: "working_directory",
                 reason: "Could not determine home directory".to_string(),
             })?;
-            let rest = path.strip_prefix("~/").unwrap_or("");
-            if rest.is_empty() {
+
+            if path == "~" {
                 home.to_string_lossy().into_owned()
             } else {
-                home.join(rest).to_string_lossy().into_owned()
+                let rest = path.strip_prefix("~/").unwrap_or("");
+
+                if !rest.is_empty() {
+                    home.to_string_lossy().into_owned()
+                } else {
+                    path.to_string()
+                }
             }
         } else {
             path.to_owned()
         };
 
-        let canonical = Path::new(&expanded)
-            .canonicalize()
-            .map_err(|e| DatabaseError::InvalidData {
-                field: "working_directory",
-                reason: format!("Invalid path '{}': {}", path, e),
-            })?;
+        let canonical =
+            Path::new(&expanded)
+                .canonicalize()
+                .map_err(|e| DatabaseError::InvalidData {
+                    field: "working_directory",
+                    reason: format!("Invalid path '{}': {}", path, e),
+                })?;
 
         if !canonical.is_dir() {
             return Err(DatabaseError::InvalidData {
@@ -429,7 +436,7 @@ impl Database {
                 reason: format!("Path is not a directory: '{}'", path),
             });
         }
-        
+
         Ok(canonical.to_string_lossy().into_owned())
     }
 
@@ -438,16 +445,13 @@ impl Database {
         conn: &rusqlite::Connection,
         ids: &Vec<i64>,
         table: &'static str,
-    )-> Result<()> {
+    ) -> Result<()> {
         let id_str = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let query = format!("SELECT COUNT(*) FROM {table} WHERE id IN ({})", id_str);
-        let count: i64 = conn.query_row(
-            &query,
-            rusqlite::params_from_iter(ids),
-            |row| row.get(0),
-        )?;
+        let count: i64 =
+            conn.query_row(&query, rusqlite::params_from_iter(ids), |row| row.get(0))?;
 
-        let id_set= HashSet::<i64>::from_iter(ids.iter().cloned());
+        let id_set = HashSet::<i64>::from_iter(ids.iter().cloned());
 
         if count != id_set.len() as i64 {
             Err(DatabaseError::InvalidData {
@@ -505,7 +509,7 @@ impl Database {
          UNION
          SELECT DISTINCT working_directory FROM groups
          WHERE working_directory IS NOT NULL
-         ORDER BY 1"
+         ORDER BY 1",
         )?;
 
         let dirs = stmt

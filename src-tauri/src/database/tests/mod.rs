@@ -74,11 +74,10 @@ impl TestDb {
     fn save_execution_history(&self, history: &ExecutionHistory) -> i64 {
         self.db.create_execution_history(history).unwrap()
     }
-    
+
     fn get_temp_dir() -> String {
         let temp_dir = std::env::temp_dir();
         temp_dir.to_string_lossy().to_string()
-
     }
 }
 

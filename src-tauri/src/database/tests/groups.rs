@@ -1327,7 +1327,6 @@ fn test_update_group_icon_and_color() {
     assert_eq!(retrieved.color, Some("#FF5733".to_string()));
 }
 
-
 #[test]
 fn test_get_groups_by_directory_basic() {
     let test_db = TestDb::setup_test_db();
@@ -1338,7 +1337,10 @@ fn test_get_groups_by_directory_basic() {
 
     test_db.create_test_group("Other");
 
-    let result = test_db.db.get_groups_by_directory(Some(&TestDb::get_temp_dir())).unwrap();
+    let result = test_db
+        .db
+        .get_groups_by_directory(Some(&TestDb::get_temp_dir()))
+        .unwrap();
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].id, group_id);
     assert_eq!(result[0].working_directory, Some(TestDb::get_temp_dir()));
@@ -1366,7 +1368,9 @@ fn test_get_groups_by_directory_none_returns_all_with_directory() {
 #[test]
 fn test_get_groups_by_directory_empty_directory() {
     let test_db = TestDb::setup_test_db();
-    let result = test_db.db.get_groups_by_directory(Some("/nonexistent/path"));
+    let result = test_db
+        .db
+        .get_groups_by_directory(Some("/nonexistent/path"));
     assert!(result.is_err());
 }
 
@@ -1389,7 +1393,10 @@ fn test_get_groups_by_directory_multiple_groups() {
     let id2 = test_db.db.create_group(&g2).unwrap();
     test_db.db.create_group(&g3).unwrap();
 
-    let result = test_db.db.get_groups_by_directory(Some(&shared_dir)).unwrap();
+    let result = test_db
+        .db
+        .get_groups_by_directory(Some(&shared_dir))
+        .unwrap();
     assert_eq!(result.len(), 2);
     let ids: Vec<i64> = result.iter().map(|g| g.id).collect();
     assert!(ids.contains(&id1));
@@ -1410,7 +1417,10 @@ fn test_get_groups_by_directory_orders_by_position() {
     test_db.db.create_group(&g1).unwrap();
     test_db.db.create_group(&g2).unwrap();
 
-    let result = test_db.db.get_groups_by_directory(Some(&TestDb::get_temp_dir())).unwrap();
+    let result = test_db
+        .db
+        .get_groups_by_directory(Some(&TestDb::get_temp_dir()))
+        .unwrap();
     assert_eq!(result.len(), 2);
     assert!(result[0].position < result[1].position);
 }
@@ -1434,7 +1444,10 @@ fn test_replace_groups_directory_basic() {
     group.working_directory = Some("~".to_string());
     let group_id = test_db.db.create_group(&group).unwrap();
 
-    let affected = test_db.db.replace_groups_directory([group_id].to_vec(), Some(&TestDb::get_temp_dir())).unwrap();
+    let affected = test_db
+        .db
+        .replace_groups_directory([group_id].to_vec(), Some(&TestDb::get_temp_dir()))
+        .unwrap();
     assert_eq!(affected, 1);
 
     let updated = test_db.db.get_group(group_id).unwrap();
@@ -1449,7 +1462,10 @@ fn test_replace_groups_directory_to_none() {
     group.working_directory = Some("~".to_string());
     let group_id = test_db.db.create_group(&group).unwrap();
 
-    let affected = test_db.db.replace_groups_directory([group_id].to_vec(), None).unwrap();
+    let affected = test_db
+        .db
+        .replace_groups_directory([group_id].to_vec(), None)
+        .unwrap();
     assert_eq!(affected, 1);
 
     let updated = test_db.db.get_group(group_id).unwrap();
@@ -1463,7 +1479,10 @@ fn test_replace_groups_directory_from_none() {
     let group = GroupBuilder::new("Test").build();
     let group_id = test_db.db.create_group(&group).unwrap();
 
-    let affected = test_db.db.replace_groups_directory([group_id].to_vec(), Some(&TestDb::get_temp_dir())).unwrap();
+    let affected = test_db
+        .db
+        .replace_groups_directory([group_id].to_vec(), Some(&TestDb::get_temp_dir()))
+        .unwrap();
     assert_eq!(affected, 1);
 
     let updated = test_db.db.get_group(group_id).unwrap();
@@ -1483,17 +1502,29 @@ fn test_replace_groups_directory_multiple_ids() {
     let id1 = test_db.db.create_group(&g1).unwrap();
     let id2 = test_db.db.create_group(&g2).unwrap();
 
-    let affected = test_db.db.replace_groups_directory([id1, id2].to_vec(), Some(&TestDb::get_temp_dir())).unwrap();
+    let affected = test_db
+        .db
+        .replace_groups_directory([id1, id2].to_vec(), Some(&TestDb::get_temp_dir()))
+        .unwrap();
     assert_eq!(affected, 2);
 
-    assert_eq!(test_db.db.get_group(id1).unwrap().working_directory, Some(TestDb::get_temp_dir()));
-    assert_eq!(test_db.db.get_group(id2).unwrap().working_directory, Some(TestDb::get_temp_dir()));
+    assert_eq!(
+        test_db.db.get_group(id1).unwrap().working_directory,
+        Some(TestDb::get_temp_dir())
+    );
+    assert_eq!(
+        test_db.db.get_group(id2).unwrap().working_directory,
+        Some(TestDb::get_temp_dir())
+    );
 }
 
 #[test]
 fn test_replace_groups_directory_empty_ids() {
     let test_db = TestDb::setup_test_db();
-    let affected = test_db.db.replace_groups_directory([].to_vec(), Some("/new/dir")).unwrap();
+    let affected = test_db
+        .db
+        .replace_groups_directory([].to_vec(), Some("/new/dir"))
+        .unwrap();
     assert_eq!(affected, 0);
 }
 
@@ -1505,7 +1536,9 @@ fn test_replace_groups_directory_invalid_id_fails_all() {
     group.working_directory = Some(TestDb::get_temp_dir());
     let valid_id = test_db.db.create_group(&group).unwrap();
 
-    let result = test_db.db.replace_groups_directory([valid_id, 99999].to_vec(), Some(&TestDb::get_temp_dir()));
+    let result = test_db
+        .db
+        .replace_groups_directory([valid_id, 99999].to_vec(), Some(&TestDb::get_temp_dir()));
     assert!(result.is_err());
 
     // Verify valid_id was NOT updated (transaction rolled back)
@@ -1524,7 +1557,10 @@ fn test_replace_groups_directory_updates_timestamp() {
     let original = test_db.db.get_group(group_id).unwrap();
     std::thread::sleep(std::time::Duration::from_millis(1000));
 
-    test_db.db.replace_groups_directory([group_id].to_vec(), Some("~")).unwrap();
+    test_db
+        .db
+        .replace_groups_directory([group_id].to_vec(), Some("~"))
+        .unwrap();
 
     let updated = test_db.db.get_group(group_id).unwrap();
     assert_ne!(original.updated_at, updated.updated_at);
@@ -1545,12 +1581,18 @@ fn test_replace_groups_directory_preserves_other_fields() {
     group.color = Some("#FF5733".to_string());
     let group_id = test_db.db.create_group(&group).unwrap();
 
-    test_db.db.replace_groups_directory([group_id].to_vec(), Some("~")).unwrap();
+    test_db
+        .db
+        .replace_groups_directory([group_id].to_vec(), Some("~"))
+        .unwrap();
 
     let updated = test_db.db.get_group(group_id).unwrap();
     assert_eq!(updated.name, group.name);
     assert_eq!(updated.category_id, group.category_id);
-    assert_eq!(updated.env_vars, Some(HashMap::from([("KEY".to_string(), "value".to_string())])));
+    assert_eq!(
+        updated.env_vars,
+        Some(HashMap::from([("KEY".to_string(), "value".to_string())]))
+    );
     assert_eq!(updated.description, group.description);
     assert_eq!(updated.shell, group.shell);
     assert_eq!(updated.icon, group.icon);
@@ -1565,7 +1607,10 @@ fn test_replace_groups_directory_nonexistent_path_fails() {
     group.working_directory = Some("~".to_string());
     let group_id = test_db.db.create_group(&group).unwrap();
 
-    let result = test_db.db.replace_groups_directory([group_id].to_vec(), Some("/this/path/does/not/exist/anywhere"));
+    let result = test_db.db.replace_groups_directory(
+        [group_id].to_vec(),
+        Some("/this/path/does/not/exist/anywhere"),
+    );
     assert!(matches!(
         result,
         Err(DatabaseError::InvalidData {
@@ -1575,7 +1620,6 @@ fn test_replace_groups_directory_nonexistent_path_fails() {
     ));
 }
 
-
 #[test]
 fn test_duplicate_groups_basic() {
     let test_db = TestDb::setup_test_db();
@@ -1583,7 +1627,10 @@ fn test_duplicate_groups_basic() {
     let group = GroupBuilder::new("Original").build();
     let original_id = test_db.db.create_group(&group).unwrap();
 
-    let new_ids = test_db.db.duplicate_groups([original_id].to_vec(), "Copy of ", false).unwrap();
+    let new_ids = test_db
+        .db
+        .duplicate_groups([original_id].to_vec(), "Copy of ", false)
+        .unwrap();
     assert_eq!(new_ids.len(), 1);
 
     let original = test_db.db.get_group(original_id).unwrap();
@@ -1597,7 +1644,10 @@ fn test_duplicate_groups_basic() {
 #[test]
 fn test_duplicate_groups_empty_ids() {
     let test_db = TestDb::setup_test_db();
-    let new_ids = test_db.db.duplicate_groups([].to_vec(), "Copy of ", false).unwrap();
+    let new_ids = test_db
+        .db
+        .duplicate_groups([].to_vec(), "Copy of ", false)
+        .unwrap();
     assert!(new_ids.is_empty());
 }
 
@@ -1617,14 +1667,20 @@ fn test_duplicate_groups_preserves_all_fields() {
     group.color = Some("#FF5733".to_string());
 
     let original_id = test_db.db.create_group(&group).unwrap();
-    let new_ids = test_db.db.duplicate_groups([original_id].to_vec(), "", false).unwrap();
+    let new_ids = test_db
+        .db
+        .duplicate_groups([original_id].to_vec(), "", false)
+        .unwrap();
 
     let duplicate = test_db.db.get_group(new_ids[0]).unwrap();
     assert_eq!(duplicate.description, group.description);
     assert_eq!(duplicate.working_directory, group.working_directory);
     assert_eq!(duplicate.shell, group.shell);
     assert_eq!(duplicate.category_id, group.category_id);
-    assert_eq!(duplicate.env_vars, Some(HashMap::from([("KEY".to_string(), "value".to_string())])));
+    assert_eq!(
+        duplicate.env_vars,
+        Some(HashMap::from([("KEY".to_string(), "value".to_string())]))
+    );
     assert_eq!(duplicate.icon, group.icon);
     assert_eq!(duplicate.color, group.color);
 }
@@ -1637,7 +1693,10 @@ fn test_duplicate_groups_resets_favorite() {
     group.is_favorite = true;
     let original_id = test_db.db.create_group(&group).unwrap();
 
-    let new_ids = test_db.db.duplicate_groups([original_id].to_vec(), "Copy ", false).unwrap();
+    let new_ids = test_db
+        .db
+        .duplicate_groups([original_id].to_vec(), "Copy ", false)
+        .unwrap();
 
     let duplicate = test_db.db.get_group(new_ids[0]).unwrap();
     assert!(!duplicate.is_favorite);
@@ -1651,7 +1710,10 @@ fn test_duplicate_groups_assigns_new_position() {
     let group = GroupBuilder::new("Test").with_parent(parent_id).build();
     let original_id = test_db.db.create_group(&group).unwrap();
 
-    let new_ids = test_db.db.duplicate_groups([original_id].to_vec(), "Copy ", false).unwrap();
+    let new_ids = test_db
+        .db
+        .duplicate_groups([original_id].to_vec(), "Copy ", false)
+        .unwrap();
 
     let original = test_db.db.get_group(original_id).unwrap();
     let duplicate = test_db.db.get_group(new_ids[0]).unwrap();
@@ -1672,12 +1734,24 @@ fn test_duplicate_groups_multiple() {
     let id2 = test_db.db.create_group(&g2).unwrap();
     let id3 = test_db.db.create_group(&g3).unwrap();
 
-    let new_ids = test_db.db.duplicate_groups([id1, id2, id3].to_vec(), "Backup ", false).unwrap();
+    let new_ids = test_db
+        .db
+        .duplicate_groups([id1, id2, id3].to_vec(), "Backup ", false)
+        .unwrap();
     assert_eq!(new_ids.len(), 3);
 
-    assert_eq!(test_db.db.get_group(new_ids[0]).unwrap().name, "Backup Group1");
-    assert_eq!(test_db.db.get_group(new_ids[1]).unwrap().name, "Backup Group2");
-    assert_eq!(test_db.db.get_group(new_ids[2]).unwrap().name, "Backup Group3");
+    assert_eq!(
+        test_db.db.get_group(new_ids[0]).unwrap().name,
+        "Backup Group1"
+    );
+    assert_eq!(
+        test_db.db.get_group(new_ids[1]).unwrap().name,
+        "Backup Group2"
+    );
+    assert_eq!(
+        test_db.db.get_group(new_ids[2]).unwrap().name,
+        "Backup Group3"
+    );
 }
 
 #[test]
@@ -1687,7 +1761,9 @@ fn test_duplicate_groups_invalid_id_fails_all() {
     let group = GroupBuilder::new("Valid").build();
     let valid_id = test_db.db.create_group(&group).unwrap();
 
-    let result = test_db.db.duplicate_groups([valid_id, 99999].to_vec(), "Copy ", false);
+    let result = test_db
+        .db
+        .duplicate_groups([valid_id, 99999].to_vec(), "Copy ", false);
     assert!(result.is_err());
 
     // Verify no duplicate was created for valid_id
@@ -1702,7 +1778,10 @@ fn test_duplicate_groups_empty_prefix() {
     let group = GroupBuilder::new("Original").build();
     let original_id = test_db.db.create_group(&group).unwrap();
 
-    let new_ids = test_db.db.duplicate_groups([original_id].to_vec(), "", false).unwrap();
+    let new_ids = test_db
+        .db
+        .duplicate_groups([original_id].to_vec(), "", false)
+        .unwrap();
 
     let duplicate = test_db.db.get_group(new_ids[0]).unwrap();
     assert_eq!(duplicate.name, "Original");
@@ -1715,7 +1794,10 @@ fn test_duplicate_groups_with_special_chars_in_prefix() {
     let group = GroupBuilder::new("Test").build();
     let original_id = test_db.db.create_group(&group).unwrap();
 
-    let new_ids = test_db.db.duplicate_groups([original_id].to_vec(), "[BACKUP] ", false).unwrap();
+    let new_ids = test_db
+        .db
+        .duplicate_groups([original_id].to_vec(), "[BACKUP] ", false)
+        .unwrap();
 
     let duplicate = test_db.db.get_group(new_ids[0]).unwrap();
     assert_eq!(duplicate.name, "[BACKUP] Test");
@@ -1729,11 +1811,16 @@ fn test_duplicate_groups_non_recursive() {
     let child = GroupBuilder::new("Child").with_parent(parent_id).build();
     let child_id = test_db.db.create_group(&child).unwrap();
 
-    let grandchild = GroupBuilder::new("Grandchild").with_parent(child_id).build();
+    let grandchild = GroupBuilder::new("Grandchild")
+        .with_parent(child_id)
+        .build();
     test_db.db.create_group(&grandchild).unwrap();
 
     // Non-recursive: only duplicates the specified group, not descendants
-    let new_ids = test_db.db.duplicate_groups([child_id].to_vec(), "Copy ", false).unwrap();
+    let new_ids = test_db
+        .db
+        .duplicate_groups([child_id].to_vec(), "Copy ", false)
+        .unwrap();
     assert_eq!(new_ids.len(), 1);
 
     let duplicate = test_db.db.get_group(new_ids[0]).unwrap();
@@ -1747,12 +1834,25 @@ fn test_duplicate_groups_recursive() {
     let test_db = TestDb::setup_test_db();
     let parent_id = test_db.create_test_group("Parent");
 
-    let child_id = test_db.db.create_group(&GroupBuilder::new("Child").with_parent(parent_id).build()).unwrap();
+    let child_id = test_db
+        .db
+        .create_group(&GroupBuilder::new("Child").with_parent(parent_id).build())
+        .unwrap();
 
-    test_db.db.create_group(&GroupBuilder::new("Grandchild").with_parent(child_id).build()).unwrap();
+    test_db
+        .db
+        .create_group(
+            &GroupBuilder::new("Grandchild")
+                .with_parent(child_id)
+                .build(),
+        )
+        .unwrap();
 
     // Recursive: duplicates the group and all descendants
-    let new_ids = test_db.db.duplicate_groups([child_id].to_vec(), "Copy ", true).unwrap();
+    let new_ids = test_db
+        .db
+        .duplicate_groups([child_id].to_vec(), "Copy ", true)
+        .unwrap();
 
     // Should have 2 new groups: Copy Child and Copy Grandchild
     assert_eq!(new_ids.len(), 2);
@@ -1764,7 +1864,7 @@ fn test_duplicate_groups_recursive() {
 
     let new_grandchild = test_db.db.get_group(new_ids[1]).unwrap();
     assert_eq!(new_grandchild.name, "Grandchild"); // nested groups do not show copy
-    // The grandchild should have the new child as parent, not the original
+                                                   // The grandchild should have the new child as parent, not the original
     assert_eq!(new_grandchild.parent_group_id, Some(new_ids[0]));
 }
 
@@ -1772,23 +1872,50 @@ fn test_duplicate_groups_recursive() {
 fn test_duplicate_groups_recursive_multiple_roots() {
     let test_db = TestDb::setup_test_db();
 
-    let root1_id = test_db.db.create_group(&GroupBuilder::new("Root1").build()).unwrap();
-    test_db.db.create_group(&GroupBuilder::new("Child1").with_parent(root1_id).build()).unwrap();
+    let root1_id = test_db
+        .db
+        .create_group(&GroupBuilder::new("Root1").build())
+        .unwrap();
+    test_db
+        .db
+        .create_group(&GroupBuilder::new("Child1").with_parent(root1_id).build())
+        .unwrap();
 
-    let root2_id = test_db.db.create_group(&GroupBuilder::new("Root2").build()).unwrap();
-    test_db.db.create_group(&GroupBuilder::new("Child2").with_parent(root2_id).build()).unwrap();
+    let root2_id = test_db
+        .db
+        .create_group(&GroupBuilder::new("Root2").build())
+        .unwrap();
+    test_db
+        .db
+        .create_group(&GroupBuilder::new("Child2").with_parent(root2_id).build())
+        .unwrap();
 
-    let new_ids = test_db.db.duplicate_groups([root1_id, root2_id].to_vec(), "Backup ", true).unwrap();
+    let new_ids = test_db
+        .db
+        .duplicate_groups([root1_id, root2_id].to_vec(), "Backup ", true)
+        .unwrap();
     assert_eq!(new_ids.len(), 4);
 
-    let new_root1 = new_ids.iter().map(|id| test_db.db.get_group(*id).unwrap())
-        .find(|g| g.name == "Backup Root1").unwrap();
-    let new_child1 = new_ids.iter().map(|id| test_db.db.get_group(*id).unwrap())
-        .find(|g| g.name == "Child1").unwrap();
-    let new_root2 = new_ids.iter().map(|id| test_db.db.get_group(*id).unwrap())
-        .find(|g| g.name == "Backup Root2").unwrap();
-    let new_child2 = new_ids.iter().map(|id| test_db.db.get_group(*id).unwrap())
-        .find(|g| g.name == "Child2").unwrap();
+    let new_root1 = new_ids
+        .iter()
+        .map(|id| test_db.db.get_group(*id).unwrap())
+        .find(|g| g.name == "Backup Root1")
+        .unwrap();
+    let new_child1 = new_ids
+        .iter()
+        .map(|id| test_db.db.get_group(*id).unwrap())
+        .find(|g| g.name == "Child1")
+        .unwrap();
+    let new_root2 = new_ids
+        .iter()
+        .map(|id| test_db.db.get_group(*id).unwrap())
+        .find(|g| g.name == "Backup Root2")
+        .unwrap();
+    let new_child2 = new_ids
+        .iter()
+        .map(|id| test_db.db.get_group(*id).unwrap())
+        .find(|g| g.name == "Child2")
+        .unwrap();
 
     assert_eq!(new_child1.parent_group_id, Some(new_root1.id));
     assert_eq!(new_child2.parent_group_id, Some(new_root2.id));
@@ -1810,7 +1937,10 @@ fn test_duplicate_groups_recursive_preserves_hierarchy_depth() {
     let level3 = GroupBuilder::new("Level3").with_parent(l2_id).build();
     test_db.db.create_group(&level3).unwrap();
 
-    let new_ids = test_db.db.duplicate_groups([l0_id].to_vec(), "Copy ", true).unwrap();
+    let new_ids = test_db
+        .db
+        .duplicate_groups([l0_id].to_vec(), "Copy ", true)
+        .unwrap();
     assert_eq!(new_ids.len(), 4);
 
     // Verify the chain: Copy Level3 -> Copy Level2 -> Copy Level1 -> Copy Level0
@@ -1832,7 +1962,10 @@ fn test_duplicate_groups_root_level() {
     let group = GroupBuilder::new("RootGroup").build();
     let original_id = test_db.db.create_group(&group).unwrap();
 
-    let new_ids = test_db.db.duplicate_groups([original_id].to_vec(), "Copy ", false).unwrap();
+    let new_ids = test_db
+        .db
+        .duplicate_groups([original_id].to_vec(), "Copy ", false)
+        .unwrap();
 
     let duplicate = test_db.db.get_group(new_ids[0]).unwrap();
     assert_eq!(duplicate.parent_group_id, None);
@@ -1847,7 +1980,10 @@ fn test_duplicate_groups_in_group() {
     let group = GroupBuilder::new("Child").with_parent(parent_id).build();
     let original_id = test_db.db.create_group(&group).unwrap();
 
-    let new_ids = test_db.db.duplicate_groups([original_id].to_vec(), "Copy ", false).unwrap();
+    let new_ids = test_db
+        .db
+        .duplicate_groups([original_id].to_vec(), "Copy ", false)
+        .unwrap();
 
     let duplicate = test_db.db.get_group(new_ids[0]).unwrap();
     assert_eq!(duplicate.parent_group_id, Some(parent_id));
@@ -1882,7 +2018,9 @@ fn test_replace_groups_directory_validates_path_exists() {
     let group_id = test_db.db.create_group(&group).unwrap();
 
     // Should fail for non-existent path
-    let result = test_db.db.replace_groups_directory([group_id].to_vec(), Some("/definitely/not/real"));
+    let result = test_db
+        .db
+        .replace_groups_directory([group_id].to_vec(), Some("/definitely/not/real"));
     assert!(matches!(
         result,
         Err(DatabaseError::InvalidData {

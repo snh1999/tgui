@@ -422,9 +422,16 @@ impl Database {
 
         while !queue.is_empty() {
             let current_ids = std::mem::take(&mut queue);
-            let placeholders = current_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+            let placeholders = current_ids
+                .iter()
+                .map(|_| "?")
+                .collect::<Vec<_>>()
+                .join(",");
             let groups: Vec<Group> = tx
-                .prepare(&format!("SELECT * FROM groups WHERE id IN ({}) ORDER BY position", placeholders))?
+                .prepare(&format!(
+                    "SELECT * FROM groups WHERE id IN ({}) ORDER BY position",
+                    placeholders
+                ))?
                 .query_map(rusqlite::params_from_iter(&current_ids), Self::row_to_group)?
                 .collect::<rusqlite::Result<Vec<_>>>()?;
 
@@ -444,10 +451,9 @@ impl Database {
             is_root = false; // Only first level are roots
         }
 
-        let mut id_mapping =   HashMap::<i64, i64>::new();
+        let mut id_mapping = HashMap::<i64, i64>::new();
 
         let mut new_ids = Vec::with_capacity(all_groups.len());
-
 
         for (original, is_root) in &all_groups {
             let new_name = if *is_root {
@@ -457,7 +463,8 @@ impl Database {
             };
 
             // Remap parent: if parent was duplicated, point to new parent; else keep original
-            let new_parent = original.parent_group_id
+            let new_parent = original
+                .parent_group_id
                 .map(|pid| id_mapping.get(&pid).copied().unwrap_or(pid));
 
             let new_position = Self::get_position_with_conn(
@@ -476,18 +483,18 @@ impl Database {
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
                 )?;
                 stmt.execute(params![
-                new_name,
-                original.description,
-                new_parent,
-                new_position,
-                original.working_directory,
-                env_vars,
-                original.shell,
-                original.category_id,
-                false,
-                original.icon,
-                original.color,
-            ])?;
+                    new_name,
+                    original.description,
+                    new_parent,
+                    new_position,
+                    original.working_directory,
+                    env_vars,
+                    original.shell,
+                    original.category_id,
+                    false,
+                    original.icon,
+                    original.color,
+                ])?;
             }
 
             let new_id = tx.last_insert_rowid();

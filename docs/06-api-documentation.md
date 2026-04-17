@@ -14,6 +14,33 @@ and Vue frontend.
 
 ## Common
 
+### Get Unique Directories
+
+`get_unique_directories() -&gt; Result&lt;Vec&lt;String&gt;, Error&gt;`
+
+**Description**: Returns all unique working directories currently used by commands and groups, ordered alphabetically.
+
+**Behavior**:
+
+- Queries both `commands` and `groups` tables for distinct `working_directory` values
+- Excludes `NULL` entries (items without an explicit working directory)
+- Results are deduplicated across both tables
+- Paths are returned in their canonicalized form (as stored in the database)
+- Ordering is alphabetical (`ORDER BY 1`)
+
+**Returns**: Array of unique canonical directory paths
+
+**Errors**:
+
+- `DatabaseError`: SQLite query failure
+
+**Usage**:
+
+```typescript
+const directories = await invoke('get_unique_directories')
+// Returns: ['/home/user/project', '/opt/app', '/var/log']
+```
+
 ### Row Deserialization Edge Cases
 
 **Arguments Parsing**:

@@ -257,7 +257,7 @@ impl ProcessManager {
             .map(PathBuf::from)
             .or_else(|| dirs::home_dir())
             .unwrap_or_else(|| PathBuf::from("/"));
-        
+
         if !working_directory.exists() {
             return Err(SerializableError {
                 code: "INVALID_DIRECTORY".to_string(),

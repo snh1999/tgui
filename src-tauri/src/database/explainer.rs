@@ -229,8 +229,8 @@ pub(crate) fn is_destructive(raw: &str) -> bool {
     if raw.contains(":(){:|:&};:") {
         return true;
     }
-    let tokens: Vec<String> = shlex::split(raw)
-        .unwrap_or_else(|| raw.split_whitespace().map(String::from).collect());
+    let tokens: Vec<String> =
+        shlex::split(raw).unwrap_or_else(|| raw.split_whitespace().map(String::from).collect());
 
     'outer: for pattern in DESTRUCTIVE_TOKEN_PATTERNS {
         if tokens.len() < pattern.len() {
@@ -318,8 +318,8 @@ fn build_segment(text: &str, connector: Option<String>) -> RawSegment {
     let mut is_background = false;
     let mut clean: Vec<String> = Vec::new();
 
-    let tokens: Vec<String> = shlex::split(text)
-        .unwrap_or_else(|| text.split_whitespace().map(String::from).collect());
+    let tokens: Vec<String> =
+        shlex::split(text).unwrap_or_else(|| text.split_whitespace().map(String::from).collect());
     let mut skip_next = false;
 
     for token in &tokens {

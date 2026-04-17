@@ -447,8 +447,6 @@ fn test_resolve_segment_text_no_match_returns_all_unknown() {
     assert_eq!(unknown, vec!["unknowncommand", "-a", "-b"]);
 }
 
-
-
 #[test]
 fn test_strip_sudo_combined_flags() {
     let (is_priv, cmd) = database::explainer::strip_sudo("sudo -E -u admin echo hello");
